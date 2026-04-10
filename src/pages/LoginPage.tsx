@@ -3,7 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { LogIn, ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -89,9 +89,11 @@ export function LoginPage() {
         <div className="rounded-2xl border bg-white p-8 shadow-sm dark:bg-gray-800">
           {/* Header */}
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white">
-              <LogIn className="h-6 w-6" />
-            </div>
+            <img
+              src="/grind-karo-logo.png"
+              alt={APP_NAME}
+              className="mx-auto mb-4 h-20 w-20 rounded-xl"
+            />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               {APP_NAME}
             </h1>

@@ -48,9 +48,16 @@ export function Sidebar() {
       >
         {/* Header */}
         <div className="flex h-16 items-center justify-between px-4">
-          {!isCollapsed && (
-            <span className="text-lg font-bold truncate">{APP_NAME}</span>
-          )}
+          <div className="flex items-center gap-2 overflow-hidden">
+            <img
+              src="/grind-karo-logo.png"
+              alt={APP_NAME}
+              className="h-9 w-9 shrink-0 rounded-md"
+            />
+            {!isCollapsed && (
+              <span className="text-lg font-bold truncate">{APP_NAME}</span>
+            )}
+          </div>
           <button
             onClick={() => setMobileOpen(false)}
             className="rounded-lg p-1 hover:bg-sidebar-hover lg:hidden"
