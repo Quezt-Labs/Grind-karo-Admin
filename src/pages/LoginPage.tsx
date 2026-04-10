@@ -84,16 +84,25 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
-      <div className="w-full max-w-md">
-        <div className="rounded-2xl border bg-white p-8 shadow-sm dark:bg-gray-800">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-50 px-4 dark:bg-gray-900">
+      {/* Background decoration */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary-500/10 blur-3xl dark:bg-primary-500/5" />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-accent-500/10 blur-3xl dark:bg-accent-500/5" />
+        <div className="absolute left-1/2 top-1/4 h-64 w-64 -translate-x-1/2 rounded-full bg-primary-400/5 blur-2xl dark:bg-primary-400/5" />
+      </div>
+
+      <div className="relative w-full max-w-md">
+        <div className="rounded-2xl border bg-white/80 p-8 shadow-lg backdrop-blur-sm dark:bg-gray-800/80">
           {/* Header */}
           <div className="mb-8 text-center">
-            <img
-              src="/grind-karo-logo.png"
-              alt={APP_NAME}
-              className="mx-auto mb-4 h-20 w-20 rounded-xl"
-            />
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-800 shadow-lg shadow-primary-500/25">
+              <img
+                src="/grind-karo-logo.png"
+                alt={APP_NAME}
+                className="h-16 w-16 rounded-lg object-contain"
+              />
+            </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               {APP_NAME}
             </h1>
