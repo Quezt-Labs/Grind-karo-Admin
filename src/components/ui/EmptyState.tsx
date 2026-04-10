@@ -10,7 +10,7 @@ export function EmptyState({
   message = "No data found",
 }: EmptyStateProps) {
   return (
-    <div className="rounded-xl border bg-white p-12 text-center dark:bg-gray-800">
+    <div className="rounded-xl border bg-white p-8 text-center dark:bg-gray-800 sm:p-12">
       {icon && (
         <div className="mx-auto mb-4 text-gray-300 dark:text-gray-600">
           {icon}

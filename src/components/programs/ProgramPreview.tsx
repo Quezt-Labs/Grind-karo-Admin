@@ -43,7 +43,7 @@ function ProgramPreviewInner({
       {/* Program Card */}
       <div className="rounded-2xl border bg-white shadow-sm dark:bg-gray-800">
         {/* Header */}
-        <div className="relative rounded-t-2xl bg-gradient-to-br from-primary-600 to-primary-800 p-6 text-white">
+        <div className="relative rounded-t-2xl bg-gradient-to-br from-primary-600 to-primary-800 p-4 text-white sm:p-6">
           {badge && (
             <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-yellow-400 px-2.5 py-0.5 text-xs font-bold text-yellow-900">
               <Star className="h-3 w-3" />
@@ -58,7 +58,7 @@ function ProgramPreviewInner({
         </div>
 
         {/* Meta */}
-        <div className="flex gap-4 border-b px-6 py-3 text-sm text-gray-600 dark:text-gray-300">
+        <div className="flex flex-wrap gap-3 border-b px-4 py-3 text-sm text-gray-600 dark:text-gray-300 sm:gap-4 sm:px-6">
           <span className="flex items-center gap-1.5">
             <Clock className="h-4 w-4" />
             {duration || 0} weeks
@@ -71,7 +71,7 @@ function ProgramPreviewInner({
         </div>
 
         {/* Description */}
-        <div className="px-6 py-4">
+        <div className="px-4 py-4 sm:px-6">
           <p className="text-sm text-gray-600 dark:text-gray-300">
             {description || "Program description will appear here..."}
           </p>
@@ -79,7 +79,7 @@ function ProgramPreviewInner({
 
         {/* Highlights */}
         {highlights.filter(Boolean).length > 0 && (
-          <div className="border-t px-6 py-4">
+          <div className="border-t px-4 py-4 sm:px-6">
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Highlights
             </h4>
@@ -99,7 +99,7 @@ function ProgramPreviewInner({
 
         {/* Goals */}
         {goals.filter(Boolean).length > 0 && (
-          <div className="border-t px-6 py-4">
+          <div className="border-t px-4 py-4 sm:px-6">
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Goals
             </h4>
@@ -119,7 +119,7 @@ function ProgramPreviewInner({
 
         {/* Pricing Tiers */}
         {pricingTiers.length > 0 && (
-          <div className="border-t px-6 py-4">
+          <div className="border-t px-4 py-4 sm:px-6">
             <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Pricing
             </h4>

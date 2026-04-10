@@ -21,11 +21,27 @@
   --color-sidebar-active: #991b1b;
 }
 
+html {
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 antialiased;
   margin: 0;
+  overflow-x: hidden;
 }
 
 * {
   @apply border-gray-200 dark:border-gray-700;
+}
+
+/* Improve touch targets and scrolling on mobile */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
 }

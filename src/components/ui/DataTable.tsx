@@ -98,7 +98,7 @@ export function DataTable<T extends { id: string }>({
                 <th
                   key={col.key}
                   className={cn(
-                    "px-4 py-3 font-medium text-gray-600 dark:text-gray-300",
+                    "whitespace-nowrap px-3 py-3 font-medium text-gray-600 dark:text-gray-300 sm:px-4",
                     col.sortable &&
                       "cursor-pointer select-none hover:text-gray-900 dark:hover:text-white",
                   )}
@@ -133,7 +133,7 @@ export function DataTable<T extends { id: string }>({
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className="px-4 py-3 text-gray-700 dark:text-gray-300"
+                    className="whitespace-nowrap px-3 py-3 text-gray-700 dark:text-gray-300 sm:px-4"
                   >
                     {col.render
                       ? col.render(row[col.key], row)
@@ -156,8 +156,8 @@ export function DataTable<T extends { id: string }>({
         </table>
       </div>
 
-      <div className="flex flex-col items-center justify-between gap-3 border-t px-4 py-3 sm:flex-row">
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+      <div className="flex flex-col items-center justify-between gap-3 border-t px-3 py-3 sm:flex-row sm:px-4">
+        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
           <span>Rows per page:</span>
           <select
             value={pageSize}
@@ -176,11 +176,11 @@ export function DataTable<T extends { id: string }>({
             {sortedData.length}
           </span>
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed dark:text-gray-300 dark:hover:bg-gray-700"
+            className="rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed dark:text-gray-300 dark:hover:bg-gray-700 sm:px-3 sm:text-sm"
           >
             Previous
           </button>
@@ -200,7 +200,7 @@ export function DataTable<T extends { id: string }>({
                 key={pageNum}
                 onClick={() => setPage(pageNum)}
                 className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium",
+                  "hidden rounded-lg px-3 py-1.5 text-sm font-medium sm:inline-block",
                   page === pageNum
                     ? "bg-primary-600 text-white"
                     : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
@@ -210,10 +210,13 @@ export function DataTable<T extends { id: string }>({
               </button>
             );
           })}
+          <span className="inline-block px-2 text-xs text-gray-500 sm:hidden">
+            {page}/{totalPages}
+          </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed dark:text-gray-300 dark:hover:bg-gray-700"
+            className="rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed dark:text-gray-300 dark:hover:bg-gray-700 sm:px-3 sm:text-sm"
           >
             Next
           </button>

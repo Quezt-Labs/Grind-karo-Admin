@@ -94,7 +94,7 @@ export function DashboardPage() {
 
       {/* Recent Programs */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Recent Programs
           </h2>

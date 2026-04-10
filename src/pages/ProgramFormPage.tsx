@@ -232,9 +232,9 @@ export function ProgramFormPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Form */}
-        <div className="xl:col-span-2">
+        <div className="lg:col-span-2">
           <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
             {/* Basic Info */}
             <FormSection title="Basic Info">
@@ -386,7 +386,7 @@ export function ProgramFormPage() {
             </FormSection>
 
             {/* Submit */}
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="secondary"
@@ -402,7 +402,7 @@ export function ProgramFormPage() {
         </div>
 
         {/* Preview Panel */}
-        <div className="hidden xl:block">
+        <div className="hidden lg:block">
           <div className="sticky top-6">
             <ProgramPreview
               name={watchedValues.name || ""}
