@@ -2,16 +2,32 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'editor' | 'viewer';
+  phone?: string;
+  role: string;
   avatar?: string;
 }
 
-export interface LoginCredentials {
+export interface SendOtpPayload {
   email: string;
-  password: string;
+}
+
+export interface VerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+export interface RefreshTokenPayload {
+  refreshToken: string;
 }
 
 export interface AuthResponse {
   user: User;
-  token: string;
+  accessToken: string;
+  refreshToken: string;
+}
+
+// Keep for backwards compat with authStore
+export interface LoginCredentials {
+  email: string;
+  password: string;
 }

@@ -5,6 +5,9 @@ import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { ProgramsPage } from "@/pages/ProgramsPage";
+import { ProgramFormPage } from "@/pages/ProgramFormPage";
+import { EnrollmentsPage } from "@/pages/EnrollmentsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
 export default function App() {
@@ -17,31 +20,10 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
-              {/* Placeholder routes */}
-              <Route
-                path="/users"
-                element={
-                  <div className="text-gray-500 dark:text-gray-400">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      Users
-                    </h1>
-                    <p className="mt-1 text-sm">
-                      Users management page — coming soon.
-                    </p>
-                  </div>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <div className="text-gray-500 dark:text-gray-400">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      Settings
-                    </h1>
-                    <p className="mt-1 text-sm">Settings page — coming soon.</p>
-                  </div>
-                }
-              />
+              <Route path="/programs" element={<ProgramsPage />} />
+              <Route path="/programs/new" element={<ProgramFormPage />} />
+              <Route path="/programs/:id/edit" element={<ProgramFormPage />} />
+              <Route path="/enrollments" element={<EnrollmentsPage />} />
             </Route>
           </Route>
 

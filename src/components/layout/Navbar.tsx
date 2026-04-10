@@ -3,6 +3,7 @@ import { useSidebarStore } from "@/store/sidebarStore";
 import { useAuth } from "@/hooks/useAuth";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import { useNavigate } from "react-router-dom";
+import { authService } from "@/services/authService";
 import toast from "react-hot-toast";
 
 export function Navbar() {
@@ -11,7 +12,8 @@ export function Navbar() {
   const { isDark, toggle: toggleDark } = useDarkMode();
   const navigate = useNavigate();
 
-  function handleLogout() {
+  async function handleLogout() {
+    await authService.logout();
     logout();
     toast.success("Logged out successfully");
     navigate("/login");

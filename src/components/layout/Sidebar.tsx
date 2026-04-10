@@ -1,8 +1,8 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  Users,
-  Settings,
+  Dumbbell,
+  Award,
   ChevronLeft,
   ChevronRight,
   X,
@@ -14,14 +14,14 @@ import type { ReactNode } from "react";
 
 const iconMap: Record<string, ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="h-5 w-5" />,
-  Users: <Users className="h-5 w-5" />,
-  Settings: <Settings className="h-5 w-5" />,
+  Dumbbell: <Dumbbell className="h-5 w-5" />,
+  Award: <Award className="h-5 w-5" />,
 };
 
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { path: "/users", label: "Users", icon: "Users" },
-  { path: "/settings", label: "Settings", icon: "Settings" },
+  { path: "/programs", label: "Programs", icon: "Dumbbell" },
+  { path: "/enrollments", label: "Enrollments", icon: "Award" },
 ];
 
 export function Sidebar() {

@@ -6,6 +6,9 @@ import {
   DollarSign,
   ShoppingCart,
   Activity,
+  Dumbbell,
+  Award,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -14,6 +17,9 @@ const iconMap: Record<string, ReactNode> = {
   DollarSign: <DollarSign className="h-6 w-6" />,
   ShoppingCart: <ShoppingCart className="h-6 w-6" />,
   Activity: <Activity className="h-6 w-6" />,
+  Dumbbell: <Dumbbell className="h-6 w-6" />,
+  Award: <Award className="h-6 w-6" />,
+  LayoutDashboard: <LayoutDashboard className="h-6 w-6" />,
 };
 
 interface StatsCardProps {

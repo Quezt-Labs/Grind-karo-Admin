@@ -2,8 +2,8 @@ export const APP_NAME = "Grind Karo";
 
 export const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { path: "/users", label: "Users", icon: "Users" },
-  { path: "/settings", label: "Settings", icon: "Settings" },
+  { path: "/programs", label: "Programs", icon: "Dumbbell" },
+  { path: "/enrollments", label: "Enrollments", icon: "Award" },
 ] as const;
 
 export const PAGE_SIZES = [10, 25, 50] as const;
