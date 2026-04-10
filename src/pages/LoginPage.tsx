@@ -85,11 +85,199 @@ export function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-50 px-4 dark:bg-gray-900">
-      {/* Background decoration */}
+      {/* Background grid pattern */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.4] dark:opacity-[0.15]">
+        <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern
+              id="grid"
+              width="40"
+              height="40"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M 40 0 L 0 0 0 40"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="0.5"
+                className="text-gray-300 dark:text-gray-600"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+      </div>
+
+      {/* Gradient blobs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary-500/10 blur-3xl dark:bg-primary-500/5" />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-accent-500/10 blur-3xl dark:bg-accent-500/5" />
-        <div className="absolute left-1/2 top-1/4 h-64 w-64 -translate-x-1/2 rounded-full bg-primary-400/5 blur-2xl dark:bg-primary-400/5" />
+        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-primary-500/15 blur-3xl dark:bg-primary-500/10" />
+        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-accent-500/15 blur-3xl dark:bg-accent-500/10" />
+        <div className="absolute right-1/4 top-1/4 h-72 w-72 rounded-full bg-primary-300/10 blur-3xl dark:bg-primary-400/5" />
+      </div>
+
+      {/* Decorative SVG shapes */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Top-right dumbbell / fitness motif */}
+        <svg
+          className="absolute -right-6 -top-6 h-64 w-64 text-primary-500/10 dark:text-primary-400/5"
+          viewBox="0 0 200 200"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="60"
+            cy="100"
+            r="45"
+            stroke="currentColor"
+            strokeWidth="6"
+          />
+          <circle
+            cx="140"
+            cy="100"
+            r="45"
+            stroke="currentColor"
+            strokeWidth="6"
+          />
+          <rect
+            x="55"
+            y="92"
+            width="90"
+            height="16"
+            rx="4"
+            fill="currentColor"
+          />
+          <rect
+            x="20"
+            y="88"
+            width="30"
+            height="24"
+            rx="6"
+            fill="currentColor"
+          />
+          <rect
+            x="150"
+            y="88"
+            width="30"
+            height="24"
+            rx="6"
+            fill="currentColor"
+          />
+        </svg>
+
+        {/* Bottom-left geometric */}
+        <svg
+          className="absolute -bottom-10 -left-10 h-72 w-72 text-accent-500/10 dark:text-accent-400/5"
+          viewBox="0 0 200 200"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <polygon
+            points="100,10 190,150 10,150"
+            stroke="currentColor"
+            strokeWidth="3"
+            fill="none"
+          />
+          <polygon
+            points="100,40 170,140 30,140"
+            stroke="currentColor"
+            strokeWidth="3"
+            fill="none"
+          />
+          <circle
+            cx="100"
+            cy="105"
+            r="30"
+            stroke="currentColor"
+            strokeWidth="3"
+            fill="none"
+          />
+        </svg>
+
+        {/* Floating dots pattern - top left */}
+        <svg
+          className="absolute left-8 top-8 h-40 w-40 text-gray-400/20 dark:text-gray-500/10"
+          viewBox="0 0 120 120"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {Array.from({ length: 25 }).map((_, i) => (
+            <circle
+              key={i}
+              cx={(i % 5) * 28 + 8}
+              cy={Math.floor(i / 5) * 28 + 8}
+              r="3"
+            />
+          ))}
+        </svg>
+
+        {/* Floating dots pattern - bottom right */}
+        <svg
+          className="absolute bottom-12 right-12 h-32 w-32 text-gray-400/20 dark:text-gray-500/10"
+          viewBox="0 0 120 120"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {Array.from({ length: 16 }).map((_, i) => (
+            <circle
+              key={i}
+              cx={(i % 4) * 32 + 12}
+              cy={Math.floor(i / 4) * 32 + 12}
+              r="3"
+            />
+          ))}
+        </svg>
+
+        {/* Rings */}
+        <svg
+          className="absolute left-1/4 top-16 h-24 w-24 text-primary-400/10 dark:text-primary-400/5"
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="50"
+            cy="50"
+            r="45"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="30"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="15"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+        </svg>
+
+        <svg
+          className="absolute bottom-24 right-1/4 h-20 w-20 text-accent-400/10 dark:text-accent-400/5"
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="50"
+            cy="50"
+            r="45"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="25"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+        </svg>
       </div>
 
       <div className="relative w-full max-w-md">
