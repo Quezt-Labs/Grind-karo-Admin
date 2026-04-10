@@ -66,7 +66,7 @@ export function LoginPage() {
               {APP_NAME}
             </h1>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Sign in to your account
+              Sign in to your admin panel
             </p>
           </div>
 

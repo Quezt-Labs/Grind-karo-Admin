@@ -96,7 +96,7 @@ export function Sidebar() {
         {/* Footer */}
         <div className="border-t border-gray-700 p-4">
           {!isCollapsed && (
-            <p className="text-xs text-gray-400">© 2026 Admin Dashboard</p>
+            <p className="text-xs text-gray-400">© 2026 Grind Karo</p>
           )}
         </div>
       </aside>
