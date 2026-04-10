@@ -29,16 +29,16 @@ export const programService = {
   },
 
   async create(payload: CreateProgramPayload): Promise<Program> {
-    const { data } = await api.post("/programs", payload);
+    const { data } = await api.post("/admin/programs", payload);
     return data.data ?? data;
   },
 
   async update(id: string, payload: UpdateProgramPayload): Promise<Program> {
-    const { data } = await api.patch(`/programs/${id}`, payload);
+    const { data } = await api.patch(`/admin/programs/${id}`, payload);
     return data.data ?? data;
   },
 
   async remove(id: string): Promise<void> {
-    await api.delete(`/programs/${id}`);
+    await api.delete(`/admin/programs/${id}`);
   },
 };

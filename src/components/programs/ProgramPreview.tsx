@@ -1,7 +1,6 @@
 import { memo } from "react";
 import { Clock, Dumbbell, Target, Star, Zap } from "lucide-react";
 import { LevelBadge } from "@/components/ui/LevelBadge";
-import type { PricingTier } from "@/types/program";
 
 interface ProgramPreviewProps {
   name: string;
@@ -14,11 +13,6 @@ interface ProgramPreviewProps {
   goals: string[];
   badge?: string;
   category: string;
-  pricingTiers: Partial<PricingTier>[];
-}
-
-function formatPrice(paise: number): string {
-  return `₹${(paise / 100).toLocaleString("en-IN")}`;
 }
 
 function ProgramPreviewInner({
@@ -32,7 +26,6 @@ function ProgramPreviewInner({
   goals,
   badge,
   category,
-  pricingTiers,
 }: ProgramPreviewProps) {
   return (
     <div className="space-y-4">
@@ -114,35 +107,6 @@ function ProgramPreviewInner({
                 </li>
               ))}
             </ul>
-          </div>
-        )}
-
-        {/* Pricing Tiers */}
-        {pricingTiers.length > 0 && (
-          <div className="border-t px-4 py-4 sm:px-6">
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Pricing
-            </h4>
-            <div className="grid gap-3">
-              {pricingTiers.map((tier, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between rounded-lg border bg-gray-50 p-3 dark:bg-gray-700/50"
-                >
-                  <div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {tier.tier || "TIER"}
-                    </span>
-                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                      {tier.validityDays || 0} days
-                    </span>
-                  </div>
-                  <span className="text-lg font-bold text-primary-600 dark:text-primary-400">
-                    {formatPrice(tier.price || 0)}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>

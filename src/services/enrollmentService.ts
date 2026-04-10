@@ -1,19 +1,23 @@
 import api from "./api";
-import type { Enrollment } from "@/types/program";
+import type { Subscription } from "@/types/program";
 
 export const enrollmentService = {
-  async getMyEnrollments(): Promise<Enrollment[]> {
-    const { data } = await api.get("/programs/my/enrollments");
+  async getAllSubscriptions(): Promise<Subscription[]> {
+    const { data } = await api.get("/admin/plans/subscriptions");
     return data.data ?? data;
   },
 
-  async getMyActiveEnrollments(): Promise<Enrollment[]> {
-    const { data } = await api.get("/programs/my/active");
+  async getMySubscriptions(): Promise<Subscription[]> {
+    const { data } = await api.get("/plans/my/subscriptions");
     return data.data ?? data;
   },
 
-  async checkAccess(programId: string): Promise<{ hasAccess: boolean }> {
-    const { data } = await api.get(`/programs/${programId}/access`);
-    return data;
+  async getMyActiveSubscription(): Promise<Subscription | null> {
+    try {
+      const { data } = await api.get("/plans/my/subscription/active");
+      return data.data ?? data;
+    } catch {
+      return null;
+    }
   },
 };

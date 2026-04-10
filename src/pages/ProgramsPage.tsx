@@ -25,7 +25,6 @@ type ProgramRow = {
   duration: string;
   badge: string;
   isActive: string;
-  tiers: string;
 };
 
 const programColumns: Column<ProgramRow>[] = [
@@ -45,7 +44,6 @@ const programColumns: Column<ProgramRow>[] = [
     sortable: true,
     render: (value) => <StatusBadge status={value as string} />,
   },
-  { key: "tiers", header: "Tiers", sortable: false },
 ];
 
 export function ProgramsPage() {
@@ -99,7 +97,6 @@ export function ProgramsPage() {
       duration: `${p.duration} weeks`,
       badge: p.badge || "—",
       isActive: p.isActive ? "Active" : "Inactive",
-      tiers: String(p.pricingTiers?.length ?? 0),
     }));
   }, [programs, searchTerm]);
 

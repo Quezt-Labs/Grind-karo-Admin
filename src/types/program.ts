@@ -3,17 +3,6 @@ export type ProgramLevel =
   | "INTERMEDIATE"
   | "ADVANCED"
   | "ALL_LEVELS";
-export type PricingTierType = "BASIC" | "PREMIUM" | "ELITE";
-
-export interface PricingTier {
-  id?: string;
-  tier: PricingTierType;
-  price: number;
-  validityDays: number;
-  features: Record<string, boolean | number>;
-  valueBreakdown: Record<string, number>;
-  totalValue: number;
-}
 
 export interface Program {
   id: string;
@@ -30,7 +19,6 @@ export interface Program {
   category: string;
   sortOrder: number;
   isActive: boolean;
-  pricingTiers: PricingTier[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -49,28 +37,55 @@ export interface CreateProgramPayload {
   category: string;
   sortOrder: number;
   isActive: boolean;
-  pricingTiers: Omit<PricingTier, "id">[];
 }
 
-export type UpdateProgramPayload = Partial<
-  Omit<CreateProgramPayload, "pricingTiers">
->;
+export type UpdateProgramPayload = Partial<CreateProgramPayload>;
 
-export interface Enrollment {
+// --- Plans ---
+
+export interface Plan {
   id: string;
   programId: string;
   program?: Program;
-  tier: PricingTierType;
-  orderId: string;
+  name: string;
+  description: string;
+  price: number;
+  validityMonths: number;
+  features: string[];
+  displayOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreatePlanPayload {
+  programId: string;
+  name: string;
+  description: string;
+  price: number;
+  validityMonths: number;
+  features: string[];
+  displayOrder: number;
+  isActive: boolean;
+}
+
+export type UpdatePlanPayload = Partial<CreatePlanPayload>;
+
+// --- Subscriptions ---
+
+export interface Subscription {
+  id: string;
+  planId: string;
+  plan?: Plan;
   userId?: string;
+  orderId: string;
   status?: string;
   expiresAt?: string;
-  enrolledAt?: string;
+  subscribedAt?: string;
   createdAt?: string;
 }
 
-export interface EnrollProgramPayload {
-  programId: string;
-  tier: PricingTierType;
+export interface SubscribePlanPayload {
+  planId: string;
   orderId: string;
 }

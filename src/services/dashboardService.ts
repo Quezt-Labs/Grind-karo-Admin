@@ -5,9 +5,9 @@ import type { Program } from "@/types/program";
 
 export const dashboardService = {
   async getStats(): Promise<StatsData[]> {
-    const [programs, enrollments] = await Promise.all([
+    const [programs, subscriptions] = await Promise.all([
       programService.getAll(true).catch(() => [] as Program[]),
-      enrollmentService.getMyEnrollments().catch(() => []),
+      enrollmentService.getAllSubscriptions().catch(() => []),
     ]);
 
     const activePrograms = programs.filter((p) => p.isActive);
@@ -31,8 +31,8 @@ export const dashboardService = {
       },
       {
         id: "3",
-        title: "Total Enrollments",
-        value: String(enrollments.length),
+        title: "Total Subscriptions",
+        value: String(subscriptions.length),
         change: 0,
         changeType: "increase",
         icon: "Award",
