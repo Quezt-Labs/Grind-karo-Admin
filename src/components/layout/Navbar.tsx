@@ -49,14 +49,14 @@ export function Navbar() {
           <div className="flex items-center gap-3 border-l pl-3 dark:border-gray-600">
             <div className="hidden sm:block">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                {user.name}
+                {user.name || user.email}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {user.role}
               </p>
             </div>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-sm font-medium text-white">
-              {user.name.charAt(0)}
+              {(user.name || user.email || "?").charAt(0).toUpperCase()}
             </div>
           </div>
         )}
