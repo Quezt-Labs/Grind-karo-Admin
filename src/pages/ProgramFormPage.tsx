@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, X, ImageIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -15,6 +15,7 @@ import { FormSection } from "@/components/ui/FormSection";
 import { DynamicListField } from "@/components/programs/DynamicListField";
 import { ProgramPreview } from "@/components/programs/ProgramPreview";
 import { programService } from "@/services/programService";
+import { uploadService } from "@/services/uploadService";
 
 // --- Zod Schema ---
 const programSchema = z.object({
@@ -54,6 +55,9 @@ export function ProgramFormPage() {
   const isEdit = !!id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: existing, isLoading: loadingExisting } = useQuery({
     queryKey: ["program", id],
@@ -108,6 +112,7 @@ export function ProgramFormPage() {
       highlights: existing.highlights.map((h) => ({ value: h })),
       goals: existing.goals.map((g) => ({ value: g })),
     });
+    setImageUrl(existing.image ?? null);
   }, [existing, reset]);
 
   const createMutation = useMutation({
@@ -132,12 +137,41 @@ export function ProgramFormPage() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const result = await uploadService.upload(file);
+      setImageUrl(result.url);
+      toast.success("Image uploaded");
+    } catch {
+      toast.error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   function onSubmit(data: ProgramFormData) {
     const payload = {
       ...data,
       tagline: data.tagline || undefined,
       badge: data.badge || undefined,
       sortOrder: data.sortOrder ?? 0,
+      image: imageUrl || null,
       highlights: data.highlights.map((h) => h.value).filter(Boolean),
       goals: data.goals.map((g) => g.value).filter(Boolean),
     };
@@ -223,6 +257,65 @@ export function ProgramFormPage() {
                   error={errors.category?.message}
                   {...register("category")}
                 />
+              </div>
+            </FormSection>
+
+            {/* Program Image */}
+            <FormSection title="Program Image">
+              <div className="space-y-3">
+                {imageUrl ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={imageUrl}
+                      alt="Program"
+                      className="h-40 w-auto rounded-lg border object-cover dark:border-gray-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl(null)}
+                      className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white shadow-sm hover:bg-red-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex h-40 w-full max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-primary-400 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-primary-500 dark:hover:bg-gray-700"
+                  >
+                    {isUploading ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-gray-400" />
+                    )}
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {isUploading ? "Uploading..." : "Click to upload image"}
+                    </span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      PNG, JPG up to 5MB
+                    </span>
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                {imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 disabled:opacity-50 dark:text-primary-400"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    {isUploading ? "Uploading..." : "Replace image"}
+                  </button>
+                )}
               </div>
             </FormSection>
 

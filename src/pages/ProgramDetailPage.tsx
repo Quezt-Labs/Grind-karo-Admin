@@ -115,11 +115,20 @@ export function ProgramDetailPage() {
       </button>
 
       {/* Hero banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-primary-600 via-primary-700 to-primary-900 p-6 text-white shadow-lg sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-primary-600 via-primary-700 to-primary-900 text-white shadow-lg">
+        {program.image && (
+          <img
+            src={program.image}
+            alt={program.name}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        {/* Overlay for readability when image is present */}
+        {program.image && <div className="absolute inset-0 bg-black/50" />}
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5" />
         <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5" />
 
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="relative flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between sm:p-8">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium uppercase tracking-wider">
