@@ -17,6 +17,7 @@ export interface Program {
   goals: string[];
   badge?: string;
   category: string;
+  image?: string | null;
   sortOrder: number;
   isActive: boolean;
   createdAt?: string;

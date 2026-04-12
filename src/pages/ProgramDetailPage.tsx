@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,17 +12,31 @@ import {
   Star,
   CalendarDays,
   BarChart3,
+  Trash2,
+  AlertTriangle,
+  ToggleLeft,
+  ToggleRight,
+  IndianRupee,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LevelBadge } from "@/components/ui/LevelBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { programService } from "@/services/programService";
+import { planService } from "@/services/planService";
+
+function formatPrice(paise: number): string {
+  return `₹${(paise / 100).toLocaleString("en-IN")}`;
+}
 
 export function ProgramDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const {
     data: program,
@@ -31,6 +46,34 @@ export function ProgramDetailPage() {
     queryKey: ["program", id],
     queryFn: () => programService.getById(id!),
     enabled: !!id,
+  });
+
+  const { data: plans } = useQuery({
+    queryKey: ["plans", id],
+    queryFn: () => planService.getForProgram(id!),
+    enabled: !!id,
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: () =>
+      programService.update(id!, { isActive: !program?.isActive }),
+    onSuccess: () => {
+      toast.success(
+        program?.isActive ? "Program deactivated" : "Program activated",
+      );
+      queryClient.invalidateQueries({ queryKey: ["program", id] });
+      queryClient.invalidateQueries({ queryKey: ["programs"] });
+    },
+    onError: () => toast.error("Failed to update status"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => programService.remove(id!),
+    onSuccess: () => {
+      toast.success("Program deleted");
+      navigate("/programs");
+    },
+    onError: () => toast.error("Failed to delete program"),
   });
 
   if (isLoading) {
@@ -48,6 +91,17 @@ export function ProgramDetailPage() {
   const badgeLabel = program.badge
     ?.replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  // Plans summary
+  const activePlans = plans?.filter((p) => p.isActive) ?? [];
+  const totalPlans = plans?.length ?? 0;
+  const prices = plans?.map((p) => p.price).sort((a, b) => a - b) ?? [];
+  const priceRange =
+    prices.length === 0
+      ? "No plans"
+      : prices.length === 1
+        ? formatPrice(prices[0])
+        : `${formatPrice(prices[0])} – ${formatPrice(prices[prices.length - 1])}`;
 
   return (
     <div className="space-y-6">
@@ -159,9 +213,54 @@ export function ProgramDetailPage() {
         </Link>
       </div>
 
+      {/* Plans summary */}
+      <div className="rounded-xl border bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            <CreditCard className="h-4 w-4" />
+            Plans Overview
+          </h3>
+          <Link
+            to={`/programs/${program.id}/plans`}
+            className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+          >
+            Manage &rarr;
+          </Link>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {totalPlans}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Total Plans
+            </p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {activePlans.length}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Active Plans
+            </p>
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <IndianRupee className="h-4 w-4 text-gray-400" />
+              <p className="text-lg font-bold text-gray-900 dark:text-white">
+                {prices.length > 0 ? priceRange : "—"}
+              </p>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Price Range
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Content cards */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Description — full width on mobile, spans 2 cols on lg */}
+        {/* Description */}
         <div className="rounded-xl border bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
             About this program
@@ -171,7 +270,7 @@ export function ProgramDetailPage() {
           </p>
         </div>
 
-        {/* Slug + meta sidebar */}
+        {/* Details sidebar */}
         <div className="rounded-xl border bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
             Details
@@ -268,6 +367,73 @@ export function ProgramDetailPage() {
           )}
         </div>
       )}
+
+      {/* Status toggle + Danger zone */}
+      <div className="rounded-xl border bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        {/* Toggle active status */}
+        <div className="flex items-center justify-between border-b px-5 py-4 dark:border-gray-700">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Program Status
+            </h3>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              {program.isActive
+                ? "This program is currently visible to users."
+                : "This program is hidden from users."}
+            </p>
+          </div>
+          <button
+            onClick={() => toggleMutation.mutate()}
+            disabled={toggleMutation.isPending}
+            className="flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {program.isActive ? (
+              <>
+                <ToggleRight className="h-8 w-8 text-green-500" />
+                <span className="text-green-600 dark:text-green-400">
+                  Active
+                </span>
+              </>
+            ) : (
+              <>
+                <ToggleLeft className="h-8 w-8 text-gray-400" />
+                <span className="text-gray-500 dark:text-gray-400">
+                  Inactive
+                </span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Delete */}
+        <div className="flex items-center justify-between px-5 py-4">
+          <div>
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-4 w-4" />
+              Danger Zone
+            </h3>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              Permanently delete this program and all associated data.
+            </p>
+          </div>
+          <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
+            <Trash2 className="h-4 w-4" />
+            Delete Program
+          </Button>
+        </div>
+      </div>
+
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        open={showDeleteModal}
+        title="Delete Program"
+        message={`Are you sure you want to delete "${program.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
+        onCancel={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }
