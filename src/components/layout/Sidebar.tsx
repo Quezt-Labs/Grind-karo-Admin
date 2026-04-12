@@ -4,8 +4,6 @@ import {
   Dumbbell,
   Award,
   MessageSquare,
-  ChevronLeft,
-  ChevronRight,
   X,
   LogOut,
 } from "lucide-react";
@@ -34,8 +32,7 @@ const NAV_ITEMS = [
 ];
 
 export function Sidebar() {
-  const { isCollapsed, isMobileOpen, toggle, setMobileOpen } =
-    useSidebarStore();
+  const { isMobileOpen, setMobileOpen } = useSidebarStore();
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -64,8 +61,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-full flex-col bg-sidebar text-white transition-all duration-300 lg:relative lg:z-auto",
-          isCollapsed ? "w-16" : "w-64",
+          "fixed left-0 top-0 z-50 flex h-full w-64 flex-col bg-sidebar text-white transition-all duration-300 lg:relative lg:z-auto",
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
@@ -77,25 +73,13 @@ export function Sidebar() {
               alt={APP_NAME}
               className="h-9 w-9 shrink-0 rounded-md"
             />
-            {!isCollapsed && (
-              <span className="text-lg font-bold truncate">{APP_NAME}</span>
-            )}
+            <span className="text-lg font-bold truncate">{APP_NAME}</span>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
             className="rounded-lg p-1 hover:bg-sidebar-hover lg:hidden"
           >
             <X className="h-5 w-5" />
-          </button>
-          <button
-            onClick={toggle}
-            className="hidden rounded-lg p-1 hover:bg-sidebar-hover lg:block"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
           </button>
         </div>
 
@@ -111,13 +95,11 @@ export function Sidebar() {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileOpen(false)}
-                title={isCollapsed ? item.label : undefined}
                 className={cn(
                   "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   isActive
                     ? "bg-sidebar-active/80 text-white shadow-lg shadow-primary-900/20"
                     : "text-gray-400 hover:bg-white/5 hover:text-white",
-                  isCollapsed && "justify-center px-2",
                 )}
               >
                 {/* Active indicator bar */}
@@ -134,7 +116,7 @@ export function Sidebar() {
                 >
                   {iconMap[item.icon]}
                 </span>
-                {!isCollapsed && <span>{item.label}</span>}
+                <span>{item.label}</span>
               </NavLink>
             );
           })}
@@ -143,12 +125,7 @@ export function Sidebar() {
         {/* Profile & Logout */}
         <div className="border-t border-gray-700/50 p-3">
           {user && (
-            <div
-              className={cn(
-                "flex items-center gap-3 rounded-xl bg-white/5 p-2.5",
-                isCollapsed && "justify-center bg-transparent p-0",
-              )}
-            >
+            <div className="flex items-center gap-3 rounded-xl bg-white/5 p-2.5">
               {user.avatar ? (
                 <img
                   src={user.avatar}
@@ -160,35 +137,20 @@ export function Sidebar() {
                   {(user.name || user.email || "?").charAt(0).toUpperCase()}
                 </div>
               )}
-              {!isCollapsed && (
-                <>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-white">
-                      {user.name || user.email}
-                    </p>
-                    <p className="truncate text-xs text-gray-400">
-                      {user.role}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowLogoutModal(true)}
-                    className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                    title="Logout"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                </>
-              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-white">
+                  {user.name || user.email}
+                </p>
+                <p className="truncate text-xs text-gray-400">{user.role}</p>
+              </div>
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                title="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
-          )}
-          {isCollapsed && user && (
-            <button
-              onClick={() => setShowLogoutModal(true)}
-              className="mt-2 flex w-full items-center justify-center rounded-lg p-2 text-gray-400 transition-colors hover:bg-sidebar-hover hover:text-white"
-              title="Logout"
-            >
-              <LogOut className="h-4.5 w-4.5" />
-            </button>
           )}
         </div>
       </aside>
