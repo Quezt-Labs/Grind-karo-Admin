@@ -4,6 +4,7 @@ import {
   Dumbbell,
   Award,
   CreditCard,
+  MessageSquare,
   ChevronLeft,
   ChevronRight,
   X,
@@ -18,6 +19,7 @@ const iconMap: Record<string, ReactNode> = {
   Dumbbell: <Dumbbell className="h-5 w-5" />,
   CreditCard: <CreditCard className="h-5 w-5" />,
   Award: <Award className="h-5 w-5" />,
+  MessageSquare: <MessageSquare className="h-5 w-5" />,
 };
 
 const NAV_ITEMS = [
@@ -25,6 +27,7 @@ const NAV_ITEMS = [
   { path: "/programs", label: "Programs", icon: "Dumbbell" },
   { path: "/plans", label: "Plans", icon: "CreditCard" },
   { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
+  { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
 ];
 
 export function Sidebar() {

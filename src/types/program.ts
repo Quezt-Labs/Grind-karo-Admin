@@ -89,3 +89,35 @@ export interface SubscribePlanPayload {
   planId: string;
   orderId: string;
 }
+
+// --- Reviews ---
+
+export interface Review {
+  id: string;
+  programId: string;
+  name: string;
+  email: string;
+  rating: number;
+  title: string;
+  review: string;
+  imgUrl?: string;
+  createdAt?: string;
+}
+
+export interface CreateReviewPayload {
+  programId: string;
+  name: string;
+  email: string;
+  rating: number;
+  title: string;
+  review: string;
+  imgUrl?: string;
+}
+
+export interface ReviewsResponse {
+  reviews: Review[];
+  stats?: {
+    averageRating: number;
+    totalReviews: number;
+  };
+}

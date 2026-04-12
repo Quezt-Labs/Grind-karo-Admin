@@ -1,13 +1,12 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
@@ -180,10 +179,22 @@ export function PlansPage() {
           <Spinner size="lg" />
         </div>
       ) : tableData.length === 0 ? (
-        <EmptyState
-          icon={<Plus className="h-12 w-12" />}
-          message="No plans found. Create your first plan."
-        />
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20">
+            <CreditCard className="h-8 w-8 text-primary-500" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+            No plans yet
+          </h3>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+            Create subscription plans for your programs so users can subscribe
+            and access content.
+          </p>
+          <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" />
+            Create Your First Plan
+          </Button>
+        </div>
       ) : (
         <DataTable
           data={tableData}

@@ -5,6 +5,7 @@ export const NAV_ITEMS = [
   { path: "/programs", label: "Programs", icon: "Dumbbell" },
   { path: "/plans", label: "Plans", icon: "CreditCard" },
   { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
+  { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
 ] as const;
 
 export const PAGE_SIZES = [10, 25, 50] as const;
