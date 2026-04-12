@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
-import { Plus, Pencil, Trash2, CreditCard, X } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Plus, Pencil, Trash2, CreditCard, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
@@ -20,7 +20,6 @@ import { PlanFormModal } from "@/components/programs/PlanFormModal";
 type PlanRow = {
   id: string;
   name: string;
-  programName: string;
   price: string;
   validityMonths: string;
   displayOrder: string;
@@ -29,7 +28,6 @@ type PlanRow = {
 
 const planColumns: Column<PlanRow>[] = [
   { key: "name", header: "Plan Name", sortable: true },
-  { key: "programName", header: "Program", sortable: true },
   { key: "price", header: "Price", sortable: true },
   { key: "validityMonths", header: "Validity", sortable: true },
   { key: "displayOrder", header: "Order", sortable: true },
@@ -46,43 +44,37 @@ function formatPrice(paise: number): string {
 }
 
 export function PlansPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const programFilter = searchParams.get("program");
+  const { programId } = useParams<{ programId: string }>();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Plan | null>(null);
   const [editTarget, setEditTarget] = useState<Plan | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: programs, isLoading: programsLoading } = useQuery({
-    queryKey: ["programs"],
-    queryFn: () => programService.getAll(true),
+  const { data: program, isLoading: programLoading } = useQuery({
+    queryKey: ["program", programId],
+    queryFn: () => programService.getById(programId!),
+    enabled: !!programId,
   });
 
-  // Fetch plans for all programs
   const {
-    data: allPlans,
+    data: plans,
     isLoading: plansLoading,
     isError,
   } = useQuery({
-    queryKey: ["all-plans", programs?.map((p) => p.id)],
-    queryFn: async () => {
-      if (!programs || programs.length === 0) return [];
-      const planArrays = await Promise.all(
-        programs.map((p) => planService.getForProgram(p.id).catch(() => [])),
-      );
-      return planArrays.flat();
-    },
-    enabled: !!programs && programs.length > 0,
+    queryKey: ["plans", programId],
+    queryFn: () => planService.getForProgram(programId!),
+    enabled: !!programId,
   });
 
-  const isLoading = programsLoading || plansLoading;
+  const isLoading = programLoading || plansLoading;
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => planService.remove(id),
     onSuccess: () => {
       toast.success("Plan deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["all-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["plans", programId] });
       setDeleteTarget(null);
     },
     onError: () => {
@@ -94,43 +86,28 @@ export function PlansPage() {
     setSearchTerm(value);
   }, []);
 
-  const programMap = useMemo(() => {
-    const map = new Map<string, string>();
-    programs?.forEach((p) => map.set(p.id, p.name));
-    return map;
-  }, [programs]);
-
   const planMap = useMemo(() => {
     const map = new Map<string, Plan>();
-    allPlans?.forEach((p) => map.set(p.id, p));
+    plans?.forEach((p) => map.set(p.id, p));
     return map;
-  }, [allPlans]);
+  }, [plans]);
 
   const tableData: PlanRow[] = useMemo(() => {
-    if (!allPlans) return [];
-    let filtered = allPlans;
-    // Filter by program if URL has ?program=id
-    if (programFilter) {
-      filtered = filtered.filter((p) => p.programId === programFilter);
-    }
+    if (!plans) return [];
+    let filtered = plans;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(term) ||
-          (programMap.get(p.programId) || "").toLowerCase().includes(term),
-      );
+      filtered = plans.filter((p) => p.name.toLowerCase().includes(term));
     }
     return filtered.map((p) => ({
       id: p.id,
       name: p.name,
-      programName: programMap.get(p.programId) || p.programId,
       price: formatPrice(p.price),
       validityMonths: `${p.validityMonths} months`,
       displayOrder: String(p.displayOrder),
       isActive: p.isActive ? "Active" : "Inactive",
     }));
-  }, [allPlans, searchTerm, programMap, programFilter]);
+  }, [plans, searchTerm]);
 
   const actionsColumn = {
     key: "id" as keyof PlanRow & string,
@@ -161,32 +138,28 @@ export function PlansPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Plans"
-        description="Manage subscription plans for your programs"
-      >
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => navigate("/programs")}
+          className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {program?.name ? `${program.name} — Plans` : "Plans"}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Manage subscription plans for this program
+          </p>
+        </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4" />
           Create Plan
         </Button>
-      </PageHeader>
+      </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {programFilter ? (
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-300">
-              Program: {programMap.get(programFilter) || "Unknown"}
-              <button
-                onClick={() => setSearchParams({})}
-                className="ml-1 rounded hover:bg-primary-100 dark:hover:bg-primary-800/40"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </span>
-          </div>
-        ) : (
-          <div />
-        )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         <DebouncedSearch
           onSearch={handleSearch}
           placeholder="Search plans..."
@@ -209,7 +182,7 @@ export function PlansPage() {
             No plans yet
           </h3>
           <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
-            Create subscription plans for your programs so users can subscribe
+            Create subscription plans for this program so users can subscribe
             and access content.
           </p>
           <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
@@ -238,13 +211,13 @@ export function PlansPage() {
       {(showCreateModal || editTarget) && (
         <PlanFormModal
           plan={editTarget}
-          programs={programs || []}
+          programs={program ? [program] : []}
           onClose={() => {
             setShowCreateModal(false);
             setEditTarget(null);
           }}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ["all-plans"] });
+            queryClient.invalidateQueries({ queryKey: ["plans", programId] });
             setShowCreateModal(false);
             setEditTarget(null);
           }}

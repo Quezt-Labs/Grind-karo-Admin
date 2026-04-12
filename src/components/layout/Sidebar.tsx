@@ -82,7 +82,10 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="mt-4 flex-1 space-y-1 px-2">
           {NAV_ITEMS.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive =
+              location.pathname === item.path ||
+              (item.path !== "/" &&
+                location.pathname.startsWith(item.path + "/"));
             return (
               <NavLink
                 key={item.path}

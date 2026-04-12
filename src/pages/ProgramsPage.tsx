@@ -161,11 +161,11 @@ export function ProgramsPage() {
             <MoreVertical className="h-4 w-4" />
           </button>
           {isOpen && (
-            <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            <div className="absolute right-full top-0 z-20 mr-1 w-40 rounded-lg border bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
               <button
                 onClick={() => {
                   setOpenMenuId(null);
-                  navigate(`/plans?program=${program.id}`);
+                  navigate(`/programs/${program.id}/plans`);
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
               >

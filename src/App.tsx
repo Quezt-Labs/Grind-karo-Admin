@@ -25,7 +25,10 @@ export default function App() {
               <Route path="/programs" element={<ProgramsPage />} />
               <Route path="/programs/new" element={<ProgramFormPage />} />
               <Route path="/programs/:id/edit" element={<ProgramFormPage />} />
-              <Route path="/plans" element={<PlansPage />} />
+              <Route
+                path="/programs/:programId/plans"
+                element={<PlansPage />}
+              />
               <Route path="/subscriptions" element={<SubscriptionsPage />} />
               <Route path="/reviews" element={<ReviewsPage />} />
             </Route>
