@@ -7,6 +7,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { ProgramsPage } from "@/pages/ProgramsPage";
 import { ProgramFormPage } from "@/pages/ProgramFormPage";
+import { ProgramDetailPage } from "@/pages/ProgramDetailPage";
 import { PlansPage } from "@/pages/PlansPage";
 import { SubscriptionsPage } from "@/pages/EnrollmentsPage";
 import { ReviewsPage } from "@/pages/ReviewsPage";
@@ -24,6 +25,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/programs" element={<ProgramsPage />} />
               <Route path="/programs/new" element={<ProgramFormPage />} />
+              <Route path="/programs/:id" element={<ProgramDetailPage />} />
               <Route path="/programs/:id/edit" element={<ProgramFormPage />} />
               <Route
                 path="/programs/:programId/plans"

@@ -11,7 +11,7 @@ export const planService = {
   // --- Plans ---
 
   async getForProgram(programId: string): Promise<Plan[]> {
-    const { data } = await api.get(`/plans/program/${programId}`);
+    const { data } = await api.get(`/admin/programs/${programId}/plans`);
     return data.data ?? data;
   },
 
