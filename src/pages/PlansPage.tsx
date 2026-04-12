@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, CreditCard } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Plus, Pencil, Trash2, CreditCard, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
@@ -45,6 +46,8 @@ function formatPrice(paise: number): string {
 }
 
 export function PlansPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const programFilter = searchParams.get("program");
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Plan | null>(null);
   const [editTarget, setEditTarget] = useState<Plan | null>(null);
@@ -106,9 +109,13 @@ export function PlansPage() {
   const tableData: PlanRow[] = useMemo(() => {
     if (!allPlans) return [];
     let filtered = allPlans;
+    // Filter by program if URL has ?program=id
+    if (programFilter) {
+      filtered = filtered.filter((p) => p.programId === programFilter);
+    }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = allPlans.filter(
+      filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(term) ||
           (programMap.get(p.programId) || "").toLowerCase().includes(term),
@@ -123,7 +130,7 @@ export function PlansPage() {
       displayOrder: String(p.displayOrder),
       isActive: p.isActive ? "Active" : "Inactive",
     }));
-  }, [allPlans, searchTerm, programMap]);
+  }, [allPlans, searchTerm, programMap, programFilter]);
 
   const actionsColumn = {
     key: "id" as keyof PlanRow & string,
@@ -164,7 +171,22 @@ export function PlansPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {programFilter ? (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-300">
+              Program: {programMap.get(programFilter) || "Unknown"}
+              <button
+                onClick={() => setSearchParams({})}
+                className="ml-1 rounded hover:bg-primary-100 dark:hover:bg-primary-800/40"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          </div>
+        ) : (
+          <div />
+        )}
         <DebouncedSearch
           onSearch={handleSearch}
           placeholder="Search plans..."

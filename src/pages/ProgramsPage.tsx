@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
@@ -37,7 +37,23 @@ const programColumns: Column<ProgramRow>[] = [
   },
   { key: "category", header: "Category", sortable: true },
   { key: "duration", header: "Duration", sortable: true },
-  { key: "badge", header: "Badge", sortable: false },
+  {
+    key: "badge",
+    header: "Badge",
+    sortable: false,
+    render: (value) => {
+      const badge = value as string;
+      if (badge === "—") return <span className="text-gray-400">—</span>;
+      const label = badge
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      return (
+        <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+          {label}
+        </span>
+      );
+    },
+  },
   {
     key: "isActive",
     header: "Status",
@@ -116,6 +132,13 @@ export function ProgramsPage() {
       return (
         <div className="flex items-center gap-1">
           <Link
+            to={`/plans?program=${program.id}`}
+            className="rounded p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+            title="View Plans"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Link>
+          <Link
             to={`/programs/${program.id}/edit`}
             className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             title="Edit"
@@ -137,10 +160,7 @@ export function ProgramsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <PageHeader
-        title="Programs"
-        description="Manage your coaching programs and pricing tiers"
-      >
+      <PageHeader title="Programs" description="Manage your coaching programs">
         <Link to="/programs/new">
           <Button>
             <Plus className="h-4 w-4" />

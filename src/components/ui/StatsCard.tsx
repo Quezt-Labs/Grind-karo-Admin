@@ -8,6 +8,7 @@ import {
   Activity,
   Dumbbell,
   Award,
+  CreditCard,
   LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -19,6 +20,7 @@ const iconMap: Record<string, ReactNode> = {
   Activity: <Activity className="h-6 w-6" />,
   Dumbbell: <Dumbbell className="h-6 w-6" />,
   Award: <Award className="h-6 w-6" />,
+  CreditCard: <CreditCard className="h-6 w-6" />,
   LayoutDashboard: <LayoutDashboard className="h-6 w-6" />,
 };
 

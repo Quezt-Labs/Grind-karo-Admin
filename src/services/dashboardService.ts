@@ -1,7 +1,8 @@
 import type { StatsData } from "@/types/dashboard";
 import { programService } from "./programService";
 import { enrollmentService } from "./enrollmentService";
-import type { Program } from "@/types/program";
+import { planService } from "./planService";
+import type { Program, Plan } from "@/types/program";
 
 export const dashboardService = {
   async getStats(): Promise<StatsData[]> {
@@ -9,6 +10,15 @@ export const dashboardService = {
       programService.getAll(true).catch(() => [] as Program[]),
       enrollmentService.getAllSubscriptions().catch(() => []),
     ]);
+
+    // Fetch plans for all programs
+    let allPlans: Plan[] = [];
+    if (programs.length > 0) {
+      const planArrays = await Promise.all(
+        programs.map((p) => planService.getForProgram(p.id).catch(() => [])),
+      );
+      allPlans = planArrays.flat();
+    }
 
     const activePrograms = programs.filter((p) => p.isActive);
 
@@ -31,19 +41,19 @@ export const dashboardService = {
       },
       {
         id: "3",
-        title: "Total Subscriptions",
+        title: "Total Plans",
+        value: String(allPlans.length),
+        change: 0,
+        changeType: "increase",
+        icon: "CreditCard",
+      },
+      {
+        id: "4",
+        title: "Subscriptions",
         value: String(subscriptions.length),
         change: 0,
         changeType: "increase",
         icon: "Award",
-      },
-      {
-        id: "4",
-        title: "Categories",
-        value: String(new Set(programs.map((p) => p.category)).size),
-        change: 0,
-        changeType: "increase",
-        icon: "LayoutDashboard",
       },
     ];
   },
