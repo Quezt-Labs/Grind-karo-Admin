@@ -5,7 +5,6 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Spinner } from "@/components/ui/Spinner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { programService } from "@/services/programService";
 import { reviewService } from "@/services/reviewService";
@@ -123,10 +122,17 @@ export function ReviewsPage() {
           <Spinner size="lg" />
         </div>
       ) : tableData.length === 0 ? (
-        <EmptyState
-          icon={<MessageSquare className="h-12 w-12" />}
-          message="No reviews yet"
-        />
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-50 dark:bg-yellow-900/20">
+            <MessageSquare className="h-8 w-8 text-yellow-500" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+            No reviews yet
+          </h3>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+            Reviews will show up here once users start rating your programs.
+          </p>
+        </div>
       ) : (
         <DataTable
           data={tableData}
