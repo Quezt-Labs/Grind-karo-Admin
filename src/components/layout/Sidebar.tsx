@@ -100,7 +100,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="mt-4 flex-1 space-y-1 px-2">
+        <nav className="mt-4 flex-1 space-y-1.5 px-2">
           {NAV_ITEMS.map((item) => {
             const isActive =
               location.pathname === item.path ||
@@ -111,15 +111,29 @@ export function Sidebar() {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileOpen(false)}
+                title={isCollapsed ? item.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-sidebar-active text-white"
-                    : "text-gray-300 hover:bg-sidebar-hover hover:text-white",
+                    ? "bg-sidebar-active/80 text-white shadow-lg shadow-primary-900/20"
+                    : "text-gray-400 hover:bg-white/5 hover:text-white",
                   isCollapsed && "justify-center px-2",
                 )}
               >
-                {iconMap[item.icon]}
+                {/* Active indicator bar */}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary-300" />
+                )}
+                <span
+                  className={cn(
+                    "flex shrink-0 items-center justify-center rounded-lg p-1 transition-colors",
+                    isActive
+                      ? "bg-white/15 text-white"
+                      : "text-gray-400 group-hover:text-white",
+                  )}
+                >
+                  {iconMap[item.icon]}
+                </span>
                 {!isCollapsed && <span>{item.label}</span>}
               </NavLink>
             );
