@@ -4,7 +4,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Pencil, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
+import { ProgramDetailSkeleton } from "@/components/ui/Shimmer";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { ProgramHeroBanner } from "@/components/programs/ProgramHeroBanner";
@@ -60,11 +60,7 @@ export function ProgramDetailPage() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <ProgramDetailSkeleton />;
   }
 
   if (isError || !program) {

@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
+import { FormPageSkeleton } from "@/components/ui/Shimmer";
 import { ProgramFormFields } from "@/components/programs/ProgramFormFields";
 import { ProgramPreview } from "@/components/programs/ProgramPreview";
 import { programService } from "@/services/programService";
@@ -120,11 +120,7 @@ export function ProgramFormPage() {
   }
 
   if (isEdit && loadingExisting) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <FormPageSkeleton />;
   }
 
   return (

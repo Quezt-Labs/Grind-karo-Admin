@@ -5,8 +5,6 @@ import { Plus, Pencil, Trash2, CreditCard, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
@@ -169,11 +167,7 @@ export function PlansPage() {
 
       {isError ? (
         <ErrorAlert message="Failed to load plans. Please try again later." />
-      ) : isLoading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
-      ) : tableData.length === 0 ? (
+      ) : !isLoading && tableData.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20">
             <CreditCard className="h-8 w-8 text-primary-500" />

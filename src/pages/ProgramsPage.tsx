@@ -14,7 +14,7 @@ import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
+
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LevelBadge } from "@/components/ui/LevelBadge";
@@ -284,10 +284,6 @@ export function ProgramsPage() {
       {/* Table */}
       {isError ? (
         <ErrorAlert message="Failed to load programs. Please try again later." />
-      ) : isLoading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
       ) : (
         <DataTable
           data={tableData}

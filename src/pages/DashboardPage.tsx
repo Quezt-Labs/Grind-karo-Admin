@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { DataTable } from "@/components/ui/DataTable";
-import { Spinner } from "@/components/ui/Spinner";
+import { StatsCardsSkeleton } from "@/components/ui/Shimmer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LevelBadge } from "@/components/ui/LevelBadge";
@@ -81,9 +81,7 @@ export function DashboardPage() {
       {statsError ? (
         <ErrorAlert message="Failed to load stats. Please try again later." />
       ) : statsLoading ? (
-        <div className="flex justify-center py-8">
-          <Spinner size="lg" />
-        </div>
+        <StatsCardsSkeleton />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats?.map((stat) => (
