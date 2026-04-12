@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Dumbbell,
   Award,
-  CreditCard,
   MessageSquare,
   ChevronLeft,
   ChevronRight,
@@ -17,7 +16,6 @@ import type { ReactNode } from "react";
 const iconMap: Record<string, ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="h-5 w-5" />,
   Dumbbell: <Dumbbell className="h-5 w-5" />,
-  CreditCard: <CreditCard className="h-5 w-5" />,
   Award: <Award className="h-5 w-5" />,
   MessageSquare: <MessageSquare className="h-5 w-5" />,
 };
@@ -25,7 +23,6 @@ const iconMap: Record<string, ReactNode> = {
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { path: "/programs", label: "Programs", icon: "Dumbbell" },
-  { path: "/plans", label: "Plans", icon: "CreditCard" },
   { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
   { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
 ];

@@ -3,7 +3,6 @@ export const APP_NAME = "Grind Karo";
 export const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { path: "/programs", label: "Programs", icon: "Dumbbell" },
-  { path: "/plans", label: "Plans", icon: "CreditCard" },
   { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
   { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
 ] as const;

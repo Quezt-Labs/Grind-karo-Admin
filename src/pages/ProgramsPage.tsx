@@ -1,7 +1,15 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { Plus, Pencil, Trash2, Eye, EyeOff, ExternalLink } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Plus,
+  Eye,
+  EyeOff,
+  MoreVertical,
+  CreditCard,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
@@ -66,7 +74,21 @@ export function ProgramsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Program | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const {
     data: programs,
@@ -129,29 +151,49 @@ export function ProgramsPage() {
     render: (value: ProgramRow[keyof ProgramRow]) => {
       const program = programMap.get(value as string);
       if (!program) return null;
+      const isOpen = openMenuId === program.id;
       return (
-        <div className="flex items-center gap-1">
-          <Link
-            to={`/plans?program=${program.id}`}
-            className="rounded p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
-            title="View Plans"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </Link>
-          <Link
-            to={`/programs/${program.id}/edit`}
-            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-            title="Edit"
-          >
-            <Pencil className="h-4 w-4" />
-          </Link>
+        <div className="relative" ref={isOpen ? menuRef : undefined}>
           <button
-            onClick={() => setDeleteTarget(program)}
-            className="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-            title="Delete"
+            onClick={() => setOpenMenuId(isOpen ? null : program.id)}
+            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
           >
-            <Trash2 className="h-4 w-4" />
+            <MoreVertical className="h-4 w-4" />
           </button>
+          {isOpen && (
+            <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+              <button
+                onClick={() => {
+                  setOpenMenuId(null);
+                  navigate(`/plans?program=${program.id}`);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <CreditCard className="h-4 w-4" />
+                View Plans
+              </button>
+              <button
+                onClick={() => {
+                  setOpenMenuId(null);
+                  navigate(`/programs/${program.id}/edit`);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  setOpenMenuId(null);
+                  setDeleteTarget(program);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </button>
+            </div>
+          )}
         </div>
       );
     },
