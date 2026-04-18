@@ -56,6 +56,7 @@ export const dashboardService = {
   async getRecentPlans(): Promise<CoachingPlan[]> {
     const plans = await planService.getAll();
     return plans
+      .filter((p) => p.isActive)
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
