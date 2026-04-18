@@ -1,23 +1,29 @@
 import api from "./api";
-import type { Subscription } from "@/types/program";
+import type { CoachingSubscription } from "@/types/program";
+
+export interface SubscriptionFilters {
+  status?: string;
+  userId?: string;
+  planId?: string;
+}
 
 export const enrollmentService = {
-  async getAllSubscriptions(): Promise<Subscription[]> {
-    const { data } = await api.get("/admin/plans/subscriptions");
+  async getAll(filters?: SubscriptionFilters): Promise<CoachingSubscription[]> {
+    const { data } = await api.get("/admin/coaching/subscriptions", {
+      params: filters,
+    });
     return data.data ?? data;
   },
 
-  async getMySubscriptions(): Promise<Subscription[]> {
-    const { data } = await api.get("/plans/my/subscriptions");
+  async getById(id: string): Promise<CoachingSubscription> {
+    const { data } = await api.get(`/admin/coaching/subscriptions/${id}`);
     return data.data ?? data;
   },
 
-  async getMyActiveSubscription(): Promise<Subscription | null> {
-    try {
-      const { data } = await api.get("/plans/my/subscription/active");
-      return data.data ?? data;
-    } catch {
-      return null;
-    }
+  async cancel(id: string): Promise<CoachingSubscription> {
+    const { data } = await api.post(
+      `/admin/coaching/subscriptions/${id}/cancel`,
+    );
+    return data.data ?? data;
   },
 };

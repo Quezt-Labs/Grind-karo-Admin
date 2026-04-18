@@ -5,48 +5,33 @@ import { useAuth } from "@/hooks/useAuth";
 import { authService } from "@/services/authService";
 import { APP_NAME } from "@/utils/constants";
 import { LoginBackground } from "@/components/auth/LoginBackground";
-import { EmailForm, type EmailFormData } from "@/components/auth/EmailForm";
-import { OtpForm, type OtpFormData } from "@/components/auth/OtpForm";
+import {
+  AdminLoginForm,
+  type LoginFormData,
+} from "@/components/auth/AdminLoginForm";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, login } = useAuth();
-  const [step, setStep] = useState<"email" | "otp">("email");
-  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  async function onSendOtp(data: EmailFormData) {
+  async function onLogin(data: LoginFormData) {
     setIsLoading(true);
     try {
-      await authService.sendOtp({ email: data.email });
-      setEmail(data.email);
-      setStep("otp");
-      toast.success("OTP sent to your email!");
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to send OTP";
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function onVerifyOtp(data: OtpFormData) {
-    setIsLoading(true);
-    try {
-      const response = await authService.verifyOtp({
-        email,
-        otp: data.otp,
+      const response = await authService.login({
+        email: data.email,
+        password: data.password,
       });
       login(response.user, response.accessToken, response.refreshToken);
       toast.success(`Welcome, ${response.user.name || response.user.email}!`);
       navigate("/dashboard");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Invalid OTP";
+      const message =
+        error instanceof Error ? error.message : "Invalid credentials";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -72,23 +57,11 @@ export function LoginPage() {
               {APP_NAME}
             </h1>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              {step === "email"
-                ? "Sign in to your admin panel"
-                : `Enter the OTP sent to ${email}`}
+              Sign in to your admin panel
             </p>
           </div>
 
-          {step === "email" ? (
-            <EmailForm isLoading={isLoading} onSubmit={onSendOtp} />
-          ) : (
-            <OtpForm
-              email={email}
-              isLoading={isLoading}
-              onSubmit={onVerifyOtp}
-              onBack={() => setStep("email")}
-              onResend={() => onSendOtp({ email })}
-            />
-          )}
+          <AdminLoginForm isLoading={isLoading} onSubmit={onLogin} />
         </div>
       </div>
     </div>

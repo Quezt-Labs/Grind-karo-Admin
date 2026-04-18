@@ -1,125 +1,135 @@
-export type ProgramLevel =
-  | "BEGINNER"
-  | "INTERMEDIATE"
-  | "ADVANCED"
-  | "ALL_LEVELS";
+// ---- Enums --------------------------------------------------------------
+export type CoachingSubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 
-export interface Program {
+// ---- Add-ons (public inline) --------------------------------------------
+export interface PublicAddon {
   id: string;
   slug: string;
   name: string;
-  description: string;
-  tagline?: string;
-  level: ProgramLevel;
-  duration: number;
-  frequency: string;
-  highlights: string[];
-  goals: string[];
-  badge?: string;
-  category: string;
-  image?: string | null;
-  sortOrder: number;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  description: string | null;
+  price: number; // effective price (paise)
 }
 
-export interface CreateProgramPayload {
+// ---- Plans --------------------------------------------------------------
+export interface CoachingPlan {
+  id: string;
   slug: string;
   name: string;
-  description: string;
-  tagline?: string;
-  level: ProgramLevel;
-  duration: number;
-  frequency: string;
-  highlights: string[];
-  goals: string[];
-  badge?: string;
-  category: string;
-  image?: string | null;
+  tagline: string | null;
+  description: string | null;
+  price: number; // paise
+  validityMonths: number;
+  includedFeatures: string[];
+  excludedFeatures: string[];
+  badge: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  availableAddons: PublicAddon[];
+  totalReviews: number;
+  averageRating: number;
+}
+
+export interface CreateCoachingPlanPayload {
+  slug: string;
+  name: string;
+  tagline?: string | null;
+  description?: string | null;
+  price: number;
+  validityMonths: number;
+  includedFeatures: string[];
+  excludedFeatures?: string[];
+  badge?: string | null;
+  displayOrder?: number;
+  isActive?: boolean;
+}
+
+export type UpdateCoachingPlanPayload = Partial<CreateCoachingPlanPayload>;
+
+// ---- Add-ons (admin) ----------------------------------------------------
+export interface CoachingAddon {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  price: number;
+  isActive: boolean;
   sortOrder: number;
-  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type UpdateProgramPayload = Partial<CreateProgramPayload>;
-
-// --- Plans ---
-
-export interface Plan {
-  id: string;
-  programId: string;
-  program?: Program;
+export interface CreateCoachingAddonPayload {
+  slug: string;
   name: string;
-  description: string;
+  description?: string | null;
+  price: number;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export type UpdateCoachingAddonPayload = Partial<CreateCoachingAddonPayload>;
+
+// ---- Plan ↔ Add-on links ------------------------------------------------
+export interface PlanAddonLink {
+  planId: string;
+  addonId: string;
+  priceOverride: number | null;
+  createdAt: string;
+}
+
+export interface LinkAddonPayload {
+  addonId: string;
+  priceOverride?: number | null;
+}
+
+export interface UpdateAddonLinkPayload {
+  priceOverride?: number | null;
+}
+
+// ---- Subscriptions ------------------------------------------------------
+export interface PlanSnapshot {
+  slug: string;
+  name: string;
   price: number;
   validityMonths: number;
-  features: string[];
-  displayOrder: number;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
-export interface CreatePlanPayload {
-  programId: string;
+export interface AddonSnapshot {
+  addonId: string;
+  slug: string;
   name: string;
-  description: string;
-  price: number;
-  validityMonths: number;
-  features: string[];
-  displayOrder: number;
-  isActive: boolean;
+  pricePaid: number;
 }
 
-export type UpdatePlanPayload = Partial<CreatePlanPayload>;
+export interface CoachingSubscription {
+  id: string;
+  userId: string;
+  planId: string;
+  status: CoachingSubscriptionStatus;
+  startDate: string;
+  expiresAt: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string | null;
+  baseAmount: number;
+  addonsAmount: number;
+  totalAmount: number;
+  planSnapshot: PlanSnapshot;
+  addonsSnapshot: AddonSnapshot[];
+  createdAt: string;
+  updatedAt: string;
+}
 
-// --- Subscriptions ---
-
-export interface Subscription {
+// ---- Reviews ------------------------------------------------------------
+export interface CoachingReview {
   id: string;
   planId: string;
-  plan?: Plan;
-  userId?: string;
-  orderId: string;
-  status?: string;
-  expiresAt?: string;
-  subscribedAt?: string;
-  createdAt?: string;
-}
-
-export interface SubscribePlanPayload {
-  planId: string;
-  orderId: string;
-}
-
-// --- Reviews ---
-
-export interface Review {
-  id: string;
-  programId: string;
   name: string;
   email: string;
   rating: number;
   title: string;
   review: string;
-  imgUrl?: string;
-  createdAt?: string;
-}
-
-export interface CreateReviewPayload {
-  programId: string;
-  name: string;
-  email: string;
-  rating: number;
-  title: string;
-  review: string;
-  imgUrl?: string;
-}
-
-export interface ReviewsResponse {
-  reviews: Review[];
-  stats?: {
-    averageRating: number;
-    totalReviews: number;
-  };
+  imgUrl: string | null;
+  createdAt: string;
 }

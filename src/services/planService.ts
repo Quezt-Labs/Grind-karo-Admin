@@ -1,69 +1,72 @@
 import api from "./api";
 import type {
-  Plan,
-  CreatePlanPayload,
-  UpdatePlanPayload,
-  Subscription,
-  SubscribePlanPayload,
+  CoachingPlan,
+  CreateCoachingPlanPayload,
+  UpdateCoachingPlanPayload,
+  PlanAddonLink,
+  LinkAddonPayload,
+  UpdateAddonLinkPayload,
 } from "@/types/program";
 
 export const planService = {
-  // --- Plans ---
-
-  async getForProgram(programId: string): Promise<Plan[]> {
-    const { data } = await api.get(`/admin/programs/${programId}/plans`);
+  async getAll(): Promise<CoachingPlan[]> {
+    const { data } = await api.get("/admin/coaching/plans");
     return data.data ?? data;
   },
 
-  async getById(planId: string): Promise<Plan> {
-    const { data } = await api.get(`/plans/${planId}`);
+  async getById(planId: string): Promise<CoachingPlan> {
+    const { data } = await api.get(`/admin/coaching/plans/${planId}`);
     return data.data ?? data;
   },
 
-  async create(payload: CreatePlanPayload): Promise<Plan> {
-    const { data } = await api.post("/admin/plans", payload);
+  async create(payload: CreateCoachingPlanPayload): Promise<CoachingPlan> {
+    const { data } = await api.post("/admin/coaching/plans", payload);
     return data.data ?? data;
   },
 
-  async update(planId: string, payload: UpdatePlanPayload): Promise<Plan> {
-    const { data } = await api.patch(`/admin/plans/${planId}`, payload);
+  async update(
+    planId: string,
+    payload: UpdateCoachingPlanPayload,
+  ): Promise<CoachingPlan> {
+    const { data } = await api.patch(
+      `/admin/coaching/plans/${planId}`,
+      payload,
+    );
     return data.data ?? data;
   },
 
-  async remove(planId: string): Promise<void> {
-    await api.delete(`/admin/plans/${planId}`);
+  async remove(planId: string, hard = false): Promise<void> {
+    await api.delete(`/admin/coaching/plans/${planId}`, {
+      params: hard ? { hard: true } : undefined,
+    });
   },
 
-  // --- Subscriptions ---
+  // --- Plan ↔ Add-on links ---
 
-  async subscribe(payload: SubscribePlanPayload): Promise<Subscription> {
-    const { data } = await api.post("/plans/subscribe", payload);
+  async linkAddon(
+    planId: string,
+    payload: LinkAddonPayload,
+  ): Promise<PlanAddonLink> {
+    const { data } = await api.post(
+      `/admin/coaching/plans/${planId}/addons`,
+      payload,
+    );
     return data.data ?? data;
   },
 
-  async getMySubscriptions(): Promise<Subscription[]> {
-    const { data } = await api.get("/plans/my/subscriptions");
+  async updateAddonLink(
+    planId: string,
+    addonId: string,
+    payload: UpdateAddonLinkPayload,
+  ): Promise<PlanAddonLink> {
+    const { data } = await api.patch(
+      `/admin/coaching/plans/${planId}/addons/${addonId}`,
+      payload,
+    );
     return data.data ?? data;
   },
 
-  async getMyActiveSubscription(): Promise<Subscription> {
-    const { data } = await api.get("/plans/my/subscription/active");
-    return data.data ?? data;
-  },
-
-  async cancelSubscription(subscriptionId: string): Promise<void> {
-    await api.delete(`/plans/${subscriptionId}`);
-  },
-
-  // --- Admin Subscriptions ---
-
-  async getAllSubscriptions(): Promise<Subscription[]> {
-    const { data } = await api.get("/admin/plans/subscriptions");
-    return data.data ?? data;
-  },
-
-  async getSubscriptionsByUser(userId: string): Promise<Subscription[]> {
-    const { data } = await api.get(`/admin/plans/subscriptions/user/${userId}`);
-    return data.data ?? data;
+  async unlinkAddon(planId: string, addonId: string): Promise<void> {
+    await api.delete(`/admin/coaching/plans/${planId}/addons/${addonId}`);
   },
 };

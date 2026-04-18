@@ -7,30 +7,32 @@ import { DataTable } from "@/components/ui/DataTable";
 import { StatsCardsSkeleton } from "@/components/ui/Shimmer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
-import { LevelBadge } from "@/components/ui/LevelBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { dashboardService } from "@/services/dashboardService";
 import type { Column } from "@/types/dashboard";
 
-type ProgramRow = {
+function formatPrice(paise: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(paise / 100);
+}
+
+type PlanRow = {
   id: string;
   name: string;
-  level: string;
-  category: string;
-  duration: string;
+  slug: string;
+  price: string;
+  validityMonths: string;
   isActive: string;
 };
 
-const recentProgramColumns: Column<ProgramRow>[] = [
+const recentPlanColumns: Column<PlanRow>[] = [
   { key: "name", header: "Name", sortable: true },
-  {
-    key: "level",
-    header: "Level",
-    sortable: true,
-    render: (value) => <LevelBadge level={value as string} />,
-  },
-  { key: "category", header: "Category", sortable: true },
-  { key: "duration", header: "Duration", sortable: false },
+  { key: "slug", header: "Slug", sortable: true },
+  { key: "price", header: "Price", sortable: true },
+  { key: "validityMonths", header: "Validity", sortable: false },
   {
     key: "isActive",
     header: "Status",
@@ -50,31 +52,31 @@ export function DashboardPage() {
   });
 
   const {
-    data: recentPrograms,
-    isLoading: programsLoading,
-    isError: programsError,
+    data: recentPlans,
+    isLoading: plansLoading,
+    isError: plansError,
   } = useQuery({
-    queryKey: ["dashboard-recent-programs"],
-    queryFn: dashboardService.getRecentPrograms,
+    queryKey: ["dashboard-recent-plans"],
+    queryFn: dashboardService.getRecentPlans,
   });
 
-  const programRows: ProgramRow[] = useMemo(() => {
-    if (!recentPrograms) return [];
-    return recentPrograms.map((p) => ({
+  const planRows: PlanRow[] = useMemo(() => {
+    if (!recentPlans) return [];
+    return recentPlans.map((p) => ({
       id: p.id,
       name: p.name,
-      level: p.level,
-      category: p.category,
-      duration: `${p.duration} weeks`,
+      slug: p.slug,
+      price: formatPrice(p.price),
+      validityMonths: `${p.validityMonths} months`,
       isActive: p.isActive ? "Active" : "Inactive",
     }));
-  }, [recentPrograms]);
+  }, [recentPlans]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Overview of your platform metrics and programs"
+        description="Overview of your coaching platform metrics"
       />
 
       {/* Stats cards */}
@@ -90,27 +92,27 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Recent Programs */}
+      {/* Recent Plans */}
       <div className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Recent Programs
+            Recent Plans
           </h2>
           <Link
-            to="/programs"
+            to="/plans"
             className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
           >
             View all <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
-        {programsError ? (
-          <ErrorAlert message="Failed to load programs. Please try again later." />
+        {plansError ? (
+          <ErrorAlert message="Failed to load plans. Please try again later." />
         ) : (
           <DataTable
-            data={programRows}
-            columns={recentProgramColumns}
-            isLoading={programsLoading}
+            data={planRows}
+            columns={recentPlanColumns}
+            isLoading={plansLoading}
           />
         )}
       </div>

@@ -1,4 +1,9 @@
-import { useForm, useFieldArray } from "react-hook-form";
+import {
+  useForm,
+  useFieldArray,
+  type Resolver,
+  type UseFormRegister,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -6,18 +11,23 @@ import { X, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { planService } from "@/services/planService";
-import type { Plan, Program } from "@/types/program";
+import type { CoachingPlan } from "@/types/program";
 
 const planSchema = z.object({
-  programId: z.string().min(1, "Program is required"),
+  slug: z
+    .string()
+    .min(1, "Slug is required")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Must be kebab-case"),
   name: z.string().min(1, "Name is required"),
-  description: z.string().min(1, "Description is required"),
-  price: z.coerce.number().min(100, "Min ₹1"),
+  tagline: z.string().optional(),
+  description: z.string().optional(),
+  price: z.coerce.number().min(100, "Min ₹1 (100 paise)"),
   validityMonths: z.coerce.number().min(1, "Min 1 month"),
-  features: z.array(z.object({ value: z.string() })),
+  includedFeatures: z.array(z.object({ value: z.string() })),
+  excludedFeatures: z.array(z.object({ value: z.string() })),
+  badge: z.string().optional(),
   displayOrder: z.coerce.number().min(0),
   isActive: z.boolean(),
 });
@@ -25,15 +35,13 @@ const planSchema = z.object({
 type PlanFormData = z.infer<typeof planSchema>;
 
 interface PlanFormModalProps {
-  plan: Plan | null;
-  programs: Program[];
+  plan: CoachingPlan | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 export function PlanFormModal({
   plan,
-  programs,
   onClose,
   onSuccess,
 }: PlanFormModalProps) {
@@ -45,31 +53,42 @@ export function PlanFormModal({
     control,
     formState: { errors },
   } = useForm<PlanFormData>({
-    resolver: zodResolver(planSchema) as any,
+    resolver: zodResolver(planSchema) as Resolver<PlanFormData>,
     defaultValues: plan
       ? {
-          programId: plan.programId,
+          slug: plan.slug,
           name: plan.name,
-          description: plan.description,
+          tagline: plan.tagline || "",
+          description: plan.description || "",
           price: plan.price,
           validityMonths: plan.validityMonths,
-          features: plan.features.map((f) => ({ value: f })),
+          includedFeatures: plan.includedFeatures.length
+            ? plan.includedFeatures.map((f) => ({ value: f }))
+            : [{ value: "" }],
+          excludedFeatures: plan.excludedFeatures.length
+            ? plan.excludedFeatures.map((f) => ({ value: f }))
+            : [{ value: "" }],
+          badge: plan.badge || "",
           displayOrder: plan.displayOrder,
           isActive: plan.isActive,
         }
       : {
-          programId: "",
+          slug: "",
           name: "",
+          tagline: "",
           description: "",
           price: 0,
           validityMonths: 3,
-          features: [{ value: "" }],
+          includedFeatures: [{ value: "" }],
+          excludedFeatures: [{ value: "" }],
+          badge: "",
           displayOrder: 0,
           isActive: true,
         },
   });
 
-  const featuresArray = useFieldArray({ control, name: "features" });
+  const includedArray = useFieldArray({ control, name: "includedFeatures" });
+  const excludedArray = useFieldArray({ control, name: "excludedFeatures" });
 
   const createMutation = useMutation({
     mutationFn: planService.create,
@@ -92,8 +111,21 @@ export function PlanFormModal({
 
   function onSubmit(data: PlanFormData) {
     const payload = {
-      ...data,
-      features: data.features.map((f) => f.value).filter(Boolean),
+      slug: data.slug,
+      name: data.name,
+      tagline: data.tagline || null,
+      description: data.description || null,
+      price: data.price,
+      validityMonths: data.validityMonths,
+      includedFeatures: data.includedFeatures
+        .map((f) => f.value)
+        .filter(Boolean),
+      excludedFeatures: data.excludedFeatures
+        .map((f) => f.value)
+        .filter(Boolean),
+      badge: data.badge || null,
+      displayOrder: data.displayOrder,
+      isActive: data.isActive,
     };
 
     if (isEdit && plan) {
@@ -103,14 +135,9 @@ export function PlanFormModal({
     }
   }
 
-  const programOptions = programs.map((p) => ({
-    value: p.id,
-    label: p.name,
-  }));
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+      <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {isEdit ? "Edit Plan" : "Create Plan"}
@@ -123,33 +150,31 @@ export function PlanFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-          <Select
-            id="programId"
-            label="Program"
-            options={programOptions}
-            error={errors.programId?.message}
-            {...register("programId")}
-          />
-
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              id="plan-slug"
+              label="Slug"
+              placeholder="mega"
+              error={errors.slug?.message}
+              {...register("slug")}
+            />
             <Input
               id="plan-name"
               label="Plan Name"
-              placeholder="Premium"
+              placeholder="Grind Karo — MEGA"
               error={errors.name?.message}
               {...register("name")}
             />
-            <Input
-              id="plan-price"
-              label="Price (paise)"
-              type="number"
-              min={0}
-              placeholder="449900"
-              error={errors.price?.message}
-              {...register("price")}
-            />
           </div>
+
+          <Input
+            id="plan-tagline"
+            label="Tagline"
+            placeholder="Best value for serious athletes"
+            error={errors.tagline?.message}
+            {...register("tagline")}
+          />
 
           <Textarea
             id="plan-description"
@@ -160,13 +185,22 @@ export function PlanFormModal({
             {...register("description")}
           />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input
+              id="plan-price"
+              label="Price (paise)"
+              type="number"
+              min={0}
+              placeholder="499900"
+              error={errors.price?.message}
+              {...register("price")}
+            />
             <Input
               id="plan-validity"
               label="Validity (months)"
               type="number"
               min={1}
-              placeholder="6"
+              placeholder="3"
               error={errors.validityMonths?.message}
               {...register("validityMonths")}
             />
@@ -180,41 +214,32 @@ export function PlanFormModal({
             />
           </div>
 
-          {/* Features */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Features
-              </label>
-              <button
-                type="button"
-                onClick={() => featuresArray.append({ value: "" })}
-                className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
-              >
-                <Plus className="h-3 w-3" /> Add
-              </button>
-            </div>
-            <div className="space-y-2">
-              {featuresArray.fields.map((field, index) => (
-                <div key={field.id} className="flex gap-2">
-                  <input
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    placeholder={`Feature ${index + 1}`}
-                    {...register(`features.${index}.value`)}
-                  />
-                  {featuresArray.fields.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => featuresArray.remove(index)}
-                      className="rounded p-1 text-gray-400 hover:text-red-500"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          <Input
+            id="plan-badge"
+            label="Badge (optional)"
+            placeholder="BEST_VALUE"
+            {...register("badge")}
+          />
+
+          {/* Included Features */}
+          <FeatureList
+            label="Included Features"
+            fields={includedArray.fields}
+            onAppend={() => includedArray.append({ value: "" })}
+            onRemove={(i) => includedArray.remove(i)}
+            register={register}
+            prefix="includedFeatures"
+          />
+
+          {/* Excluded Features */}
+          <FeatureList
+            label="Excluded Features"
+            fields={excludedArray.fields}
+            onAppend={() => excludedArray.append({ value: "" })}
+            onRemove={(i) => excludedArray.remove(i)}
+            register={register}
+            prefix="excludedFeatures"
+          />
 
           <label className="flex cursor-pointer items-center gap-2">
             <input
@@ -236,6 +261,59 @@ export function PlanFormModal({
             </Button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function FeatureList({
+  label,
+  fields,
+  onAppend,
+  onRemove,
+  register,
+  prefix,
+}: {
+  label: string;
+  fields: { id: string }[];
+  onAppend: () => void;
+  onRemove: (index: number) => void;
+  register: UseFormRegister<PlanFormData>;
+  prefix: "includedFeatures" | "excludedFeatures";
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label}
+        </label>
+        <button
+          type="button"
+          onClick={onAppend}
+          className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
+        >
+          <Plus className="h-3 w-3" /> Add
+        </button>
+      </div>
+      <div className="space-y-2">
+        {fields.map((field, index) => (
+          <div key={field.id} className="flex gap-2">
+            <input
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              placeholder={`Feature ${index + 1}`}
+              {...register(`${prefix}.${index}.value` as const)}
+            />
+            {fields.length > 1 && (
+              <button
+                type="button"
+                onClick={() => onRemove(index)}
+                className="rounded p-1 text-gray-400 hover:text-red-500"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -1,56 +1,51 @@
 import type { StatsData } from "@/types/dashboard";
-import { programService } from "./programService";
-import { enrollmentService } from "./enrollmentService";
 import { planService } from "./planService";
-import type { Program, Plan } from "@/types/program";
+import { addonService } from "./addonService";
+import { enrollmentService } from "./enrollmentService";
+import type { CoachingPlan } from "@/types/program";
 
 export const dashboardService = {
   async getStats(): Promise<StatsData[]> {
-    const [programs, subscriptions] = await Promise.all([
-      programService.getAll(true).catch(() => [] as Program[]),
-      enrollmentService.getAllSubscriptions().catch(() => []),
+    const [plans, addons, subscriptions] = await Promise.all([
+      planService.getAll().catch(() => []),
+      addonService.getAll().catch(() => []),
+      enrollmentService.getAll().catch(() => []),
     ]);
 
-    // Fetch plans for all programs
-    let allPlans: Plan[] = [];
-    if (programs.length > 0) {
-      const planArrays = await Promise.all(
-        programs.map((p) => planService.getForProgram(p.id).catch(() => [])),
-      );
-      allPlans = planArrays.flat();
-    }
-
-    const activePrograms = programs.filter((p) => p.isActive);
+    const activePlans = plans.filter((p) => p.isActive);
+    const activeSubscriptions = subscriptions.filter(
+      (s) => s.status === "ACTIVE",
+    );
 
     return [
       {
         id: "1",
-        title: "Total Programs",
-        value: String(programs.length),
+        title: "Total Plans",
+        value: String(plans.length),
         change: 0,
         changeType: "increase",
-        icon: "Dumbbell",
+        icon: "CreditCard",
       },
       {
         id: "2",
-        title: "Active Programs",
-        value: String(activePrograms.length),
+        title: "Active Plans",
+        value: String(activePlans.length),
         change: 0,
         changeType: "increase",
         icon: "Activity",
       },
       {
         id: "3",
-        title: "Total Plans",
-        value: String(allPlans.length),
+        title: "Add-ons",
+        value: String(addons.length),
         change: 0,
         changeType: "increase",
-        icon: "CreditCard",
+        icon: "Puzzle",
       },
       {
         id: "4",
-        title: "Subscriptions",
-        value: String(subscriptions.length),
+        title: "Active Subscriptions",
+        value: String(activeSubscriptions.length),
         change: 0,
         changeType: "increase",
         icon: "Award",
@@ -58,13 +53,12 @@ export const dashboardService = {
     ];
   },
 
-  async getRecentPrograms(): Promise<Program[]> {
-    const programs = await programService.getAll(true);
-    return programs
+  async getRecentPlans(): Promise<CoachingPlan[]> {
+    const plans = await planService.getAll();
+    return plans
       .sort(
         (a, b) =>
-          new Date(b.createdAt || 0).getTime() -
-          new Date(a.createdAt || 0).getTime(),
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )
       .slice(0, 5);
   },

@@ -1,33 +1,17 @@
 export interface User {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
-  phone?: string;
-  role: string;
-  avatar?: string;
+  role: "ADMIN";
 }
 
-export interface SendOtpPayload {
+export interface AdminLoginPayload {
   email: string;
-}
-
-export interface VerifyOtpPayload {
-  email: string;
-  otp: string;
-}
-
-export interface RefreshTokenPayload {
-  refreshToken: string;
+  password: string;
 }
 
 export interface AuthResponse {
   user: User;
   accessToken: string;
   refreshToken: string;
-}
-
-// Keep for backwards compat with authStore
-export interface LoginCredentials {
-  email: string;
-  password: string;
 }

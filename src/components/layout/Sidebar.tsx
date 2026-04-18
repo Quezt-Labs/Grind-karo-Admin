@@ -1,7 +1,8 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  Dumbbell,
+  CreditCard,
+  Puzzle,
   Award,
   MessageSquare,
   X,
@@ -19,14 +20,16 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 
 const iconMap: Record<string, ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="h-5 w-5" />,
-  Dumbbell: <Dumbbell className="h-5 w-5" />,
+  CreditCard: <CreditCard className="h-5 w-5" />,
+  Puzzle: <Puzzle className="h-5 w-5" />,
   Award: <Award className="h-5 w-5" />,
   MessageSquare: <MessageSquare className="h-5 w-5" />,
 };
 
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { path: "/programs", label: "Programs", icon: "Dumbbell" },
+  { path: "/plans", label: "Coaching", icon: "CreditCard" },
+  { path: "/addons", label: "Add-ons", icon: "Puzzle" },
   { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
   { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
 ];
@@ -126,20 +129,12 @@ export function Sidebar() {
         <div className="border-t border-gray-700/50 p-3">
           {user && (
             <div className="flex items-center gap-3 rounded-xl bg-white/5 p-2.5">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/10"
-                />
-              ) : (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-primary-500 to-primary-700 text-sm font-semibold text-white ring-2 ring-white/10">
-                  {(user.name || user.email || "?").charAt(0).toUpperCase()}
-                </div>
-              )}
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-primary-500 to-primary-700 text-sm font-semibold text-white ring-2 ring-white/10">
+                {(user.name || user.email || "?").charAt(0).toUpperCase()}
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-white">
-                  {user.name || user.email}
+                  {user.name ?? user.email}
                 </p>
                 <p className="truncate text-xs text-gray-400">{user.role}</p>
               </div>

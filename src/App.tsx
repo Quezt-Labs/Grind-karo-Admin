@@ -5,10 +5,9 @@ import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
-import { ProgramsPage } from "@/pages/ProgramsPage";
-import { ProgramFormPage } from "@/pages/ProgramFormPage";
-import { ProgramDetailPage } from "@/pages/ProgramDetailPage";
 import { PlansPage } from "@/pages/PlansPage";
+import { PlanDetailPage } from "@/pages/PlanDetailPage";
+import { AddonsPage } from "@/pages/AddonsPage";
 import { SubscriptionsPage } from "@/pages/EnrollmentsPage";
 import { ReviewsPage } from "@/pages/ReviewsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
@@ -23,14 +22,9 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/programs" element={<ProgramsPage />} />
-              <Route path="/programs/new" element={<ProgramFormPage />} />
-              <Route path="/programs/:id" element={<ProgramDetailPage />} />
-              <Route path="/programs/:id/edit" element={<ProgramFormPage />} />
-              <Route
-                path="/programs/:programId/plans"
-                element={<PlansPage />}
-              />
+              <Route path="/plans" element={<PlansPage />} />
+              <Route path="/plans/:id" element={<PlanDetailPage />} />
+              <Route path="/addons" element={<AddonsPage />} />
               <Route path="/subscriptions" element={<SubscriptionsPage />} />
               <Route path="/reviews" element={<ReviewsPage />} />
             </Route>

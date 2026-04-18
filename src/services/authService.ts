@@ -1,18 +1,9 @@
 import api from "./api";
-import type {
-  SendOtpPayload,
-  VerifyOtpPayload,
-  AuthResponse,
-} from "@/types/auth";
+import type { AdminLoginPayload, AuthResponse } from "@/types/auth";
 
 export const authService = {
-  async sendOtp(payload: SendOtpPayload): Promise<{ message: string }> {
-    const { data } = await api.post("/auth/otp/send", payload);
-    return data;
-  },
-
-  async verifyOtp(payload: VerifyOtpPayload): Promise<AuthResponse> {
-    const { data } = await api.post("/auth/otp/verify", payload);
+  async login(payload: AdminLoginPayload): Promise<AuthResponse> {
+    const { data } = await api.post("/auth/admin/login", payload);
     return data;
   },
 

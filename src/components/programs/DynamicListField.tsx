@@ -1,12 +1,16 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { FormSection } from "@/components/ui/FormSection";
-import type { UseFieldArrayReturn, UseFormRegister } from "react-hook-form";
+import type {
+  UseFieldArrayReturn,
+  UseFormRegister,
+  FieldValues,
+} from "react-hook-form";
 
 interface DynamicListFieldProps {
   title: string;
-  fieldArray: UseFieldArrayReturn<any, any, "id">;
-  register: UseFormRegister<any>;
+  fieldArray: UseFieldArrayReturn<FieldValues, string, "id">;
+  register: UseFormRegister<FieldValues>;
   name: string;
   placeholder?: string;
 }
