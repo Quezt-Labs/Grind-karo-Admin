@@ -11,7 +11,9 @@ import { X, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { BADGE_OPTIONS } from "@/components/ui/LevelBadge";
 import { planService } from "@/services/planService";
 import type { CoachingPlan } from "@/types/program";
 
@@ -214,10 +216,10 @@ export function PlanFormModal({
             />
           </div>
 
-          <Input
+          <Select
             id="plan-badge"
             label="Badge (optional)"
-            placeholder="BEST_VALUE"
+            options={BADGE_OPTIONS}
             {...register("badge")}
           />
 

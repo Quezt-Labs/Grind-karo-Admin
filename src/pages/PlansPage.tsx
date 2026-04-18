@@ -7,6 +7,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { LevelBadge } from "@/components/ui/LevelBadge";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -40,7 +41,17 @@ const planColumns: Column<PlanRow>[] = [
   { key: "slug", header: "Slug", sortable: true },
   { key: "price", header: "Price", sortable: true },
   { key: "validityMonths", header: "Validity", sortable: true },
-  { key: "badge", header: "Badge", sortable: false },
+  {
+    key: "badge",
+    header: "Badge",
+    sortable: false,
+    render: (value) =>
+      value === "—" ? (
+        <span className="text-gray-400">—</span>
+      ) : (
+        <LevelBadge level={value as string} />
+      ),
+  },
   { key: "displayOrder", header: "Order", sortable: true },
   {
     key: "isActive",
