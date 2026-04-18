@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Plus, Pencil, Trash2, CreditCard, Eye } from "lucide-react";
 import toast from "react-hot-toast";
+import { cn } from "@/utils/cn";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -62,9 +63,12 @@ const planColumns: Column<PlanRow>[] = [
   { key: "reviews", header: "Reviews", sortable: true },
 ];
 
+type StatusFilter = "all" | "active" | "inactive";
+
 export function PlansPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deleteTarget, setDeleteTarget] = useState<CoachingPlan | null>(null);
   const [editTarget, setEditTarget] = useState<CoachingPlan | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -101,12 +105,28 @@ export function PlansPage() {
     return map;
   }, [plans]);
 
+  const statusCounts = useMemo(() => {
+    if (!plans) return { all: 0, active: 0, inactive: 0 };
+    return {
+      all: plans.length,
+      active: plans.filter((p) => p.isActive).length,
+      inactive: plans.filter((p) => !p.isActive).length,
+    };
+  }, [plans]);
+
   const tableData: PlanRow[] = useMemo(() => {
     if (!plans) return [];
     let filtered = plans;
+
+    if (statusFilter === "active") {
+      filtered = filtered.filter((p) => p.isActive);
+    } else if (statusFilter === "inactive") {
+      filtered = filtered.filter((p) => !p.isActive);
+    }
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = plans.filter(
+      filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(term) ||
           p.slug.toLowerCase().includes(term),
@@ -125,7 +145,7 @@ export function PlansPage() {
         ? `${p.averageRating.toFixed(1)}★ (${p.totalReviews})`
         : "—",
     }));
-  }, [plans, searchTerm]);
+  }, [plans, searchTerm, statusFilter]);
 
   const actionsColumn = {
     key: "id" as keyof PlanRow & string,
@@ -174,7 +194,47 @@ export function PlansPage() {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+          {(
+            [
+              { key: "all", label: "All", count: statusCounts.all },
+              { key: "active", label: "Active", count: statusCounts.active },
+              {
+                key: "inactive",
+                label: "Inactive",
+                count: statusCounts.inactive,
+              },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setStatusFilter(tab.key)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                statusFilter === tab.key
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+              )}
+            >
+              {tab.label}
+              <span
+                className={cn(
+                  "ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-medium",
+                  statusFilter === tab.key
+                    ? tab.key === "active"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : tab.key === "inactive"
+                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        : "bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300"
+                    : "bg-gray-200/70 text-gray-500 dark:bg-gray-600/50 dark:text-gray-400",
+                )}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
         <DebouncedSearch
           onSearch={handleSearch}
           placeholder="Search plans..."
