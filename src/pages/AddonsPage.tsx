@@ -14,12 +14,12 @@ import { AddonFormModal } from "@/components/coaching/AddonFormModal";
 import type { Column } from "@/types/dashboard";
 import type { CoachingAddon } from "@/types/program";
 
-function formatPrice(paise: number): string {
+function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(paise / 100);
+  }).format(rupees);
 }
 
 type AddonRow = {
@@ -97,7 +97,7 @@ export function AddonsPage() {
       id: a.id,
       name: a.name,
       slug: a.slug,
-      price: formatPrice(a.price),
+      price: formatINR(a.price),
       sortOrder: String(a.sortOrder),
       isActive: a.isActive ? "Active" : "Inactive",
     }));

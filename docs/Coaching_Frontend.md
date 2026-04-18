@@ -10,17 +10,22 @@ Everything the frontend needs to ship the `/online-coaching` flow end to end: pl
 
 ## 1. Conventions
 
-### Money is always in **paise** (integers)
+### Money is always in **INR rupees** (integers)
 
-`499900` = ₹4,999.00. Format for display:
+`4999` = ₹4,999. The API never exposes paise — it only appears internally when the server calls Razorpay. If you're opening Razorpay Checkout directly from the client, **multiply by 100** before passing `amount` to the SDK.
 
 ```ts
-const rupees = (paise: number) =>
+const formatINR = (rupees: number) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(paise / 100);
+  }).format(rupees);
+
+// e.g. formatINR(4999) → "₹4,999"
+
+// If opening Razorpay Checkout on the client:
+const razorpayAmount = apiResponse.amount * 100; // rupees → paise for Razorpay SDK
 ```
 
 ### Timestamps are ISO 8601 strings (`2026-04-18T10:23:45.123Z`).
@@ -70,7 +75,7 @@ export interface PublicAddon {
   slug: string;
   name: string;
   description: string | null;
-  price: number; // effective price (paise)
+  price: number; // effective price (INR rupees, integer)
 }
 
 export interface CoachingPlan {
@@ -79,7 +84,7 @@ export interface CoachingPlan {
   name: string;
   tagline: string | null;
   description: string | null;
-  price: number; // paise
+  price: number; // INR rupees (integer)
   validityMonths: number;
   includedFeatures: string[];
   excludedFeatures: string[];
@@ -132,7 +137,7 @@ export interface CreateSubscriptionResponse {
   subscriptionId: string;
   razorpayOrderId: string;
   razorpayKeyId: string; // public key, safe on client
-  amount: number; // paise
+  amount: number; // INR rupees (integer). Multiply by 100 for Razorpay SDK.
   currency: "INR";
   planSnapshot: PlanSnapshot;
   addonsSnapshot: AddonSnapshot[];
@@ -254,19 +259,19 @@ The validation rules are identical to the real subscribe endpoint, so the return
       "id": "ef61...",
       "slug": "mega",
       "name": "...MEGA...",
-      "amount": 499900
+      "amount": 4999
     },
     {
       "kind": "addon",
       "id": "aaaa...",
       "slug": "nutrition-guidance",
       "name": "Nutrition Guidance",
-      "amount": 99900
+      "amount": 999
     }
   ],
-  "baseAmount": 499900,
-  "addonsAmount": 99900,
-  "totalAmount": 599800,
+  "baseAmount": 4999,
+  "addonsAmount": 999,
+  "totalAmount": 5998,
   "currency": "INR"
 }
 ```
@@ -401,7 +406,8 @@ async function startCheckout(planId: string, addonIds: string[]) {
     const rzp = new (window as any).Razorpay({
       key: res.razorpayKeyId,
       order_id: res.razorpayOrderId,
-      amount: res.amount,
+      // Razorpay SDK expects paise. Our API speaks rupees, so × 100 here.
+      amount: res.amount * 100,
       currency: res.currency,
       name: "Grind Karo",
       description: res.planSnapshot.name,
@@ -547,7 +553,7 @@ Content-Type: application/json
   name: string;
   tagline?: string | null;
   description?: string | null;
-  price: number;                // paise
+  price: number;                // INR rupees (integer)
   validityMonths: number;       // >= 1
   includedFeatures: string[];
   excludedFeatures?: string[];
@@ -566,7 +572,7 @@ Update is the same, all fields optional.
   slug: string;          // kebab-case, unique
   name: string;
   description?: string | null;
-  price: number;         // paise
+  price: number;         // INR rupees (integer)
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -582,7 +588,7 @@ Update is the same, all fields optional.
 GET /coaching/plans        (once on mount)
   → render 3 plan cards sorted by displayOrder
   → for each card:
-      ₹{price/100} badge={badge} features={includedFeatures}
+      ₹{price} badge={badge} features={includedFeatures}
       stars: averageRating, ({totalReviews} reviews)
       checkboxes: availableAddons with price column
 
@@ -671,7 +677,7 @@ export async function api<T>(
 
 1. **No background expiry sweeper** — `ACTIVE → EXPIRED` happens lazily on `/me` reads. The admin list may still show stale `ACTIVE` rows until someone touches them.
 2. **No review dedupe or rate limiting** — the same `email` can submit multiple reviews. Add throttling at the edge (CDN / WAF) or a captcha on the write form.
-3. **Razorpay webhook is not wired** — only the frontend-initiated `verify` flow is supported. If the user closes the tab after paying but before verify completes, the sub will sit as `razorpayPaymentId: null` (treated as unpaid). Mitigation: retry `verify` on app load if you see such a row in history.
+3. **Razorpay webhook is wired** (`POST /webhooks/razorpay`) and handles `payment.captured`, `order.paid`, and `payment.failed`. It's idempotent and runs alongside the client-side verify — if the user closes the tab after paying, the webhook still flips `razorpayPaymentId`. Configure `RAZORPAY_WEBHOOK_SECRET` in env and register this URL in the Razorpay Dashboard → Webhooks.
 4. **Cancellation does not refund** — ops responsibility.
 5. **Admin password reset** — there is no self-serve password reset or "forgot password" flow for admins. To rotate, run `pnpm db:seed:admin <email> <new-password>` again (the seed is idempotent and will overwrite the hash).
 

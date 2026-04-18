@@ -15,12 +15,12 @@ import type { Column } from "@/types/dashboard";
 import type { CoachingPlan } from "@/types/program";
 import { PlanFormModal } from "@/components/programs/PlanFormModal";
 
-function formatPrice(paise: number): string {
+function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(paise / 100);
+  }).format(rupees);
 }
 
 type PlanRow = {
@@ -105,7 +105,7 @@ export function PlansPage() {
       id: p.id,
       name: p.name,
       slug: p.slug,
-      price: formatPrice(p.price),
+      price: formatINR(p.price),
       validityMonths: `${p.validityMonths} months`,
       badge: p.badge || "—",
       displayOrder: String(p.displayOrder),

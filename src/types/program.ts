@@ -7,7 +7,7 @@ export interface PublicAddon {
   slug: string;
   name: string;
   description: string | null;
-  price: number; // effective price (paise)
+  price: number; // INR rupees (integer)
 }
 
 // ---- Plans --------------------------------------------------------------
@@ -17,7 +17,7 @@ export interface CoachingPlan {
   name: string;
   tagline: string | null;
   description: string | null;
-  price: number; // paise
+  price: number; // INR rupees (integer)
   validityMonths: number;
   includedFeatures: string[];
   excludedFeatures: string[];

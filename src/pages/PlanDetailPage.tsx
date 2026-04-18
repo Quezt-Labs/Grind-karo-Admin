@@ -15,12 +15,12 @@ import { LinkAddonModal } from "@/components/coaching/LinkAddonModal";
 import type { Column } from "@/types/dashboard";
 import type { CoachingAddon, PublicAddon } from "@/types/program";
 
-function formatPrice(paise: number): string {
+function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(paise / 100);
+  }).format(rupees);
 }
 
 type AddonRow = {
@@ -109,7 +109,7 @@ export function PlanDetailPage() {
       id: a.id,
       name: a.name,
       slug: a.slug,
-      price: formatPrice(a.price),
+      price: formatINR(a.price),
     })) ?? [];
 
   const addonMap = new Map(plan.availableAddons?.map((a) => [a.id, a]) ?? []);
@@ -147,8 +147,7 @@ export function PlanDetailPage() {
             {plan.name}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {plan.slug} · {formatPrice(plan.price)} · {plan.validityMonths}{" "}
-            months
+            {plan.slug} · {formatINR(plan.price)} · {plan.validityMonths} months
           </p>
         </div>
         <StatusBadge status={plan.isActive ? "Active" : "Inactive"} />
@@ -156,7 +155,7 @@ export function PlanDetailPage() {
 
       {/* Info cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <InfoCard label="Price" value={formatPrice(plan.price)} />
+        <InfoCard label="Price" value={formatINR(plan.price)} />
         <InfoCard label="Validity" value={`${plan.validityMonths} months`} />
         <InfoCard
           label="Reviews"

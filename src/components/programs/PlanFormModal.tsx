@@ -23,7 +23,7 @@ const planSchema = z.object({
   name: z.string().min(1, "Name is required"),
   tagline: z.string().optional(),
   description: z.string().optional(),
-  price: z.coerce.number().min(100, "Min ₹1 (100 paise)"),
+  price: z.coerce.number().min(1, "Min ₹1"),
   validityMonths: z.coerce.number().min(1, "Min 1 month"),
   includedFeatures: z.array(z.object({ value: z.string() })),
   excludedFeatures: z.array(z.object({ value: z.string() })),
@@ -188,10 +188,10 @@ export function PlanFormModal({
           <div className="grid gap-4 sm:grid-cols-3">
             <Input
               id="plan-price"
-              label="Price (paise)"
+              label="Price (₹)"
               type="number"
               min={0}
-              placeholder="499900"
+              placeholder="4999"
               error={errors.price?.message}
               {...register("price")}
             />

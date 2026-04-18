@@ -17,7 +17,7 @@ const addonSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Must be kebab-case"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  price: z.coerce.number().min(100, "Min ₹1 (100 paise)"),
+  price: z.coerce.number().min(1, "Min ₹1"),
   isActive: z.boolean(),
   sortOrder: z.coerce.number().min(0),
 });
@@ -143,7 +143,7 @@ export function AddonFormModal({
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               id="addon-price"
-              label="Price (paise)"
+              label="Price (₹)"
               type="number"
               min={0}
               placeholder="99900"

@@ -24,7 +24,7 @@ export function LinkAddonModal({
 
   const addonOptions = availableAddons.map((a) => ({
     value: a.id,
-    label: `${a.name} (₹${(a.price / 100).toLocaleString("en-IN")})`,
+    label: `${a.name} (₹${a.price.toLocaleString("en-IN")})`,
   }));
 
   function handleSubmit(e: React.FormEvent) {
@@ -72,10 +72,10 @@ export function LinkAddonModal({
           {usePriceOverride && (
             <Input
               id="price-override"
-              label="Price Override (paise)"
+              label="Price Override (₹)"
               type="number"
               min={0}
-              placeholder="79900"
+              placeholder="799"
               value={priceOverride}
               onChange={(e) => setPriceOverride(Number(e.target.value))}
             />

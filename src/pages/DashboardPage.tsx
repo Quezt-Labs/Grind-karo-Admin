@@ -11,12 +11,12 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { dashboardService } from "@/services/dashboardService";
 import type { Column } from "@/types/dashboard";
 
-function formatPrice(paise: number): string {
+function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(paise / 100);
+  }).format(rupees);
 }
 
 type PlanRow = {
@@ -66,7 +66,7 @@ export function DashboardPage() {
       id: p.id,
       name: p.name,
       slug: p.slug,
-      price: formatPrice(p.price),
+      price: formatINR(p.price),
       validityMonths: `${p.validityMonths} months`,
       isActive: p.isActive ? "Active" : "Inactive",
     }));

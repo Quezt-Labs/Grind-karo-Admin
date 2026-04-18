@@ -12,12 +12,12 @@ import { enrollmentService } from "@/services/enrollmentService";
 import type { Column } from "@/types/dashboard";
 import type { CoachingSubscription } from "@/types/program";
 
-function formatPrice(paise: number): string {
+function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(paise / 100);
+  }).format(rupees);
 }
 
 type SubscriptionRow = {
@@ -94,7 +94,7 @@ export function SubscriptionsPage() {
       status: s.status,
       startDate: new Date(s.startDate).toLocaleDateString(),
       expiresAt: new Date(s.expiresAt).toLocaleDateString(),
-      totalAmount: formatPrice(s.totalAmount),
+      totalAmount: formatINR(s.totalAmount),
       addons: s.addonsSnapshot.length
         ? s.addonsSnapshot.map((a) => a.name).join(", ")
         : "—",
