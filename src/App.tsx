@@ -20,6 +20,7 @@ import { ProgramPurchasesPage } from "@/pages/ProgramPurchasesPage";
 import { ProgramReviewsPage } from "@/pages/ProgramReviewsPage";
 import { LandingPagesPage } from "@/pages/LandingPagesPage";
 import { LandingPageDetailPage } from "@/pages/LandingPageDetailPage";
+import { ContactSubmissionsPage } from "@/pages/ContactSubmissionsPage";
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
                 path="/landing-pages/:id"
                 element={<LandingPageDetailPage />}
               />
+              <Route path="/contact" element={<ContactSubmissionsPage />} />
             </Route>
           </Route>
 

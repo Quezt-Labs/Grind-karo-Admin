@@ -2,6 +2,7 @@ import { Menu, Sun, Moon } from "lucide-react";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import { NotificationBell } from "./NotificationBell";
+import { ContactInboxBell } from "./ContactInboxBell";
 
 export function Navbar() {
   const { setMobileOpen } = useSidebarStore();
@@ -21,6 +22,7 @@ export function Navbar() {
 
       {/* Right */}
       <div className="flex items-center gap-2">
+        <ContactInboxBell />
         <NotificationBell />
         <button
           onClick={toggleDark}
