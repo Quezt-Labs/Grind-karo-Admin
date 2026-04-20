@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Star,
   MonitorSmartphone,
+  Ticket,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useSidebarStore } from "@/store/sidebarStore";
@@ -36,24 +37,26 @@ const iconMap: Record<string, ReactNode> = {
   ShoppingBag: <ShoppingBag className="h-5 w-5" />,
   Star: <Star className="h-5 w-5" />,
   MonitorSmartphone: <MonitorSmartphone className="h-5 w-5" />,
+  Ticket: <Ticket className="h-5 w-5" />,
 };
 
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+  { path: "/landing-pages", label: "Landing Page", icon: "MonitorSmartphone" },
   { path: "/plans", label: "Coaching", icon: "CreditCard" },
-  { path: "/addons", label: "Add-ons", icon: "Puzzle" },
-  { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
   { path: "/programs", label: "Programs", icon: "BookOpen" },
-  { path: "/exercises", label: "Exercises", icon: "Dumbbell" },
+  { path: "/addons", label: "Add-ons", icon: "Puzzle" },
   {
     path: "/program-purchases",
     label: "Program Purchases",
     icon: "ShoppingBag",
   },
-  { path: "/users", label: "Users", icon: "Users" },
+  { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
   { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
   { path: "/program-reviews", label: "Program Reviews", icon: "Star" },
-  { path: "/landing-pages", label: "Landing Page", icon: "MonitorSmartphone" },
+  { path: "/coupons", label: "Coupons", icon: "Ticket" },
+  { path: "/exercises", label: "Exercises", icon: "Dumbbell" },
+  { path: "/users", label: "Users", icon: "Users" },
 ];
 
 export function Sidebar() {

@@ -21,6 +21,8 @@ import { ProgramReviewsPage } from "@/pages/ProgramReviewsPage";
 import { LandingPagesPage } from "@/pages/LandingPagesPage";
 import { LandingPageDetailPage } from "@/pages/LandingPageDetailPage";
 import { ContactSubmissionsPage } from "@/pages/ContactSubmissionsPage";
+import { CouponsPage } from "@/pages/CouponsPage";
+import { CouponDetailPage } from "@/pages/CouponDetailPage";
 
 export default function App() {
   return (
@@ -53,6 +55,8 @@ export default function App() {
                 element={<LandingPageDetailPage />}
               />
               <Route path="/contact" element={<ContactSubmissionsPage />} />
+              <Route path="/coupons" element={<CouponsPage />} />
+              <Route path="/coupons/:id" element={<CouponDetailPage />} />
             </Route>
           </Route>
 

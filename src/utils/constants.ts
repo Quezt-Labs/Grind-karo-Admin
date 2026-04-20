@@ -16,6 +16,7 @@ export const NAV_ITEMS = [
   { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
   { path: "/program-reviews", label: "Program Reviews", icon: "Star" },
   { path: "/landing-pages", label: "Landing Page", icon: "MonitorSmartphone" },
+  { path: "/coupons", label: "Coupons", icon: "Ticket" },
 ] as const;
 
 export const PAGE_SIZES = [10, 25, 50] as const;
