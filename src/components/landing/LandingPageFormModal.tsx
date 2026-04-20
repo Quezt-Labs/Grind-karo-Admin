@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { ImageUploadField } from "@/components/shared/ImageUploadField";
+import { VideoUploadField } from "@/components/shared/VideoUploadField";
 import { landingPageService } from "@/services/landingPageService";
 import type { LandingPageConfig } from "@/types/landingPage";
 
@@ -82,6 +83,7 @@ export function LandingPageFormModal({
 
   const heroBannerWebUrl = watch("heroBannerWebUrl");
   const heroBannerMobileUrl = watch("heroBannerMobileUrl");
+  const heroVideoUrl = watch("heroVideoUrl");
   const heroVideoPosterUrl = watch("heroVideoPosterUrl");
 
   function toPayload(d: FormData) {
@@ -218,13 +220,15 @@ export function LandingPageFormModal({
             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
               Hero Video
             </h3>
-            <Input
-              id="lp-video"
-              label="Video URL"
-              placeholder="https://cdn.grindkaro.in/landing/intro.mp4"
-              error={errors.heroVideoUrl?.message}
-              {...register("heroVideoUrl")}
-            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Video
+              </label>
+              <VideoUploadField
+                videoUrl={heroVideoUrl || null}
+                onVideoChange={(url) => setValue("heroVideoUrl", url ?? "")}
+              />
+            </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Video Poster

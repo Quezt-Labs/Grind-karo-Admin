@@ -1,0 +1,113 @@
+import { useRef, useState } from "react";
+import { Upload, X, Video } from "lucide-react";
+import { Spinner } from "@/components/ui/Spinner";
+import toast from "react-hot-toast";
+import { uploadService } from "@/services/uploadService";
+
+interface VideoUploadFieldProps {
+  videoUrl: string | null;
+  onVideoChange: (url: string | null) => void;
+}
+
+export function VideoUploadField({
+  videoUrl,
+  onVideoChange,
+}: VideoUploadFieldProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      toast.error("Video must be less than 50MB");
+      return;
+    }
+
+    if (!file.type.startsWith("video/")) {
+      toast.error("Please upload a video file");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const result = await uploadService.upload(file);
+      onVideoChange(result.url);
+      toast.success("Video uploaded");
+    } catch {
+      toast.error("Failed to upload video");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {videoUrl ? (
+        <div className="space-y-2">
+          <div className="relative inline-block">
+            <video
+              src={videoUrl}
+              className="h-40 w-auto rounded-lg border object-cover dark:border-gray-700"
+              muted
+              playsInline
+              preload="metadata"
+            />
+            <button
+              type="button"
+              onClick={() => onVideoChange(null)}
+              className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white shadow-sm hover:bg-red-600"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <input
+            type="text"
+            value={videoUrl}
+            readOnly
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Replace video
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="flex h-40 w-full max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-primary-400 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-primary-500 dark:hover:bg-gray-700"
+        >
+          {isUploading ? (
+            <Spinner size="sm" />
+          ) : (
+            <Video className="h-8 w-8 text-gray-400" />
+          )}
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {isUploading ? "Uploading..." : "Click to upload video"}
+          </span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            MP4, WebM up to 50MB
+          </span>
+        </button>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={handleUpload}
+      />
+    </div>
+  );
+}
