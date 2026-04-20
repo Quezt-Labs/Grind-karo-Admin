@@ -70,6 +70,7 @@ export function CouponFormModal({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as unknown as Resolver<FormData>,
@@ -105,6 +106,8 @@ export function CouponFormModal({
           isActive: true,
         },
   });
+
+  const discountType = watch("discountType");
 
   function toPayload(d: FormData) {
     return {
@@ -201,15 +204,17 @@ export function CouponFormModal({
               error={errors.discountValue?.message}
               {...register("discountValue")}
             />
-            <Input
-              id="c-max"
-              label="Max Discount (₹)"
-              type="number"
-              min={0}
-              placeholder="500"
-              error={errors.maxDiscount?.message}
-              {...register("maxDiscount")}
-            />
+            {discountType === "PERCENT" && (
+              <Input
+                id="c-max"
+                label="Max Discount (₹)"
+                type="number"
+                min={0}
+                placeholder="500"
+                error={errors.maxDiscount?.message}
+                {...register("maxDiscount")}
+              />
+            )}
             <Input
               id="c-min-order"
               label="Min Order (₹)"
