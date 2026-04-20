@@ -108,7 +108,7 @@ export interface Week {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
-  days?: Day[];
+  days: Day[];
 }
 
 export interface CreateWeekPayload {
@@ -129,7 +129,7 @@ export interface Day {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
-  exercises?: ExerciseRow[];
+  exercises: ExerciseRow[];
 }
 
 export interface CreateDayPayload {
