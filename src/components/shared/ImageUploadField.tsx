@@ -20,9 +20,9 @@ export function ImageUploadField({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 2 * 1024 * 1024; // 2MB
     if (file.size > maxSize) {
-      toast.error("Image must be less than 5MB");
+      toast.error("Image must be less than 2 MB");
       return;
     }
 
@@ -77,7 +77,7 @@ export function ImageUploadField({
             {isUploading ? "Uploading..." : "Click to upload image"}
           </span>
           <span className="text-xs text-gray-400 dark:text-gray-500">
-            PNG, JPG up to 5MB
+            PNG, JPG, WebP up to 2 MB
           </span>
         </button>
       )}
