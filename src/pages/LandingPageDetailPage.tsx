@@ -13,7 +13,6 @@ import {
   ZapOff,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Shimmer } from "@/components/ui/Shimmer";

@@ -10,7 +10,6 @@ import {
   Layers,
   Calendar,
   Sun,
-  Dumbbell,
   FileText,
   Pencil,
 } from "lucide-react";
@@ -180,21 +179,24 @@ export function ProgramDetailPage() {
   function toggleBlock(id: string) {
     setExpandedBlocks((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
   function toggleWeek(id: string) {
     setExpandedWeeks((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
   function toggleDay(id: string) {
     setExpandedDays((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }

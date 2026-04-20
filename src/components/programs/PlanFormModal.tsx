@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { BADGE_OPTIONS } from "@/components/ui/LevelBadge";
+import { BADGE_OPTIONS } from "@/components/ui/badgeOptions";
 import { planService } from "@/services/planService";
 import type { CoachingPlan } from "@/types/program";
 

@@ -106,7 +106,8 @@ export function CarouselItemFormModal({
   const isSaving = createMut.isPending || updateMut.isPending;
 
   function onSubmit(data: FormData) {
-    isEdit ? updateMut.mutate(data) : createMut.mutate(data);
+    if (isEdit) updateMut.mutate(data);
+    else createMut.mutate(data);
   }
 
   return (
