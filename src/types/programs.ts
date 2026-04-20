@@ -1,0 +1,241 @@
+// ---- Exercise Library ----------------------------------------------------
+export type ExerciseCategory =
+  | "SQUAT"
+  | "BENCH"
+  | "DEADLIFT"
+  | "ACCESSORY"
+  | "OTHER";
+
+export interface Exercise {
+  id: string;
+  slug: string;
+  name: string;
+  category: ExerciseCategory;
+  description: string | null;
+  videoUrl: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateExercisePayload {
+  slug: string;
+  name: string;
+  category: ExerciseCategory;
+  description?: string | null;
+  videoUrl?: string | null;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export type UpdateExercisePayload = Partial<CreateExercisePayload>;
+
+// ---- Programs (top-level) -----------------------------------------------
+export interface Program {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string | null;
+  description: string | null;
+  coverImageUrl: string | null;
+  badge: string | null;
+  regularPrice: number;
+  salePrice: number | null;
+  currency: string;
+  liftingFrequency: string | null;
+  programLengthWeeks: number | null;
+  highlights: string[];
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  totalReviews?: number;
+  averageRating?: number;
+}
+
+export interface CreateProgramPayload {
+  slug: string;
+  name: string;
+  tagline?: string | null;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  badge?: string | null;
+  regularPrice: number;
+  salePrice?: number | null;
+  currency?: string;
+  liftingFrequency?: string | null;
+  programLengthWeeks?: number | null;
+  highlights?: string[];
+  displayOrder?: number;
+  isActive?: boolean;
+}
+
+export type UpdateProgramPayload = Partial<CreateProgramPayload>;
+
+// ---- Blocks -------------------------------------------------------------
+export type BlockType = "MAIN" | "DELOAD" | "PEAK" | "CUSTOM";
+
+export interface Block {
+  id: string;
+  programId: string;
+  slug: string;
+  name: string;
+  blockType: BlockType;
+  description: string | null;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  weeks?: Week[];
+}
+
+export interface CreateBlockPayload {
+  slug: string;
+  name: string;
+  blockType: BlockType;
+  description?: string | null;
+  displayOrder?: number;
+}
+
+export type UpdateBlockPayload = Partial<CreateBlockPayload>;
+
+// ---- Weeks --------------------------------------------------------------
+export interface Week {
+  id: string;
+  blockId: string;
+  weekNumber: number;
+  title: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  days?: Day[];
+}
+
+export interface CreateWeekPayload {
+  weekNumber: number;
+  title: string;
+  notes?: string | null;
+}
+
+export type UpdateWeekPayload = Partial<CreateWeekPayload>;
+
+// ---- Days ---------------------------------------------------------------
+export interface Day {
+  id: string;
+  weekId: string;
+  dayNumber: number;
+  title: string;
+  focus: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  exercises?: ExerciseRow[];
+}
+
+export interface CreateDayPayload {
+  dayNumber: number;
+  title: string;
+  focus?: string | null;
+  notes?: string | null;
+}
+
+export type UpdateDayPayload = Partial<CreateDayPayload>;
+
+// ---- Exercise Rows (program_exercises) ----------------------------------
+export interface ExerciseRow {
+  id: string;
+  dayId: string;
+  sortOrder: number;
+  category: ExerciseCategory;
+  exerciseId: string | null;
+  exerciseNameOverride: string | null;
+  resolvedName?: string;
+  sets: number | null;
+  repScheme: string | null;
+  targetRpe: string | null;
+  percentOneRm: number | null; // basis points (5300 = 53.00%)
+  loadNote: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateExerciseRowPayload {
+  sortOrder?: number;
+  category: ExerciseCategory;
+  exerciseId?: string | null;
+  exerciseNameOverride?: string | null;
+  sets?: number | null;
+  repScheme?: string | null;
+  targetRpe?: string | null;
+  percentOneRm?: number | null;
+  loadNote?: string | null;
+  notes?: string | null;
+}
+
+export type UpdateExerciseRowPayload = Partial<CreateExerciseRowPayload>;
+
+// ---- Resources ----------------------------------------------------------
+export interface ProgramResource {
+  id: string;
+  programId: string;
+  slug: string;
+  title: string;
+  body: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateResourcePayload {
+  slug: string;
+  title: string;
+  body: string;
+  sortOrder?: number;
+}
+
+export type UpdateResourcePayload = Partial<CreateResourcePayload>;
+
+// ---- Program Tree (GET /admin/programs/:id/tree) ------------------------
+export interface ProgramTree extends Program {
+  blocks: (Block & {
+    weeks: (Week & {
+      days: (Day & {
+        exercises: ExerciseRow[];
+      })[];
+    })[];
+  })[];
+  resources: ProgramResource[];
+}
+
+// ---- Program Reviews ----------------------------------------------------
+export interface ProgramReview {
+  id: string;
+  programId: string;
+  userId: string;
+  rating: number;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  program?: { id: string; name: string; slug: string };
+}
+
+// ---- Program Purchases --------------------------------------------------
+export type ProgramPurchaseStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+
+export interface ProgramPurchase {
+  id: string;
+  programId: string;
+  userId: string;
+  status: ProgramPurchaseStatus;
+  amount: number;
+  currency: string;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  program?: { id: string; name: string; slug: string };
+  user?: { id: string; name: string | null; email: string; role: string };
+}

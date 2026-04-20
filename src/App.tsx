@@ -10,7 +10,16 @@ import { PlanDetailPage } from "@/pages/PlanDetailPage";
 import { AddonsPage } from "@/pages/AddonsPage";
 import { SubscriptionsPage } from "@/pages/EnrollmentsPage";
 import { ReviewsPage } from "@/pages/ReviewsPage";
+import { UsersPage } from "@/pages/UsersPage";
+import { UserDetailPage } from "@/pages/UserDetailPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { ExercisesPage } from "@/pages/ExercisesPage";
+import { ProgramsPage } from "@/pages/ProgramsPage";
+import { ProgramDetailPage } from "@/pages/ProgramDetailPage";
+import { ProgramPurchasesPage } from "@/pages/ProgramPurchasesPage";
+import { ProgramReviewsPage } from "@/pages/ProgramReviewsPage";
+import { LandingPagesPage } from "@/pages/LandingPagesPage";
+import { LandingPageDetailPage } from "@/pages/LandingPageDetailPage";
 
 export default function App() {
   return (
@@ -26,7 +35,22 @@ export default function App() {
               <Route path="/plans/:id" element={<PlanDetailPage />} />
               <Route path="/addons" element={<AddonsPage />} />
               <Route path="/subscriptions" element={<SubscriptionsPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/users/:id" element={<UserDetailPage />} />
               <Route path="/reviews" element={<ReviewsPage />} />
+              <Route path="/programs" element={<ProgramsPage />} />
+              <Route path="/programs/:id" element={<ProgramDetailPage />} />
+              <Route path="/exercises" element={<ExercisesPage />} />
+              <Route
+                path="/program-purchases"
+                element={<ProgramPurchasesPage />}
+              />
+              <Route path="/program-reviews" element={<ProgramReviewsPage />} />
+              <Route path="/landing-pages" element={<LandingPagesPage />} />
+              <Route
+                path="/landing-pages/:id"
+                element={<LandingPageDetailPage />}
+              />
             </Route>
           </Route>
 

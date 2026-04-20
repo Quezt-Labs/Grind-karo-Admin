@@ -5,8 +5,14 @@ import {
   Puzzle,
   Award,
   MessageSquare,
+  Users,
   X,
   LogOut,
+  Dumbbell,
+  BookOpen,
+  ShoppingBag,
+  Star,
+  MonitorSmartphone,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useSidebarStore } from "@/store/sidebarStore";
@@ -24,6 +30,12 @@ const iconMap: Record<string, ReactNode> = {
   Puzzle: <Puzzle className="h-5 w-5" />,
   Award: <Award className="h-5 w-5" />,
   MessageSquare: <MessageSquare className="h-5 w-5" />,
+  Users: <Users className="h-5 w-5" />,
+  Dumbbell: <Dumbbell className="h-5 w-5" />,
+  BookOpen: <BookOpen className="h-5 w-5" />,
+  ShoppingBag: <ShoppingBag className="h-5 w-5" />,
+  Star: <Star className="h-5 w-5" />,
+  MonitorSmartphone: <MonitorSmartphone className="h-5 w-5" />,
 };
 
 const NAV_ITEMS = [
@@ -31,7 +43,17 @@ const NAV_ITEMS = [
   { path: "/plans", label: "Coaching", icon: "CreditCard" },
   { path: "/addons", label: "Add-ons", icon: "Puzzle" },
   { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
+  { path: "/programs", label: "Programs", icon: "BookOpen" },
+  { path: "/exercises", label: "Exercises", icon: "Dumbbell" },
+  {
+    path: "/program-purchases",
+    label: "Program Purchases",
+    icon: "ShoppingBag",
+  },
+  { path: "/users", label: "Users", icon: "Users" },
   { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
+  { path: "/program-reviews", label: "Program Reviews", icon: "Star" },
+  { path: "/landing-pages", label: "Landing Page", icon: "MonitorSmartphone" },
 ];
 
 export function Sidebar() {

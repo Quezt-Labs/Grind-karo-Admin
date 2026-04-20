@@ -5,7 +5,17 @@ export const NAV_ITEMS = [
   { path: "/plans", label: "Plans", icon: "CreditCard" },
   { path: "/addons", label: "Add-ons", icon: "Puzzle" },
   { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
+  { path: "/programs", label: "Programs", icon: "BookOpen" },
+  { path: "/exercises", label: "Exercises", icon: "Dumbbell" },
+  {
+    path: "/program-purchases",
+    label: "Program Purchases",
+    icon: "ShoppingBag",
+  },
+  { path: "/users", label: "Users", icon: "Users" },
   { path: "/reviews", label: "Reviews", icon: "MessageSquare" },
+  { path: "/program-reviews", label: "Program Reviews", icon: "Star" },
+  { path: "/landing-pages", label: "Landing Page", icon: "MonitorSmartphone" },
 ] as const;
 
 export const PAGE_SIZES = [10, 25, 50] as const;
