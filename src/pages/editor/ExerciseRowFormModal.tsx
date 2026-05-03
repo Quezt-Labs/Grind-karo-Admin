@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { programService } from "@/services/programService";
 import { exerciseService } from "@/services/exerciseService";
-import type { ExerciseRow } from "@/types/programs";
+import type { ExerciseRow, MovementSlot } from "@/types/programs";
 import { ExerciseRowFields } from "./ExerciseRowFields";
 import {
   exerciseRowSchema,
@@ -19,6 +19,7 @@ interface ExerciseRowFormModalProps {
   programId: string;
   dayId?: string;
   row?: ExerciseRow;
+  movementSlots?: MovementSlot[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -27,6 +28,7 @@ export function ExerciseRowFormModal({
   programId,
   dayId,
   row,
+  movementSlots,
   onClose,
   onSuccess,
 }: ExerciseRowFormModalProps) {
@@ -45,6 +47,7 @@ export function ExerciseRowFormModal({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<ExerciseRowFormData>({
     resolver: zodResolver(exerciseRowSchema) as Resolver<ExerciseRowFormData>,
@@ -94,8 +97,10 @@ export function ExerciseRowFormModal({
           <ExerciseRowFields
             register={register}
             watch={watch}
+            setValue={setValue}
             errors={errors}
             exerciseOptions={exerciseOptions}
+            movementSlots={movementSlots}
           />
 
           <div className="flex justify-end gap-2 pt-2">

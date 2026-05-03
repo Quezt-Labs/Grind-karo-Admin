@@ -48,16 +48,26 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
           </span>
         </td>
         <td className="py-2.5">
-          <span
-            className={cn(
-              "font-medium",
-              isAccessory
-                ? "text-gray-600 dark:text-gray-400"
-                : "text-gray-900 dark:text-white",
+          <div className="flex items-center gap-1">
+            {row.movementSlotId && (
+              <span
+                className="inline-flex shrink-0 items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/20 dark:text-violet-400"
+                title="Linked to movement slot"
+              >
+                🔀
+              </span>
             )}
-          >
-            {exerciseName}
-          </span>
+            <span
+              className={cn(
+                "font-medium",
+                isAccessory
+                  ? "text-gray-600 dark:text-gray-400"
+                  : "text-gray-900 dark:text-white",
+              )}
+            >
+              {exerciseName}
+            </span>
+          </div>
           {hasNotes && (
             <p className="mt-0.5 text-[10px] leading-tight text-gray-400 dark:text-gray-500">
               {row.loadNote && <span className="italic">{row.loadNote}</span>}

@@ -37,6 +37,7 @@ import { ResourceFormModal } from "./editor/ResourceFormModal";
 import { formatINR } from "./editor/programConstants";
 import { StatCard, EmptySection } from "./editor/ProgramShared";
 import { BlockNode } from "./editor/BlockNode";
+import { MovementSlotsPanel } from "./editor/MovementSlotsPanel";
 
 /* ─── Main Page ───────────────────────────────────────────────────────── */
 
@@ -434,6 +435,14 @@ export function ProgramDetailPage() {
         )}
       </div>
 
+      {/* ── Movement Slots ────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Movement Slots
+        </h2>
+        <MovementSlotsPanel programId={programId!} tree={tree} />
+      </div>
+
       {/* ── Resources ──────────────────────────────────────────────────── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -543,6 +552,7 @@ export function ProgramDetailPage() {
           programId={programId!}
           dayId={exerciseRowModal.dayId}
           row={exerciseRowModal.row}
+          movementSlots={tree.movementSlots}
           onClose={() => setExerciseRowModal({ open: false })}
           onSuccess={() => {
             refreshTree();

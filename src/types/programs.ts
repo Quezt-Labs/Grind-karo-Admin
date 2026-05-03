@@ -142,6 +142,12 @@ export interface CreateDayPayload {
 export type UpdateDayPayload = Partial<CreateDayPayload>;
 
 // ---- Exercise Rows (program_exercises) ----------------------------------
+export type LoadComputation =
+  | "RPE_CHART"
+  | "PERCENT_1RM"
+  | "PERCENT_OF_ROW"
+  | "NONE";
+
 export interface ExerciseRow {
   id: string;
   dayId: string;
@@ -154,12 +160,17 @@ export interface ExerciseRow {
   repScheme: string | null;
   targetRpe: string | null;
   percentOneRm: number | null; // basis points (5300 = 53.00%)
-  computedLoadKg: number | null;
-  loadSource: "percent" | "rpe" | null;
+  computedLoadKg?: number | null;
+  loadSource?: "percent" | "rpe" | null;
   loadNote: string | null;
   notes: string | null;
-  createdAt: string;
-  updatedAt: string;
+  movementSlotId: string | null;
+  loadComputation: LoadComputation;
+  loadRefFactor: number | null;
+  loadRefExerciseId: string | null;
+  hasPlateCheck: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateExerciseRowPayload {
@@ -175,6 +186,11 @@ export interface CreateExerciseRowPayload {
   loadSource?: "percent" | "rpe" | null;
   loadNote?: string | null;
   notes?: string | null;
+  movementSlotId?: string | null;
+  loadComputation?: LoadComputation;
+  loadRefFactor?: number | null;
+  loadRefExerciseId?: string | null;
+  hasPlateCheck?: boolean;
 }
 
 export type UpdateExerciseRowPayload = Partial<CreateExerciseRowPayload>;
@@ -200,6 +216,71 @@ export interface CreateResourcePayload {
 
 export type UpdateResourcePayload = Partial<CreateResourcePayload>;
 
+// ---- Movement Slots -----------------------------------------------------
+export type SlotCategory = "SQUAT" | "BENCH" | "DEADLIFT" | "ACCESSORY";
+
+export interface MovementOptionOverride {
+  programExerciseId: string;
+  sets: number | null;
+  repScheme: string | null;
+  targetRpe: string | null;
+  percentOneRm: number | null;
+  loadComputation: LoadComputation | null;
+  loadRefFactor: number | null;
+  loadRefExerciseId: string | null;
+  loadNote: string | null;
+  notes: string | null;
+}
+
+export interface MovementOption {
+  id: string;
+  exerciseId: string | null;
+  exerciseName: string;
+  isDefault: boolean;
+  sortOrder: number;
+  overrides: MovementOptionOverride[];
+}
+
+export interface MovementSlot {
+  id: string;
+  slotKey: string;
+  label: string;
+  category: SlotCategory;
+  sortOrder: number;
+  options: MovementOption[];
+}
+
+export interface CreateSlotPayload {
+  slotKey: string;
+  label: string;
+  category: SlotCategory;
+  sortOrder?: number;
+}
+
+export type UpdateSlotPayload = Partial<CreateSlotPayload>;
+
+export interface CreateOptionPayload {
+  exerciseId?: string | null;
+  exerciseName: string;
+  isDefault?: boolean;
+  sortOrder?: number;
+}
+
+export type UpdateOptionPayload = Partial<CreateOptionPayload>;
+
+export interface OverrideUpsertPayload {
+  programExerciseId: string;
+  sets?: number | null;
+  repScheme?: string | null;
+  targetRpe?: string | null;
+  percentOneRm?: number | null;
+  loadComputation?: LoadComputation | null;
+  loadRefFactor?: number | null;
+  loadRefExerciseId?: string | null;
+  loadNote?: string | null;
+  notes?: string | null;
+}
+
 // ---- Program Tree (GET /admin/programs/:id/tree) ------------------------
 export interface ProgramTree extends Program {
   blocks: (Block & {
@@ -210,6 +291,7 @@ export interface ProgramTree extends Program {
     })[];
   })[];
   resources: ProgramResource[];
+  movementSlots: MovementSlot[];
 }
 
 // ---- Program Reviews ----------------------------------------------------

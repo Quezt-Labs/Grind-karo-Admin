@@ -1,27 +1,42 @@
 import type {
   UseFormRegister,
   UseFormWatch,
+  UseFormSetValue,
   FieldErrors,
 } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { CATEGORY_OPTIONS } from "./exerciseRowSchema";
+import {
+  CATEGORY_OPTIONS,
+  LOAD_COMPUTATION_OPTIONS,
+} from "./exerciseRowSchema";
 import type { ExerciseRowFormData } from "./exerciseRowSchema";
+import type { MovementSlot } from "@/types/programs";
 
 interface ExerciseRowFieldsProps {
   register: UseFormRegister<ExerciseRowFormData>;
   watch: UseFormWatch<ExerciseRowFormData>;
+  setValue: UseFormSetValue<ExerciseRowFormData>;
   errors: FieldErrors<ExerciseRowFormData>;
   exerciseOptions: { value: string; label: string }[];
+  movementSlots?: MovementSlot[];
 }
 
 export function ExerciseRowFields({
   register,
   watch,
+  setValue,
   errors,
   exerciseOptions,
+  movementSlots = [],
 }: ExerciseRowFieldsProps) {
+  const loadComputation = watch("loadComputation");
+  const slotOptions = movementSlots.map((s) => ({
+    value: s.id,
+    label: `${s.label} [${s.category}]`,
+  }));
+
   return (
     <>
       <Select
@@ -94,6 +109,57 @@ export function ExerciseRowFields({
           {...register("sortOrder")}
         />
       </div>
+
+      {/* ── Movement Slot ──────────────────────────────────── */}
+      {slotOptions.length > 0 && (
+        <Select
+          id="row-slot"
+          label="Movement Slot"
+          options={slotOptions}
+          value={watch("movementSlotId")}
+          {...register("movementSlotId")}
+        />
+      )}
+
+      {/* ── Load Computation ───────────────────────────────── */}
+      <Select
+        id="row-load-computation"
+        label="Load Computation"
+        options={LOAD_COMPUTATION_OPTIONS}
+        value={watch("loadComputation")}
+        {...register("loadComputation")}
+      />
+
+      {loadComputation === "PERCENT_OF_ROW" && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            id="row-ref-factor"
+            label="Reference Factor"
+            type="number"
+            step={0.01}
+            min={0}
+            max={2}
+            placeholder="0.90"
+            {...register("loadRefFactor")}
+          />
+          <Input
+            id="row-ref-exercise"
+            label="Reference Row ID"
+            placeholder="exercise-row-uuid"
+            {...register("loadRefExerciseId")}
+          />
+        </div>
+      )}
+
+      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={watch("hasPlateCheck") ?? false}
+          onChange={(e) => setValue("hasPlateCheck", e.target.checked)}
+        />
+        Plate Rounding (round to nearest plate increment)
+      </label>
 
       <Input
         id="row-load"

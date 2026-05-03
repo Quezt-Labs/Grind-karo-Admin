@@ -9,6 +9,13 @@ export const CATEGORY_OPTIONS = [
   { value: "OTHER", label: "Other" },
 ];
 
+export const LOAD_COMPUTATION_OPTIONS = [
+  { value: "RPE_CHART", label: "RPE Chart" },
+  { value: "PERCENT_1RM", label: "% of 1RM" },
+  { value: "PERCENT_OF_ROW", label: "% of Another Row" },
+  { value: "NONE", label: "None" },
+];
+
 export const exerciseRowSchema = z.object({
   sortOrder: z.coerce.number().min(0),
   category: z.enum(["SQUAT", "BENCH", "DEADLIFT", "ACCESSORY", "OTHER"]),
@@ -20,6 +27,13 @@ export const exerciseRowSchema = z.object({
   percentOneRmDisplay: z.coerce.number().nullable().optional(),
   loadNote: z.string().optional(),
   notes: z.string().optional(),
+  movementSlotId: z.string().optional(),
+  loadComputation: z
+    .enum(["RPE_CHART", "PERCENT_1RM", "PERCENT_OF_ROW", "NONE"])
+    .optional(),
+  loadRefFactor: z.coerce.number().nullable().optional(),
+  loadRefExerciseId: z.string().optional(),
+  hasPlateCheck: z.boolean().optional(),
 });
 
 export type ExerciseRowFormData = z.infer<typeof exerciseRowSchema>;
@@ -41,6 +55,11 @@ export function toPayload(d: ExerciseRowFormData) {
     loadSource: null,
     loadNote: d.loadNote || null,
     notes: d.notes || null,
+    movementSlotId: d.movementSlotId || null,
+    loadComputation: d.loadComputation || "RPE_CHART",
+    loadRefFactor: d.loadRefFactor ?? null,
+    loadRefExerciseId: d.loadRefExerciseId || null,
+    hasPlateCheck: d.hasPlateCheck ?? false,
   };
 }
 
@@ -57,6 +76,11 @@ export function getDefaultValues(row?: ExerciseRow): ExerciseRowFormData {
       percentOneRmDisplay: row.percentOneRm ? row.percentOneRm / 100 : null,
       loadNote: row.loadNote || "",
       notes: row.notes || "",
+      movementSlotId: row.movementSlotId || "",
+      loadComputation: row.loadComputation || "RPE_CHART",
+      loadRefFactor: row.loadRefFactor,
+      loadRefExerciseId: row.loadRefExerciseId || "",
+      hasPlateCheck: row.hasPlateCheck ?? false,
     };
   }
   return {
@@ -70,5 +94,10 @@ export function getDefaultValues(row?: ExerciseRow): ExerciseRowFormData {
     percentOneRmDisplay: null,
     loadNote: "",
     notes: "",
+    movementSlotId: "",
+    loadComputation: "RPE_CHART",
+    loadRefFactor: null,
+    loadRefExerciseId: "",
+    hasPlateCheck: false,
   };
 }
