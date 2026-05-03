@@ -159,10 +159,6 @@ export function InlineExerciseRow({
     );
   }
 
-  const resolvedName = row.exerciseId
-    ? (activeExercises.find((e) => e.id === row.exerciseId)?.name ?? "")
-    : "";
-
   return (
     <>
       {/* Row 1: Main fields */}

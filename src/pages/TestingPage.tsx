@@ -46,7 +46,7 @@ interface SheetData {
 
 /* ─── XLSX Parser (extracts both values AND formulas) ─────────────────── */
 
-function parseXLSX(buffer: ArrayBuffer, gid: string): SheetData {
+function parseXLSX(buffer: ArrayBuffer, _gid: string): SheetData {
   const wb = XLSX.read(buffer, { type: "array", cellFormula: true });
 
   // Try to find the sheet matching the gid, fallback to first sheet
