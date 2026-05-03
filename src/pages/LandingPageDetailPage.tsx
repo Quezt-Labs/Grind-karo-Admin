@@ -1,17 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Plus,
-  Pencil,
-  Trash2,
-  GripVertical,
-  Image,
-  ExternalLink,
-  Zap,
-  ZapOff,
-} from "lucide-react";
+import { ArrowLeft, Zap, ZapOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -20,6 +10,8 @@ import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { CarouselItemFormModal } from "@/components/landing/CarouselItemFormModal";
 import { landingPageService } from "@/services/landingPageService";
+import { HeroSection } from "./landingDetail/HeroSection";
+import { CarouselSection } from "./landingDetail/CarouselSection";
 import type { CarouselItem } from "@/types/landingPage";
 
 export function LandingPageDetailPage() {
@@ -69,6 +61,20 @@ export function LandingPageDetailPage() {
     },
   });
 
+  const handleAdd = useCallback(() => {
+    setEditItem(null);
+    setItemFormOpen(true);
+  }, []);
+
+  const handleEdit = useCallback((item: CarouselItem) => {
+    setEditItem(item);
+    setItemFormOpen(true);
+  }, []);
+
+  const handleDelete = useCallback((item: CarouselItem) => {
+    setDeleteItem(item);
+  }, []);
+
   function handleItemSuccess() {
     queryClient.invalidateQueries({ queryKey: ["landing-page", id] });
     setItemFormOpen(false);
@@ -98,8 +104,6 @@ export function LandingPageDetailPage() {
       </div>
     );
   }
-
-  const items = config.carouselItems ?? [];
 
   return (
     <div className="space-y-6">
@@ -145,167 +149,15 @@ export function LandingPageDetailPage() {
         </div>
       </div>
 
-      {/* Hero section preview */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">
-          Hero Section
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Banner previews */}
-          <div className="space-y-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-              Banner (Web)
-            </p>
-            {config.heroBannerWebUrl ? (
-              <img
-                src={config.heroBannerWebUrl}
-                alt={config.heroBannerAlt ?? "Hero banner"}
-                className="h-40 w-full rounded-lg border object-cover dark:border-gray-600"
-              />
-            ) : (
-              <div className="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-400 dark:border-gray-600">
-                No web banner
-              </div>
-            )}
-          </div>
-          <div className="space-y-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-              Banner (Mobile)
-            </p>
-            {config.heroBannerMobileUrl ? (
-              <img
-                src={config.heroBannerMobileUrl}
-                alt={config.heroBannerAlt ?? "Hero banner"}
-                className="h-40 w-auto mx-auto rounded-lg border object-cover dark:border-gray-600"
-              />
-            ) : (
-              <div className="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-400 dark:border-gray-600">
-                No mobile banner
-              </div>
-            )}
-          </div>
-        </div>
+      <HeroSection config={config} />
 
-        {/* Video + CTA info */}
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <InfoCell
-            label="Banner Link"
-            value={config.heroBannerLinkUrl}
-            isUrl
-          />
-          <InfoCell label="Video URL" value={config.heroVideoUrl} isUrl />
-          <InfoCell
-            label="Video Poster"
-            value={config.heroVideoPosterUrl}
-            isUrl
-          />
-          <InfoCell
-            label="CTA"
-            value={
-              config.ctaLabel
-                ? `${config.ctaLabel} → ${config.ctaUrl ?? "—"}`
-                : null
-            }
-          />
-        </div>
-      </div>
+      <CarouselSection
+        items={config.carouselItems ?? []}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
-      {/* Carousel items */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-            Carousel Items ({items.length})
-          </h2>
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditItem(null);
-              setItemFormOpen(true);
-            }}
-          >
-            <Plus className="mr-1 h-3.5 w-3.5" /> Add Slide
-          </Button>
-        </div>
-
-        {items.length === 0 ? (
-          <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center dark:border-gray-600">
-            <Image className="mx-auto h-8 w-8 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              No carousel slides yet. Add your first slide above.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700/50"
-              >
-                <GripVertical className="h-4 w-4 shrink-0 text-gray-400" />
-
-                <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-white dark:border-gray-600 dark:bg-gray-800">
-                  {item.imageWebUrl ? (
-                    <img
-                      src={item.imageWebUrl}
-                      alt={item.alt ?? ""}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <Image className="h-5 w-5 text-gray-400" />
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                    {item.title || item.alt || `Slide ${item.sortOrder}`}
-                  </p>
-                  {item.subtitle && (
-                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                      {item.subtitle}
-                    </p>
-                  )}
-                  <p className="mt-0.5 text-xs text-gray-400">
-                    Order: {item.sortOrder}
-                  </p>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-1">
-                  {item.linkUrl && (
-                    <a
-                      href={item.linkUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded p-1.5 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
-                      title="Open link"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  )}
-                  <button
-                    onClick={() => {
-                      setEditItem(item);
-                      setItemFormOpen(true);
-                    }}
-                    className="rounded p-1.5 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-600"
-                    title="Edit"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setDeleteItem(item)}
-                    className="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Carousel item form modal */}
       {itemFormOpen && (
         <CarouselItemFormModal
           configId={id!}
@@ -318,7 +170,6 @@ export function LandingPageDetailPage() {
         />
       )}
 
-      {/* Delete confirm */}
       <ConfirmModal
         open={!!deleteItem}
         title="Delete Carousel Item"
@@ -329,44 +180,6 @@ export function LandingPageDetailPage() {
         onConfirm={() => deleteItem && deleteItemMut.mutate(deleteItem.id)}
         onCancel={() => setDeleteItem(null)}
       />
-    </div>
-  );
-}
-
-/* Small helper */
-function InfoCell({
-  label,
-  value,
-  isUrl,
-}: {
-  label: string;
-  value?: string | null;
-  isUrl?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-        {label}
-      </p>
-      {value ? (
-        isUrl ? (
-          <a
-            href={value}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-0.5 inline-flex items-center gap-1 truncate text-sm text-primary-600 hover:underline dark:text-primary-400"
-          >
-            {new URL(value).pathname.slice(0, 40)}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        ) : (
-          <p className="mt-0.5 truncate text-sm text-gray-700 dark:text-gray-300">
-            {value}
-          </p>
-        )
-      ) : (
-        <p className="mt-0.5 text-sm text-gray-400">—</p>
-      )}
     </div>
   );
 }

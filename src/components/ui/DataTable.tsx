@@ -1,6 +1,13 @@
 import { useState, useMemo } from "react";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/utils/cn";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/ShadSelect";
 import type { Column } from "@/types/dashboard";
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from "@/utils/constants";
 
@@ -159,17 +166,21 @@ export function DataTable<T extends { id: string }>({
       <div className="flex flex-col items-center justify-between gap-3 border-t px-3 py-3 sm:flex-row sm:px-4">
         <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
           <span>Rows per page:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            className="rounded border bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => handlePageSizeChange(Number(v))}
           >
-            {PAGE_SIZES.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="rounded border bg-white px-2 py-1 text-sm h-8 w-18 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZES.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span>
             {(page - 1) * pageSize + 1}–
             {Math.min(page * pageSize, sortedData.length)} of{" "}

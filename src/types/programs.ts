@@ -154,6 +154,8 @@ export interface ExerciseRow {
   repScheme: string | null;
   targetRpe: string | null;
   percentOneRm: number | null; // basis points (5300 = 53.00%)
+  computedLoadKg: number | null;
+  loadSource: "percent" | "rpe" | null;
   loadNote: string | null;
   notes: string | null;
   createdAt: string;
@@ -169,6 +171,8 @@ export interface CreateExerciseRowPayload {
   repScheme?: string | null;
   targetRpe?: string | null;
   percentOneRm?: number | null;
+  computedLoadKg?: number | null;
+  loadSource?: "percent" | "rpe" | null;
   loadNote?: string | null;
   notes?: string | null;
 }

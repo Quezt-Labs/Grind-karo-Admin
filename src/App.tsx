@@ -23,6 +23,7 @@ import { LandingPageDetailPage } from "@/pages/LandingPageDetailPage";
 import { ContactSubmissionsPage } from "@/pages/ContactSubmissionsPage";
 import { CouponsPage } from "@/pages/CouponsPage";
 import { CouponDetailPage } from "@/pages/CouponDetailPage";
+import { TestingPage } from "@/pages/TestingPage";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/testing" element={<TestingPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>

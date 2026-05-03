@@ -1,81 +1,23 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { Users, Eye, ShoppingCart } from "lucide-react";
-import { DataTable } from "@/components/ui/DataTable";
+import { Users, ShoppingCart } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { userService } from "@/services/userService";
 import { cn } from "@/utils/cn";
-import type { Column } from "@/types/dashboard";
-
-function formatINR(rupees: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(rupees);
-}
-
-// ---- All Users tab --------------------------------------------------------
-
-type UserRow = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  createdAt: string;
-};
-
-const userColumns: Column<UserRow>[] = [
-  { key: "name", header: "Name", sortable: true },
-  { key: "email", header: "Email", sortable: true },
-  {
-    key: "role",
-    header: "Role",
-    sortable: true,
-    render: (value) => (
-      <span
-        className={cn(
-          "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-          value === "ADMIN"
-            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-        )}
-      >
-        {value as string}
-      </span>
-    ),
-  },
-  { key: "createdAt", header: "Joined", sortable: true },
-];
-
-// ---- Purchasers tab -------------------------------------------------------
-
-type PurchaserRow = {
-  id: string;
-  name: string;
-  email: string;
-  coachingSubs: string;
-  programPurchases: string;
-  totalSpent: string;
-  lastPurchase: string;
-};
-
-const purchaserColumns: Column<PurchaserRow>[] = [
-  { key: "name", header: "Name", sortable: true },
-  { key: "email", header: "Email", sortable: true },
-  { key: "coachingSubs", header: "Coaching", sortable: true },
-  { key: "programPurchases", header: "Programs", sortable: true },
-  { key: "totalSpent", header: "Total Spent", sortable: true },
-  { key: "lastPurchase", header: "Last Purchase", sortable: true },
-];
-
-type Tab = "all" | "purchasers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/ShadSelect";
+import { AllUsersSection } from "./users/AllUsersSection";
+import { PurchasersSection } from "./users/PurchasersSection";
+import { formatINR } from "./users/usersConstants";
+import type { Tab } from "./users/usersConstants";
 
 export function UsersPage() {
-  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"" | "USER" | "ADMIN">("");
@@ -84,7 +26,6 @@ export function UsersPage() {
     setSearch(value);
   }, []);
 
-  // All users query
   const {
     data: usersData,
     isLoading: usersLoading,
@@ -100,7 +41,6 @@ export function UsersPage() {
     enabled: tab === "all",
   });
 
-  // Purchasers query
   const {
     data: purchasersData,
     isLoading: purchasersLoading,
@@ -115,8 +55,7 @@ export function UsersPage() {
     enabled: tab === "purchasers",
   });
 
-  // Map rows
-  const userRows: UserRow[] = useMemo(() => {
+  const userRows = useMemo(() => {
     if (!usersData?.items) return [];
     return usersData.items.map((u) => ({
       id: u.id,
@@ -127,7 +66,7 @@ export function UsersPage() {
     }));
   }, [usersData]);
 
-  const purchaserRows: PurchaserRow[] = useMemo(() => {
+  const purchaserRows = useMemo(() => {
     if (!purchasersData?.items) return [];
     return purchasersData.items.map((p) => ({
       id: p.id,
@@ -140,34 +79,6 @@ export function UsersPage() {
     }));
   }, [purchasersData]);
 
-  const userActionsColumn = {
-    key: "id" as keyof UserRow & string,
-    header: "Actions",
-    render: (value: UserRow[keyof UserRow]) => (
-      <button
-        onClick={() => navigate(`/users/${value}`)}
-        className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-        title="View purchases"
-      >
-        <Eye className="h-4 w-4" />
-      </button>
-    ),
-  };
-
-  const purchaserActionsColumn = {
-    key: "id" as keyof PurchaserRow & string,
-    header: "Actions",
-    render: (value: PurchaserRow[keyof PurchaserRow]) => (
-      <button
-        onClick={() => navigate(`/users/${value}`)}
-        className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-        title="View purchases"
-      >
-        <Eye className="h-4 w-4" />
-      </button>
-    ),
-  };
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -175,7 +86,7 @@ export function UsersPage() {
         description="All signed-up users and active customers"
       />
 
-      {/* Tabs */}
+      {/* Tabs + filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
           {(
@@ -224,17 +135,23 @@ export function UsersPage() {
 
         <div className="flex items-center gap-2">
           {tab === "all" && (
-            <select
-              value={roleFilter}
-              onChange={(e) =>
-                setRoleFilter(e.target.value as "" | "USER" | "ADMIN")
+            <Select
+              value={roleFilter || "__all__"}
+              onValueChange={(v) =>
+                setRoleFilter(
+                  (v === "__all__" ? "" : v) as "" | "USER" | "ADMIN",
+                )
               }
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
             >
-              <option value="">All roles</option>
-              <option value="USER">User</option>
-              <option value="ADMIN">Admin</option>
-            </select>
+              <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm h-9 w-32 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All roles</SelectItem>
+                <SelectItem value="USER">User</SelectItem>
+                <SelectItem value="ADMIN">Admin</SelectItem>
+              </SelectContent>
+            </Select>
           )}
           <DebouncedSearch
             onSearch={handleSearch}
@@ -244,71 +161,21 @@ export function UsersPage() {
         </div>
       </div>
 
-      {/* All Users Table */}
       {tab === "all" && (
-        <>
-          {usersError ? (
-            <ErrorAlert message="Failed to load users. Please try again later." />
-          ) : !usersLoading && userRows.length === 0 ? (
-            <EmptyUsers />
-          ) : (
-            <DataTable
-              data={userRows}
-              columns={[...userColumns, userActionsColumn]}
-              isLoading={usersLoading}
-            />
-          )}
-        </>
+        <AllUsersSection
+          rows={userRows}
+          isLoading={usersLoading}
+          isError={usersError}
+        />
       )}
 
-      {/* Purchasers Table */}
       {tab === "purchasers" && (
-        <>
-          {purchasersError ? (
-            <ErrorAlert message="Failed to load purchasers. Please try again later." />
-          ) : !purchasersLoading && purchaserRows.length === 0 ? (
-            <EmptyPurchasers />
-          ) : (
-            <DataTable
-              data={purchaserRows}
-              columns={[...purchaserColumns, purchaserActionsColumn]}
-              isLoading={purchasersLoading}
-            />
-          )}
-        </>
+        <PurchasersSection
+          rows={purchaserRows}
+          isLoading={purchasersLoading}
+          isError={purchasersError}
+        />
       )}
-    </div>
-  );
-}
-
-function EmptyUsers() {
-  return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20">
-        <Users className="h-8 w-8 text-primary-500" />
-      </div>
-      <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-        No users found
-      </h3>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
-        Users will appear here once people sign up.
-      </p>
-    </div>
-  );
-}
-
-function EmptyPurchasers() {
-  return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20">
-        <ShoppingCart className="h-8 w-8 text-primary-500" />
-      </div>
-      <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-        No purchasers yet
-      </h3>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
-        Users who make a paid purchase will appear here.
-      </p>
     </div>
   );
 }

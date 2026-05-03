@@ -3,6 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Dumbbell } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/ShadSelect";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -219,20 +226,24 @@ export function ExercisesPage() {
               {s.charAt(0).toUpperCase() + s.slice(1)}
             </button>
           ))}
-          <select
-            value={categoryFilter}
-            onChange={(e) =>
-              setCategoryFilter(e.target.value as CategoryFilter)
+          <Select
+            value={categoryFilter || "__all__"}
+            onValueChange={(v) =>
+              setCategoryFilter((v === "__all__" ? "" : v) as CategoryFilter)
             }
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
           >
-            <option value="">All categories</option>
-            <option value="SQUAT">Squat</option>
-            <option value="BENCH">Bench</option>
-            <option value="DEADLIFT">Deadlift</option>
-            <option value="ACCESSORY">Accessory</option>
-            <option value="OTHER">Other</option>
-          </select>
+            <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs h-8 w-36 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All categories</SelectItem>
+              <SelectItem value="SQUAT">Squat</SelectItem>
+              <SelectItem value="BENCH">Bench</SelectItem>
+              <SelectItem value="DEADLIFT">Deadlift</SelectItem>
+              <SelectItem value="ACCESSORY">Accessory</SelectItem>
+              <SelectItem value="OTHER">Other</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <DebouncedSearch
           onSearch={handleSearch}
