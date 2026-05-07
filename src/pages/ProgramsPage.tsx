@@ -1,19 +1,26 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Eye, BookOpen } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  BookOpen,
+  Star,
+  Clock,
+  Zap,
+  ArrowUpDown,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
-import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Spinner } from "@/components/ui/Spinner";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
 import { programService } from "@/services/programService";
-import type { Column } from "@/types/dashboard";
 import type { Program } from "@/types/programs";
 
 function formatINR(rupees: number): string {
@@ -23,32 +30,6 @@ function formatINR(rupees: number): string {
     maximumFractionDigits: 0,
   }).format(rupees);
 }
-
-type ProgramRow = {
-  id: string;
-  name: string;
-  slug: string;
-  price: string;
-  frequency: string;
-  length: string;
-  displayOrder: string;
-  isActive: string;
-};
-
-const programColumns: Column<ProgramRow>[] = [
-  { key: "name", header: "Program", sortable: true },
-  { key: "slug", header: "Slug", sortable: true },
-  { key: "price", header: "Price", sortable: true },
-  { key: "frequency", header: "Frequency", sortable: false },
-  { key: "length", header: "Length", sortable: true },
-  { key: "displayOrder", header: "Order", sortable: true },
-  {
-    key: "isActive",
-    header: "Status",
-    sortable: true,
-    render: (value) => <StatusBadge status={value as string} />,
-  },
-];
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -86,12 +67,6 @@ export function ProgramsPage() {
     setSearchTerm(value);
   }, []);
 
-  const programMap = useMemo(() => {
-    const map = new Map<string, Program>();
-    programs?.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [programs]);
-
   const statusCounts = useMemo(() => {
     if (!programs) return { all: 0, active: 0, inactive: 0 };
     return {
@@ -101,74 +76,26 @@ export function ProgramsPage() {
     };
   }, [programs]);
 
-  const tableData: ProgramRow[] = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!programs) return [];
-    let filtered = programs;
-
-    if (statusFilter === "active")
-      filtered = filtered.filter((p) => p.isActive);
+    let list = programs;
+    if (statusFilter === "active") list = list.filter((p) => p.isActive);
     else if (statusFilter === "inactive")
-      filtered = filtered.filter((p) => !p.isActive);
-
+      list = list.filter((p) => !p.isActive);
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
+      list = list.filter(
         (p) =>
           p.name.toLowerCase().includes(term) ||
           p.slug.toLowerCase().includes(term),
       );
     }
-
-    return filtered.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: p.salePrice
-        ? `${formatINR(p.salePrice)} (was ${formatINR(p.regularPrice)})`
-        : formatINR(p.regularPrice),
-      frequency: p.liftingFrequency || "—",
-      length: p.programLengthWeeks ? `${p.programLengthWeeks} weeks` : "—",
-      displayOrder: String(p.displayOrder),
-      isActive: p.isActive ? "Active" : "Inactive",
-    }));
+    return list.sort((a, b) => a.displayOrder - b.displayOrder);
   }, [programs, searchTerm, statusFilter]);
-
-  const actionsColumn = {
-    key: "id" as keyof ProgramRow & string,
-    header: "Actions",
-    render: (value: ProgramRow[keyof ProgramRow]) => {
-      const program = programMap.get(value as string);
-      if (!program) return null;
-      return (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => navigate(`/programs/${program.id}`)}
-            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-            title="Open Editor"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setEditTarget(program)}
-            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-            title="Edit metadata"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setDeleteTarget(program)}
-            className="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      );
-    },
-  };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           title="Programs"
@@ -180,6 +107,7 @@ export function ProgramsPage() {
         </Button>
       </div>
 
+      {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
           {(
@@ -224,9 +152,18 @@ export function ProgramsPage() {
         />
       </div>
 
-      {isError ? (
-        <ErrorAlert message="Failed to load programs." />
-      ) : !isLoading && tableData.length === 0 ? (
+      {/* Error */}
+      {isError && <ErrorAlert message="Failed to load programs." />}
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex justify-center py-20">
+          <Spinner />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && !isError && filtered.length === 0 && (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20">
             <BookOpen className="h-8 w-8 text-primary-500" />
@@ -242,14 +179,24 @@ export function ProgramsPage() {
             Create Your First Program
           </Button>
         </div>
-      ) : (
-        <DataTable
-          data={tableData}
-          columns={[...programColumns, actionsColumn]}
-          isLoading={isLoading}
-        />
       )}
 
+      {/* Card grid */}
+      {!isLoading && !isError && filtered.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((program) => (
+            <ProgramCard
+              key={program.id}
+              program={program}
+              onEdit={() => setEditTarget(program)}
+              onDelete={() => setDeleteTarget(program)}
+              onOpen={() => navigate(`/programs/${program.id}`)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Modals */}
       <ConfirmModal
         open={!!deleteTarget}
         title="Delete Program"
@@ -274,6 +221,157 @@ export function ProgramsPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/* ─── Program Card ────────────────────────────────────────────────────── */
+
+interface ProgramCardProps {
+  program: Program;
+  onEdit: () => void;
+  onDelete: () => void;
+  onOpen: () => void;
+}
+
+function ProgramCard({ program, onEdit, onDelete, onOpen }: ProgramCardProps) {
+  const hasDiscount =
+    program.salePrice !== null && program.salePrice < program.regularPrice;
+  const displayPrice = program.salePrice ?? program.regularPrice;
+  const rating = program.averageRating ?? 0;
+  const reviews = program.totalReviews ?? 0;
+
+  return (
+    <div
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-xl border bg-white transition-shadow hover:shadow-md dark:bg-gray-800",
+        program.isActive
+          ? "border-gray-200 dark:border-gray-700"
+          : "border-dashed border-gray-300 opacity-70 dark:border-gray-600",
+      )}
+    >
+      {/* Cover image */}
+      <div
+        className="relative h-36 cursor-pointer overflow-hidden bg-linear-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600"
+        onClick={onOpen}
+      >
+        {program.coverImageUrl ? (
+          <img
+            src={program.coverImageUrl}
+            alt={program.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <BookOpen className="h-10 w-10 text-gray-300 dark:text-gray-500" />
+          </div>
+        )}
+
+        {/* Overlay badges */}
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+          {program.badge && (
+            <span className="rounded-full bg-primary-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white shadow">
+              {program.badge}
+            </span>
+          )}
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-0.5 text-[11px] font-semibold shadow",
+              program.isActive
+                ? "bg-green-500 text-white"
+                : "bg-gray-500 text-white",
+            )}
+          >
+            {program.isActive ? "Active" : "Inactive"}
+          </span>
+        </div>
+
+        {/* Sort order chip */}
+        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] text-white backdrop-blur-sm">
+          <ArrowUpDown className="h-3 w-3" />
+          {program.displayOrder}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        {/* Name + tagline */}
+        <div className="cursor-pointer" onClick={onOpen}>
+          <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400">
+            {program.name}
+          </h3>
+          {program.tagline && (
+            <p className="mt-0.5 line-clamp-1 text-xs text-gray-500 dark:text-gray-400">
+              {program.tagline}
+            </p>
+          )}
+        </div>
+
+        {/* Chips row */}
+        <div className="flex flex-wrap gap-1.5">
+          {program.liftingFrequency && (
+            <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+              <Zap className="h-3 w-3" />
+              {program.liftingFrequency}
+            </span>
+          )}
+          {program.programLengthWeeks && (
+            <span className="flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-[11px] font-medium text-orange-700 dark:bg-orange-900/20 dark:text-orange-400">
+              <Clock className="h-3 w-3" />
+              {program.programLengthWeeks} weeks
+            </span>
+          )}
+        </div>
+
+        {/* Price + rating */}
+        <div className="mt-auto flex items-end justify-between">
+          <div>
+            <span className="text-base font-bold text-gray-900 dark:text-white">
+              {formatINR(displayPrice)}
+            </span>
+            {hasDiscount && (
+              <span className="ml-1.5 text-xs text-gray-400 line-through">
+                {formatINR(program.regularPrice)}
+              </span>
+            )}
+          </div>
+          {reviews > 0 && (
+            <div className="flex items-center gap-1">
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                {rating.toFixed(1)}
+              </span>
+              <span className="text-xs text-gray-400">({reviews})</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer actions */}
+      <div className="flex items-center gap-1 border-t border-gray-100 px-3 py-2 dark:border-gray-700">
+        <Button
+          size="sm"
+          variant="primary"
+          className="flex-1 text-xs"
+          onClick={onOpen}
+        >
+          Open Editor
+        </Button>
+        <button
+          onClick={onEdit}
+          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+          title="Edit metadata"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={onDelete}
+          className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+          title="Delete program"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
