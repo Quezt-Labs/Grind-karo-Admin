@@ -32,23 +32,23 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
           "group border-l-3 transition-colors",
           CATEGORY_BORDER[row.category] || CATEGORY_BORDER.OTHER,
           isAccessory
-            ? "bg-gray-50/50 hover:bg-gray-100/50 dark:bg-gray-800/50 dark:hover:bg-gray-750"
-            : "hover:bg-gray-50 dark:hover:bg-gray-750",
-          index > 0 && "border-t border-t-gray-100 dark:border-t-gray-700",
+            ? "bg-white hover:bg-gray-50/80 dark:bg-gray-800 dark:hover:bg-gray-750"
+            : "hover:bg-blue-50/30 dark:hover:bg-gray-750",
+          "border-t border-gray-100 dark:border-gray-700/60",
         )}
       >
-        <td className="py-2.5 pl-3">
+        <td className="py-4 pl-4">
           <span
             className={cn(
-              "font-mono text-[10px]",
+              "font-mono text-xs",
               isAccessory ? "text-gray-400" : "text-gray-500",
             )}
           >
             {index + 1}
           </span>
         </td>
-        <td className="py-2.5">
-          <div className="flex items-center gap-1">
+        <td className="py-4 pl-2">
+          <div className="flex items-center gap-2">
             {row.movementSlotId && (
               <span
                 className="inline-flex shrink-0 items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/20 dark:text-violet-400"
@@ -69,7 +69,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             </span>
           </div>
           {hasNotes && (
-            <p className="mt-0.5 text-[10px] leading-tight text-gray-400 dark:text-gray-500">
+            <p className="mt-1 text-xs leading-tight text-gray-400 dark:text-gray-500">
               {row.loadNote && <span className="italic">{row.loadNote}</span>}
               {row.loadNote && row.notes && <span> · </span>}
               {row.notes && <span>{row.notes}</span>}
@@ -79,7 +79,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
         <td className="py-2.5">
           <span
             className={cn(
-              "inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold",
+              "inline-block rounded-md px-2 py-1 text-xs font-semibold",
               CATEGORY_COLORS[row.category] || CATEGORY_COLORS.OTHER,
             )}
           >
@@ -88,24 +88,24 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
         </td>
         <td
           className={cn(
-            "py-2.5 text-center font-mono",
+            "py-4 text-center font-mono text-sm",
             isAccessory
               ? "text-gray-500 dark:text-gray-400"
-              : "text-gray-700 dark:text-gray-300",
+              : "text-gray-800 dark:text-gray-200",
           )}
         >
           {row.sets ?? (
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
         </td>
-        <td className="py-2.5 text-center">
+        <td className="py-4 text-center">
           {row.repScheme ? (
             <span
               className={cn(
-                "font-mono",
+                "font-mono text-sm",
                 isAccessory
                   ? "text-gray-500 dark:text-gray-400"
-                  : "text-gray-700 dark:text-gray-300",
+                  : "text-gray-800 dark:text-gray-200",
               )}
             >
               {row.repScheme}
@@ -114,11 +114,11 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
         </td>
-        <td className="py-2.5 text-center">
+        <td className="py-4 text-center">
           {row.targetRpe ? (
             <span
               className={cn(
-                "inline-block rounded-md px-1.5 py-0.5 font-mono text-[11px] font-semibold",
+                "inline-block rounded-md px-2 py-1 font-mono text-xs font-semibold",
                 !isAccessory &&
                   "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
                 isAccessory && "text-gray-500 dark:text-gray-400",
@@ -130,20 +130,20 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
         </td>
-        <td className="py-2.5 text-center">
+        <td className="py-4 text-center">
           {row.percentOneRm ? (
-            <span className="inline-block rounded-md bg-indigo-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400">
+            <span className="inline-block rounded-md bg-indigo-50 px-2 py-1 font-mono text-xs font-semibold text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400">
               {formatPercent(row.percentOneRm)}
             </span>
           ) : (
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
         </td>
-        <td className="py-2.5 text-center">
+        <td className="py-4 text-center">
           {row.computedLoadKg ? (
-            <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
+            <span className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-400">
               {row.computedLoadKg}
-              <span className="ml-0.5 text-[10px] font-normal text-emerald-600/70 dark:text-emerald-400/70">
+              <span className="ml-0.5 text-xs font-normal text-emerald-600/70 dark:text-emerald-400/70">
                 kg
               </span>
             </span>
@@ -151,21 +151,21 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
         </td>
-        <td className="py-2.5">
-          <div className="flex items-center justify-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-40 sm:group-hover:opacity-100">
+        <td className="py-4">
+          <div className="flex items-center justify-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-40 sm:group-hover:opacity-100">
             <button
               onClick={onEdit}
-              className="rounded-md p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-200"
+              className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-200"
               title="Edit exercise"
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <Pencil className="h-4 w-4" />
             </button>
             <button
               onClick={onDelete}
-              className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+              className="rounded-md p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
               title="Delete exercise"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </td>

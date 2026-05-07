@@ -355,7 +355,7 @@ function ProgramCard({ program, onEdit, onDelete, onOpen }: ProgramCardProps) {
           className="flex-1 text-xs"
           onClick={onOpen}
         >
-          Open Editor
+          Edit Program
         </Button>
         <button
           onClick={onEdit}

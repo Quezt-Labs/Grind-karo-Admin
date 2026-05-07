@@ -25,34 +25,34 @@ export const ExerciseTable = memo(function ExerciseTable({
 }: ExerciseTableProps) {
   return (
     <div className="overflow-x-auto border-t border-gray-200 dark:border-gray-700">
-      <table className="w-full text-xs">
+      <table className="w-full text-sm">
         <thead>
-          <tr className="sticky top-0 z-10 bg-gray-50/95 text-left backdrop-blur-sm dark:bg-gray-750/95">
-            <th className="w-10 border-b border-gray-200 py-2 pl-3 font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-400">
+          <tr className="sticky top-0 z-10 bg-gray-50/95 text-left backdrop-blur-sm dark:bg-gray-800/95">
+            <th className="w-10 border-b border-gray-200 py-3 pl-4 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-600 dark:text-gray-500">
               #
             </th>
-            <th className="min-w-45 border-b border-gray-200 py-2 font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <th className="min-w-52 border-b border-gray-200 py-3 pl-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-600 dark:text-gray-500">
               Exercise
             </th>
-            <th className="w-24 border-b border-gray-200 py-2 font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <th className="w-28 border-b border-gray-200 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-600 dark:text-gray-500">
               Category
             </th>
-            <th className="w-16 border-b border-gray-200 py-2 text-center font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <th className="w-16 border-b border-gray-200 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-600 dark:text-gray-500">
               Sets
             </th>
-            <th className="w-20 border-b border-gray-200 py-2 text-center font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <th className="w-24 border-b border-gray-200 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-600 dark:text-gray-500">
               Reps
             </th>
-            <th className="w-16 border-b border-gray-200 py-2 text-center font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <th className="w-20 border-b border-gray-200 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-600 dark:text-gray-500">
               RPE
             </th>
-            <th className="w-20 border-b border-gray-200 py-2 text-center font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <th className="w-20 border-b border-gray-200 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-600 dark:text-gray-500">
               %1RM
             </th>
-            <th className="w-28 border-b border-gray-200 py-2 text-center font-semibold text-emerald-600 dark:border-gray-600 dark:text-emerald-400">
+            <th className="w-28 border-b border-gray-200 py-3 text-center text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:border-gray-600 dark:text-emerald-400">
               Load (kg)
             </th>
-            <th className="w-20 border-b border-gray-200 py-2 text-center font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <th className="w-20 border-b border-gray-200 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-600 dark:text-gray-500">
               Actions
             </th>
           </tr>
