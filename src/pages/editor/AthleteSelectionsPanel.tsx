@@ -112,8 +112,6 @@ export function AthleteSelectionsPanel({
     }
   }
 
-  const slotLookup = new Map<string, MovementSlot>(slots.map((s) => [s.id, s]));
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
