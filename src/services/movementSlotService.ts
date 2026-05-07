@@ -7,6 +7,7 @@ import type {
   CreateOptionPayload,
   UpdateOptionPayload,
   OverrideUpsertPayload,
+  AthleteSelectionRecord,
 } from "@/types/programs";
 
 export const movementSlotService = {
@@ -88,6 +89,25 @@ export const movementSlotService = {
   ): Promise<void> {
     await api.put(`/admin/program-exercises/${exerciseRowId}/slot`, {
       movementSlotId,
+    });
+  },
+
+  // ---- Athlete selections (admin/coach) ------------------------------------
+  async getAthleteSelections(
+    programId: string,
+  ): Promise<AthleteSelectionRecord[]> {
+    const { data } = await api.get(
+      `/admin/programs/${programId}/athlete-selections`,
+    );
+    return data.data ?? data;
+  },
+
+  async resetAthleteSelections(
+    programId: string,
+    userId: string,
+  ): Promise<void> {
+    await api.post(`/programs/${programId}/profile/reset-selections`, {
+      userId,
     });
   },
 };

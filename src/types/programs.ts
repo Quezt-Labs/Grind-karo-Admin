@@ -307,6 +307,20 @@ export interface ProgramReview {
   program?: { id: string; name: string; slug: string };
 }
 
+// ---- Athlete Selections (admin) -----------------------------------------
+export interface AthleteSelectionRecord {
+  userId: string;
+  userName: string | null;
+  userEmail: string;
+  profileId: string | null;
+  movementSelections: Record<string, string> | null; // slotId → optionId
+  has125kgPlates: boolean;
+  selectionsLockedAt: string | null; // ISO 8601 — null = unlocked
+  squatOneRm: number | null;
+  benchOneRm: number | null;
+  deadliftOneRm: number | null;
+}
+
 // ---- Program Purchases --------------------------------------------------
 export type ProgramPurchaseStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 

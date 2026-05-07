@@ -38,6 +38,7 @@ import { formatINR } from "./editor/programConstants";
 import { StatCard, EmptySection } from "./editor/ProgramShared";
 import { BlockNode } from "./editor/BlockNode";
 import { MovementSlotsPanel } from "./editor/MovementSlotsPanel";
+import { AthleteSelectionsPanel } from "./editor/AthleteSelectionsPanel";
 
 /* ─── Main Page ───────────────────────────────────────────────────────── */
 
@@ -442,6 +443,19 @@ export function ProgramDetailPage() {
         </h2>
         <MovementSlotsPanel programId={programId!} tree={tree} />
       </div>
+
+      {/* ── Athlete Selections ─────────────────────────────────────── */}
+      {tree.movementSlots.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Athlete Selections
+          </h2>
+          <AthleteSelectionsPanel
+            programId={programId!}
+            slots={tree.movementSlots}
+          />
+        </div>
+      )}
 
       {/* ── Resources ──────────────────────────────────────────────────── */}
       <div className="space-y-4">
