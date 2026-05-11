@@ -63,6 +63,7 @@ export function OptionFormModal({
   });
 
   const exerciseId = useWatch({ control, name: "exerciseId" });
+  const isDefault = useWatch({ control, name: "isDefault" });
 
   const createMut = useMutation({
     mutationFn: (d: FormData) =>
@@ -149,7 +150,7 @@ export function OptionFormModal({
             <input
               type="checkbox"
               className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              checked={watch("isDefault")}
+              checked={isDefault}
               onChange={(e) => setValue("isDefault", e.target.checked)}
             />
             Set as default option
