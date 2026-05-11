@@ -1,4 +1,4 @@
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -46,7 +46,7 @@ export function SlotFormModal({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
@@ -60,14 +60,18 @@ export function SlotFormModal({
       : { slotKey: "", label: "", category: "SQUAT", sortOrder: 0 },
   });
 
+  const category = useWatch({ control, name: "category" });
+
   const createMut = useMutation({
     mutationFn: (d: FormData) => movementSlotService.createSlot(programId, d),
     onSuccess: () => {
       toast.success("Slot created");
       onSuccess();
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message || "Failed to create slot";
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Failed to create slot";
       toast.error(msg);
     },
   });
@@ -122,7 +126,7 @@ export function SlotFormModal({
             label="Category"
             options={SLOT_CATEGORY_OPTIONS}
             error={errors.category?.message}
-            value={watch("category")}
+            value={category}
             {...register("category")}
           />
           <Input

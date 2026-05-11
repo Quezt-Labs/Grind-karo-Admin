@@ -1,15 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  MessageCircle,
-  Send,
-  Paperclip,
-  X,
-  Image as ImageIcon,
-  Mic,
-  Loader2,
-} from "lucide-react";
+import { MessageCircle, Send, Paperclip, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { chatService } from "@/services/chatService";
 import { uploadService } from "@/services/uploadService";
@@ -233,7 +225,7 @@ export function ChatPage() {
                   No messages yet. Say hello!
                 </div>
               ) : (
-                <MessageList messages={messages} adminId={selectedUserId} />
+                <MessageList messages={messages} />
               )}
               <div ref={bottomRef} />
             </div>
@@ -360,40 +352,32 @@ function InboxRow({
   );
 }
 
-function MessageList({
-  messages,
-  adminId,
-}: {
-  messages: ChatMessage[];
-  adminId: string;
-}) {
-  let lastDate = "";
+function MessageList({ messages }: { messages: ChatMessage[] }) {
+  const items = messages.map((msg, i) => ({
+    msg,
+    msgDate: dateDivider(msg.createdAt),
+    showDivider:
+      i === 0 ||
+      dateDivider(msg.createdAt) !== dateDivider(messages[i - 1].createdAt),
+    isFromUser: msg.senderId === msg.userId,
+  }));
 
   return (
     <>
-      {messages.map((msg) => {
-        const msgDate = dateDivider(msg.createdAt);
-        const showDivider = msgDate !== lastDate;
-        lastDate = msgDate;
-
-        // If senderId === userId, the message is FROM the client; otherwise it's from admin/trainer
-        const isFromUser = msg.senderId === msg.userId;
-
-        return (
-          <div key={msg.id}>
-            {showDivider && (
-              <div className="flex items-center gap-3 py-3">
-                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-                <span className="text-[10px] font-medium text-gray-400">
-                  {msgDate}
-                </span>
-                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-              </div>
-            )}
-            <MessageBubble msg={msg} isFromUser={isFromUser} />
-          </div>
-        );
-      })}
+      {items.map(({ msg, msgDate, showDivider, isFromUser }) => (
+        <div key={msg.id}>
+          {showDivider && (
+            <div className="flex items-center gap-3 py-3">
+              <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+              <span className="text-[10px] font-medium text-gray-400">
+                {msgDate}
+              </span>
+              <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+            </div>
+          )}
+          <MessageBubble msg={msg} isFromUser={isFromUser} />
+        </div>
+      ))}
     </>
   );
 }

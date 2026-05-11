@@ -1,4 +1,9 @@
-import { useForm, useFieldArray, type Resolver } from "react-hook-form";
+import {
+  useForm,
+  useFieldArray,
+  useWatch,
+  type Resolver,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -50,7 +55,6 @@ export function ProgramFormModal({
     register,
     handleSubmit,
     control,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<ProgramFormData>({
@@ -93,7 +97,7 @@ export function ProgramFormModal({
   });
 
   const highlightsArray = useFieldArray({ control, name: "highlights" });
-  const coverImageUrl = watch("coverImageUrl");
+  const coverImageUrl = useWatch({ control, name: "coverImageUrl" });
 
   const createMutation = useMutation({
     mutationFn: programService.create,

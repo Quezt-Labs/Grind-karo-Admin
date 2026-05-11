@@ -1,4 +1,4 @@
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -47,7 +47,7 @@ export function OptionFormModal({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<FormData>({
@@ -61,6 +61,8 @@ export function OptionFormModal({
         }
       : { exerciseId: "", exerciseName: "", isDefault: false, sortOrder: 0 },
   });
+
+  const exerciseId = useWatch({ control, name: "exerciseId" });
 
   const createMut = useMutation({
     mutationFn: (d: FormData) =>
@@ -126,7 +128,7 @@ export function OptionFormModal({
             id="opt-exercise"
             label="Exercise (from library)"
             options={exerciseOptions}
-            value={watch("exerciseId")}
+            value={exerciseId}
             onChange={handleExerciseChange}
           />
           <Input

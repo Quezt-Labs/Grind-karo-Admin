@@ -1,4 +1,4 @@
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -70,7 +70,7 @@ export function CouponFormModal({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as unknown as Resolver<FormData>,
@@ -107,7 +107,7 @@ export function CouponFormModal({
         },
   });
 
-  const discountType = watch("discountType");
+  const discountType = useWatch({ control, name: "discountType" });
 
   function toPayload(d: FormData) {
     return {

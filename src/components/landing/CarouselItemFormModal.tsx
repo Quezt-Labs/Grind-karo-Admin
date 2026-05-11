@@ -1,4 +1,4 @@
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -40,7 +40,7 @@ export function CarouselItemFormModal({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<FormData>({
@@ -66,8 +66,8 @@ export function CarouselItemFormModal({
         },
   });
 
-  const imageWebUrl = watch("imageWebUrl");
-  const imageMobileUrl = watch("imageMobileUrl");
+  const imageWebUrl = useWatch({ control, name: "imageWebUrl" });
+  const imageMobileUrl = useWatch({ control, name: "imageMobileUrl" });
 
   const createMut = useMutation({
     mutationFn: (d: FormData) =>

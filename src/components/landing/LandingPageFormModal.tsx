@@ -1,4 +1,4 @@
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -45,7 +45,7 @@ export function LandingPageFormModal({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<FormData>({
@@ -81,10 +81,13 @@ export function LandingPageFormModal({
         },
   });
 
-  const heroBannerWebUrl = watch("heroBannerWebUrl");
-  const heroBannerMobileUrl = watch("heroBannerMobileUrl");
-  const heroVideoUrl = watch("heroVideoUrl");
-  const heroVideoPosterUrl = watch("heroVideoPosterUrl");
+  const heroBannerWebUrl = useWatch({ control, name: "heroBannerWebUrl" });
+  const heroBannerMobileUrl = useWatch({
+    control,
+    name: "heroBannerMobileUrl",
+  });
+  const heroVideoUrl = useWatch({ control, name: "heroVideoUrl" });
+  const heroVideoPosterUrl = useWatch({ control, name: "heroVideoPosterUrl" });
 
   function toPayload(d: FormData) {
     return {
