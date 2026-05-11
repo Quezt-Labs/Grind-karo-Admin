@@ -203,7 +203,9 @@ export function AthleteSelectionsPanel({
               <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                    {(athlete.userName ?? athlete.userEmail)[0].toUpperCase()}
+                    {(athlete.userName ??
+                      athlete.userEmail ??
+                      "?")[0].toUpperCase()}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">

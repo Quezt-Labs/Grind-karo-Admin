@@ -171,7 +171,7 @@ export function UserDetailPage() {
           <div className="flex justify-center py-10">
             <Spinner />
           </div>
-        ) : !progressData || progressData.items.length === 0 ? (
+        ) : (progressData?.items ?? []).length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center dark:border-gray-600 dark:bg-gray-800">
             <ImageIcon className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -181,7 +181,7 @@ export function UserDetailPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {progressData.items.map((entry) => (
+              {(progressData?.items ?? []).map((entry) => (
                 <a
                   key={entry.id}
                   href={entry.imageUrl}
@@ -213,15 +213,15 @@ export function UserDetailPage() {
               ))}
             </div>
 
-            {progressData.total > PROGRESS_PAGE_SIZE && (
+            {(progressData?.total ?? 0) > PROGRESS_PAGE_SIZE && (
               <div className="mt-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
                 <span>
                   Showing {progressOffset + 1}–
                   {Math.min(
                     progressOffset + PROGRESS_PAGE_SIZE,
-                    progressData.total,
+                    progressData?.total ?? 0,
                   )}{" "}
-                  of {progressData.total}
+                  of {progressData?.total ?? 0}
                 </span>
                 <div className="flex gap-2">
                   <button
@@ -240,7 +240,8 @@ export function UserDetailPage() {
                       setProgressOffset((o) => o + PROGRESS_PAGE_SIZE)
                     }
                     disabled={
-                      progressOffset + PROGRESS_PAGE_SIZE >= progressData.total
+                      progressOffset + PROGRESS_PAGE_SIZE >=
+                      (progressData?.total ?? 0)
                     }
                     className="rounded-lg border p-1.5 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-700"
                   >

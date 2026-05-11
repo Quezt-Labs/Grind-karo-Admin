@@ -1,4 +1,4 @@
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -50,6 +50,7 @@ export function ExerciseFormModal({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ExerciseFormData>({
     resolver: zodResolver(exerciseSchema) as Resolver<ExerciseFormData>,
@@ -73,6 +74,8 @@ export function ExerciseFormModal({
           sortOrder: 0,
         },
   });
+
+  const category = useWatch({ control, name: "category" });
 
   const createMutation = useMutation({
     mutationFn: exerciseService.create,
@@ -149,6 +152,7 @@ export function ExerciseFormModal({
             label="Category"
             options={CATEGORY_OPTIONS}
             error={errors.category?.message}
+            value={category}
             {...register("category")}
           />
 

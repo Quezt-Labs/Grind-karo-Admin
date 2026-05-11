@@ -167,14 +167,14 @@ export function InlineExerciseRow({
           {nextSortOrder + 1}
         </td>
         <td className="py-1.5" colSpan={2}>
-          {/* Exercise picker: search dropdown + manual override */}
-          <div className="flex flex-col gap-1">
+          {/* Exercise picker: library dropdown + manual override, side by side */}
+          <div className="flex items-center gap-1">
             <Select
               value={row.exerciseId || undefined}
               onValueChange={(v) => handleExerciseSelect(v)}
             >
-              <SelectTrigger className="w-full rounded border border-gray-300 bg-white px-1.5 py-1 text-xs h-7 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
-                <SelectValue placeholder="-- Select from library --" />
+              <SelectTrigger className="w-44 shrink-0 rounded border border-gray-300 bg-white px-1.5 py-1 text-xs h-7 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
+                <SelectValue placeholder="-- Library --" />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORY_OPTIONS.map((cat) => {
@@ -195,21 +195,22 @@ export function InlineExerciseRow({
                 })}
               </SelectContent>
             </Select>
-            {!row.exerciseId && (
-              <input
-                ref={nameRef}
-                value={row.exerciseNameOverride}
-                onChange={(e) =>
-                  setRow((prev) => ({
-                    ...prev,
-                    exerciseNameOverride: e.target.value,
-                  }))
-                }
-                onKeyDown={handleKeyDown}
-                placeholder="or type name manually..."
-                className="w-full rounded border border-gray-300 bg-white px-1.5 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              />
-            )}
+            <span className="shrink-0 text-[10px] text-gray-400">or</span>
+            <input
+              ref={nameRef}
+              value={row.exerciseNameOverride}
+              onChange={(e) =>
+                setRow((prev) => ({
+                  ...prev,
+                  exerciseNameOverride: e.target.value,
+                  exerciseId: e.target.value ? "" : prev.exerciseId,
+                }))
+              }
+              onKeyDown={handleKeyDown}
+              placeholder="type name manually…"
+              disabled={!!row.exerciseId}
+              className="min-w-0 flex-1 rounded border border-gray-300 bg-white px-1.5 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:disabled:bg-gray-800"
+            />
           </div>
         </td>
         <td className="py-1.5 px-1">

@@ -15,6 +15,7 @@ const SLOT_CATEGORY_OPTIONS = [
   { value: "BENCH", label: "Bench" },
   { value: "DEADLIFT", label: "Deadlift" },
   { value: "ACCESSORY", label: "Accessory" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const schema = z.object({
@@ -23,7 +24,7 @@ const schema = z.object({
     .min(1)
     .regex(/^[a-z0-9]+(?:_[a-z0-9]+)*$/, "Lowercase with underscores only"),
   label: z.string().min(1),
-  category: z.enum(["SQUAT", "BENCH", "DEADLIFT", "ACCESSORY"]),
+  category: z.enum(["SQUAT", "BENCH", "DEADLIFT", "ACCESSORY", "OTHER"]),
   sortOrder: z.coerce.number().min(0),
 });
 

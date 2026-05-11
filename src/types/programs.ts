@@ -217,7 +217,12 @@ export interface CreateResourcePayload {
 export type UpdateResourcePayload = Partial<CreateResourcePayload>;
 
 // ---- Movement Slots -----------------------------------------------------
-export type SlotCategory = "SQUAT" | "BENCH" | "DEADLIFT" | "ACCESSORY";
+export type SlotCategory =
+  | "SQUAT"
+  | "BENCH"
+  | "DEADLIFT"
+  | "ACCESSORY"
+  | "OTHER";
 
 export interface MovementOptionOverride {
   programExerciseId: string;

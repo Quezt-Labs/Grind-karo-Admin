@@ -21,7 +21,9 @@ export const chatService = {
     params?: { limit?: number; offset?: number },
   ): Promise<ChatMessage[]> {
     const { data } = await api.get(`/admin/chat/history/${userId}`, { params });
-    return data.data ?? data;
+    const result = data.data ?? data;
+    // Normalise: handle both plain array and paginated { items: [] } shapes
+    return Array.isArray(result) ? result : (result.items ?? []);
   },
 
   async sendMessage(payload: SendMessagePayload): Promise<ChatMessage> {
