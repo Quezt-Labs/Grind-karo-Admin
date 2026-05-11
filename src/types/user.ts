@@ -62,6 +62,23 @@ export interface UserPurchasesResponse {
   purchases: Purchase[];
 }
 
+// ---- User Progress ------------------------------------------------------
+
+export interface UserProgressEntry {
+  id: string;
+  imageUrl: string;
+  notes: string | null;
+  weight: string | null;
+  createdAt: string;
+}
+
+export interface UserProgressResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  items: UserProgressEntry[];
+}
+
 // ---- Plan Users (by-plan API) -------------------------------------------
 
 export type PlanUserSubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";

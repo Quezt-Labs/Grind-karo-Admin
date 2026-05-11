@@ -14,6 +14,7 @@ import {
   Star,
   MonitorSmartphone,
   Ticket,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useSidebarStore } from "@/store/sidebarStore";
@@ -38,6 +39,7 @@ const iconMap: Record<string, ReactNode> = {
   Star: <Star className="h-5 w-5" />,
   MonitorSmartphone: <MonitorSmartphone className="h-5 w-5" />,
   Ticket: <Ticket className="h-5 w-5" />,
+  MessageCircle: <MessageCircle className="h-5 w-5" />,
 };
 
 const NAV_ITEMS = [
@@ -57,6 +59,7 @@ const NAV_ITEMS = [
   { path: "/coupons", label: "Coupons", icon: "Ticket" },
   { path: "/exercises", label: "Exercises", icon: "Dumbbell" },
   { path: "/users", label: "Users", icon: "Users" },
+  { path: "/chat", label: "Chat", icon: "MessageCircle" },
 ];
 
 export function Sidebar() {

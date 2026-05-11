@@ -23,6 +23,7 @@ import { LandingPageDetailPage } from "@/pages/LandingPageDetailPage";
 import { ContactSubmissionsPage } from "@/pages/ContactSubmissionsPage";
 import { CouponsPage } from "@/pages/CouponsPage";
 import { CouponDetailPage } from "@/pages/CouponDetailPage";
+import { ChatPage } from "@/pages/ChatPage";
 import { TestingPage } from "@/pages/TestingPage";
 
 export default function App() {
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="/contact" element={<ContactSubmissionsPage />} />
               <Route path="/coupons" element={<CouponsPage />} />
               <Route path="/coupons/:id" element={<CouponDetailPage />} />
+              <Route path="/chat" element={<ChatPage />} />
             </Route>
           </Route>
 

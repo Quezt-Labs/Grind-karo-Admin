@@ -4,6 +4,7 @@ import type {
   Purchaser,
   PaginatedResponse,
   UserPurchasesResponse,
+  UserProgressResponse,
 } from "@/types/user";
 
 export interface UserFilters {
@@ -42,5 +43,13 @@ export const userService = {
   async getPurchases(id: string): Promise<UserPurchasesResponse> {
     const { data } = await api.get(`/admin/users/${id}/purchases`);
     return data;
+  },
+
+  async getProgress(
+    id: string,
+    params?: { limit?: number; offset?: number },
+  ): Promise<UserProgressResponse> {
+    const { data } = await api.get(`/admin/progress/${id}`, { params });
+    return data.data ?? data;
   },
 };

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -8,6 +8,9 @@ import {
   Calendar,
   Mail,
   User,
+  ImageIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
@@ -15,6 +18,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { userService } from "@/services/userService";
 import { cn } from "@/utils/cn";
 import type { Purchase } from "@/types/user";
+
+const PROGRESS_PAGE_SIZE = 12;
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -45,10 +50,21 @@ function formatDateTime(iso: string): string {
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [progressOffset, setProgressOffset] = useState(0);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-user-purchases", id],
     queryFn: () => userService.getPurchases(id!),
+    enabled: !!id,
+  });
+
+  const { data: progressData, isLoading: progressLoading } = useQuery({
+    queryKey: ["admin-user-progress", id, progressOffset],
+    queryFn: () =>
+      userService.getProgress(id!, {
+        limit: PROGRESS_PAGE_SIZE,
+        offset: progressOffset,
+      }),
     enabled: !!id,
   });
 
@@ -136,6 +152,106 @@ export function UserDetailPage() {
           />
         </div>
       )}
+
+      {/* Progress Photos */}
+      <div>
+        <div className="mb-4 flex items-center gap-2">
+          <ImageIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Progress Photos
+          </h2>
+          {progressData && (
+            <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              {progressData.total}
+            </span>
+          )}
+        </div>
+
+        {progressLoading ? (
+          <div className="flex justify-center py-10">
+            <Spinner />
+          </div>
+        ) : !progressData || progressData.items.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center dark:border-gray-600 dark:bg-gray-800">
+            <ImageIcon className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No progress photos uploaded yet.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {progressData.items.map((entry) => (
+                <a
+                  key={entry.id}
+                  href={entry.imageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+                >
+                  <img
+                    src={entry.imageUrl}
+                    alt={`Progress ${formatDate(entry.createdAt)}`}
+                    className="aspect-3/4 w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  />
+                  <div className="p-2">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      {formatDate(entry.createdAt)}
+                    </p>
+                    {entry.weight && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {entry.weight} kg
+                      </p>
+                    )}
+                    {entry.notes && (
+                      <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+                        {entry.notes}
+                      </p>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {progressData.total > PROGRESS_PAGE_SIZE && (
+              <div className="mt-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                <span>
+                  Showing {progressOffset + 1}–
+                  {Math.min(
+                    progressOffset + PROGRESS_PAGE_SIZE,
+                    progressData.total,
+                  )}{" "}
+                  of {progressData.total}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() =>
+                      setProgressOffset((o) =>
+                        Math.max(0, o - PROGRESS_PAGE_SIZE),
+                      )
+                    }
+                    disabled={progressOffset === 0}
+                    className="rounded-lg border p-1.5 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-700"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() =>
+                      setProgressOffset((o) => o + PROGRESS_PAGE_SIZE)
+                    }
+                    disabled={
+                      progressOffset + PROGRESS_PAGE_SIZE >= progressData.total
+                    }
+                    className="rounded-lg border p-1.5 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-700"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Purchase Timeline */}
       <div>
