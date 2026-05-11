@@ -62,6 +62,39 @@ export interface UserPurchasesResponse {
   purchases: Purchase[];
 }
 
+// ---- Plan Users (by-plan API) -------------------------------------------
+
+export type PlanUserSubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
+export type PlanUserStatusFilter = "all" | "active" | "past";
+
+export interface PlanUserItem {
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    role: "USER" | "ADMIN";
+    plan: "FREE" | "PRO" | "ENTERPRISE" | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  subscription: {
+    id: string;
+    status: PlanUserSubscriptionStatus;
+    startDate: string;
+    expiresAt: string;
+    totalAmount: number;
+    razorpayPaymentId: string | null;
+    createdAt: string;
+  };
+}
+
+export interface ListPlanUsersResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  items: PlanUserItem[];
+}
+
 // ---- Notifications ------------------------------------------------------
 
 export type NotificationType =

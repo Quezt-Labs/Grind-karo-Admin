@@ -1,7 +1,16 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Check, X as XIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Check,
+  X as XIcon,
+  Users,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
@@ -14,6 +23,7 @@ import { addonService } from "@/services/addonService";
 import { LinkAddonModal } from "@/components/coaching/LinkAddonModal";
 import type { Column } from "@/types/dashboard";
 import type { CoachingAddon, PublicAddon } from "@/types/program";
+import type { PlanUserStatusFilter } from "@/types/user";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -36,12 +46,23 @@ const addonColumns: Column<AddonRow>[] = [
   { key: "price", header: "Effective Price", sortable: true },
 ];
 
+const PAGE_SIZE = 50;
+
+const STATUS_TABS: { label: string; value: PlanUserStatusFilter }[] = [
+  { label: "All", value: "all" },
+  { label: "Active", value: "active" },
+  { label: "Past", value: "past" },
+];
+
 export function PlanDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [unlinkTarget, setUnlinkTarget] = useState<PublicAddon | null>(null);
+  const [subscriberStatus, setSubscriberStatus] =
+    useState<PlanUserStatusFilter>("all");
+  const [subscriberOffset, setSubscriberOffset] = useState(0);
 
   const {
     data: plan,
@@ -50,6 +71,17 @@ export function PlanDetailPage() {
   } = useQuery({
     queryKey: ["coaching-plan", id],
     queryFn: () => planService.getById(id!),
+    enabled: !!id,
+  });
+
+  const { data: subscribersData, isLoading: subscribersLoading } = useQuery({
+    queryKey: ["plan-users", id, subscriberStatus, subscriberOffset],
+    queryFn: () =>
+      planService.getUsersByPlan(id!, {
+        status: subscriberStatus,
+        limit: PAGE_SIZE,
+        offset: subscriberOffset,
+      }),
     enabled: !!id,
   });
 
@@ -244,6 +276,147 @@ export function PlanDetailPage() {
       </div>
 
       {/* Link Modal */}
+      {/* Subscribers */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Subscribers
+          </h2>
+          {subscribersData && (
+            <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              {subscribersData.total}
+            </span>
+          )}
+        </div>
+
+        {/* Status filter tabs */}
+        <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/50">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => {
+                setSubscriberStatus(tab.value);
+                setSubscriberOffset(0);
+              }}
+              className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                subscriberStatus === tab.value
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {subscribersLoading ? (
+          <div className="flex justify-center py-10">
+            <Spinner />
+          </div>
+        ) : !subscribersData || subscribersData.items.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center dark:border-gray-600 dark:bg-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No subscribers found for this filter.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800/60">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      User
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Amount
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Start Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Expires
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                  {subscribersData.items.map(({ user, subscription }) => (
+                    <tr
+                      key={subscription.id}
+                      onClick={() => navigate(`/users/${user.id}`)}
+                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                    >
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {user.name || "—"}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {user.email}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <SubscriptionStatusBadge status={subscription.status} />
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                        {formatINR(subscription.totalAmount)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                        {new Date(subscription.startDate).toLocaleDateString(
+                          "en-IN",
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                        {new Date(subscription.expiresAt).toLocaleDateString(
+                          "en-IN",
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {subscribersData.total > PAGE_SIZE && (
+              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                <span>
+                  Showing {subscriberOffset + 1}–
+                  {Math.min(
+                    subscriberOffset + PAGE_SIZE,
+                    subscribersData.total,
+                  )}{" "}
+                  of {subscribersData.total}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() =>
+                      setSubscriberOffset((o) => Math.max(0, o - PAGE_SIZE))
+                    }
+                    disabled={subscriberOffset === 0}
+                    className="rounded-lg border p-1.5 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-700"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setSubscriberOffset((o) => o + PAGE_SIZE)}
+                    disabled={
+                      subscriberOffset + PAGE_SIZE >= subscribersData.total
+                    }
+                    className="rounded-lg border p-1.5 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-700"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {showLinkModal && (
         <LinkAddonModal
           availableAddons={unlinkableAddons}
@@ -280,5 +453,26 @@ function InfoCard({ label, value }: { label: string; value: string }) {
         {value}
       </p>
     </div>
+  );
+}
+
+function SubscriptionStatusBadge({
+  status,
+}: {
+  status: "ACTIVE" | "EXPIRED" | "CANCELLED";
+}) {
+  const styles = {
+    ACTIVE:
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    EXPIRED:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    CANCELLED: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  };
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}
+    >
+      {status.charAt(0) + status.slice(1).toLowerCase()}
+    </span>
   );
 }

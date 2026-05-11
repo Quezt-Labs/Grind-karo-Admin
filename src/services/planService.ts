@@ -7,6 +7,7 @@ import type {
   LinkAddonPayload,
   UpdateAddonLinkPayload,
 } from "@/types/program";
+import type { ListPlanUsersResponse, PlanUserStatusFilter } from "@/types/user";
 
 export const planService = {
   async getAll(): Promise<CoachingPlan[]> {
@@ -68,5 +69,21 @@ export const planService = {
 
   async unlinkAddon(planId: string, addonId: string): Promise<void> {
     await api.delete(`/admin/coaching/plans/${planId}/addons/${addonId}`);
+  },
+
+  // --- Plan subscribers ---
+
+  async getUsersByPlan(
+    planId: string,
+    params?: {
+      status?: PlanUserStatusFilter;
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<ListPlanUsersResponse> {
+    const { data } = await api.get(`/admin/users/by-plan/${planId}`, {
+      params,
+    });
+    return data.data ?? data;
   },
 };
