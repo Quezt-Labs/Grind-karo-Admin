@@ -382,6 +382,101 @@ function MessageList({ messages }: { messages: ChatMessage[] }) {
   );
 }
 
+function AudioPlayer({
+  src,
+  isFromUser,
+}: {
+  src: string;
+  isFromUser: boolean;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  function togglePlay() {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) {
+      el.pause();
+    } else {
+      void el.play();
+    }
+    setPlaying((p) => !p);
+  }
+
+  function formatTime(s: number) {
+    if (!isFinite(s) || isNaN(s)) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  }
+
+  return (
+    <div className="flex items-center gap-2.5" style={{ minWidth: "210px" }}>
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        onEnded={() => {
+          setPlaying(false);
+          setCurrentTime(0);
+        }}
+        className="hidden"
+      />
+
+      {/* Play / Pause */}
+      <button
+        onClick={togglePlay}
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80",
+          isFromUser
+            ? "bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-white"
+            : "bg-white/20 text-white",
+        )}
+      >
+        {playing ? (
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
+            <rect x="6" y="4" width="4" height="16" rx="1" />
+            <rect x="14" y="4" width="4" height="16" rx="1" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
+            <path d="M8 5.14v14l11-7-11-7z" />
+          </svg>
+        )}
+      </button>
+
+      {/* Scrubber + times */}
+      <div className="flex flex-1 flex-col gap-1">
+        <input
+          type="range"
+          min={0}
+          max={duration || 100}
+          value={currentTime}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            if (audioRef.current) audioRef.current.currentTime = val;
+            setCurrentTime(val);
+          }}
+          className="h-1 w-full cursor-pointer rounded-full"
+          style={{ accentColor: isFromUser ? "#10b981" : "white" }}
+        />
+        <div
+          className={cn(
+            "flex justify-between text-[10px]",
+            isFromUser ? "text-gray-400" : "text-emerald-100",
+          )}
+        >
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MessageBubble({
   msg,
   isFromUser,
@@ -389,6 +484,8 @@ function MessageBubble({
   msg: ChatMessage;
   isFromUser: boolean;
 }) {
+  const [lightbox, setLightbox] = useState(false);
+
   const timeStamp = (
     <p
       className={cn(
@@ -425,42 +522,50 @@ function MessageBubble({
 
         {msg.type === "IMAGE" && msg.mediaUrl && (
           <>
-            <a
-              href={msg.mediaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
+            <button
+              onClick={() => setLightbox(true)}
+              className="block cursor-zoom-in"
             >
               <img
                 src={msg.mediaUrl}
                 alt="Shared image"
-                className="block w-full max-w-xs object-cover transition-opacity hover:opacity-95"
+                className="block w-full max-w-xs object-cover transition-opacity hover:opacity-90"
               />
-            </a>
+            </button>
             <div className="px-3 pb-2 pt-1.5">
               {msg.content && (
-                <p className="mb-0.5 break-words text-xs opacity-80">
+                <p className="mb-0.5 wrap-break-word text-xs opacity-80">
                   {msg.content}
                 </p>
               )}
               {timeStamp}
             </div>
+
+            {/* Lightbox */}
+            {lightbox && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                onClick={() => setLightbox(false)}
+              >
+                <img
+                  src={msg.mediaUrl}
+                  alt="Full size"
+                  className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            )}
           </>
         )}
 
         {msg.type === "AUDIO" && msg.mediaUrl && (
           <>
-            <div className="flex flex-col gap-1">
-              <audio
-                controls
-                src={msg.mediaUrl}
-                className="h-9 w-full rounded-lg"
-                style={{ minWidth: "200px", maxWidth: "240px" }}
-              />
-              {msg.content && (
-                <p className="break-words text-xs opacity-80">{msg.content}</p>
-              )}
-            </div>
+            <AudioPlayer src={msg.mediaUrl} isFromUser={isFromUser} />
+            {msg.content && (
+              <p className="mt-1 wrap-break-word text-xs opacity-80">
+                {msg.content}
+              </p>
+            )}
             {timeStamp}
           </>
         )}
