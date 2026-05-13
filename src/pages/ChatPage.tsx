@@ -389,55 +389,81 @@ function MessageBubble({
   msg: ChatMessage;
   isFromUser: boolean;
 }) {
+  const timeStamp = (
+    <p
+      className={cn(
+        "mt-0.5 text-[10px]",
+        isFromUser ? "text-gray-400" : "text-emerald-100",
+      )}
+    >
+      {timeLabel(msg.createdAt)}
+      {!isFromUser && msg.readAt && (
+        <span className="ml-1 opacity-70">· Read</span>
+      )}
+    </p>
+  );
+
   return (
     <div
       className={cn("flex mb-1", isFromUser ? "justify-start" : "justify-end")}
     >
       <div
         className={cn(
-          "max-w-[70%] rounded-2xl px-4 py-2.5 text-sm",
+          "max-w-[70%] overflow-hidden rounded-2xl text-sm",
+          msg.type !== "IMAGE" && "px-4 py-2.5",
           isFromUser
             ? "rounded-tl-sm bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white"
             : "rounded-tr-sm bg-emerald-500 text-white",
         )}
       >
         {msg.type === "TEXT" && (
-          <p className="whitespace-pre-wrap">{msg.content}</p>
+          <>
+            <p className="whitespace-pre-wrap break-all">{msg.content}</p>
+            {timeStamp}
+          </>
         )}
 
         {msg.type === "IMAGE" && msg.mediaUrl && (
-          <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer">
-            <img
-              src={msg.mediaUrl}
-              alt="Shared image"
-              className="max-w-48 rounded-lg object-cover"
-            />
-            {msg.content && (
-              <p className="mt-1 text-xs opacity-80">{msg.content}</p>
-            )}
-          </a>
+          <>
+            <a
+              href={msg.mediaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <img
+                src={msg.mediaUrl}
+                alt="Shared image"
+                className="block w-full max-w-xs object-cover transition-opacity hover:opacity-95"
+              />
+            </a>
+            <div className="px-3 pb-2 pt-1.5">
+              {msg.content && (
+                <p className="mb-0.5 break-words text-xs opacity-80">
+                  {msg.content}
+                </p>
+              )}
+              {timeStamp}
+            </div>
+          </>
         )}
 
         {msg.type === "AUDIO" && msg.mediaUrl && (
-          <div>
-            <audio controls src={msg.mediaUrl} className="max-w-48" />
-            {msg.content && (
-              <p className="mt-1 text-xs opacity-80">{msg.content}</p>
-            )}
-          </div>
+          <>
+            <div className="flex flex-col gap-1">
+              <audio
+                controls
+                src={msg.mediaUrl}
+                className="h-9 w-full rounded-lg"
+                style={{ minWidth: "200px", maxWidth: "240px" }}
+              />
+              {msg.content && (
+                <p className="break-words text-xs opacity-80">{msg.content}</p>
+              )}
+            </div>
+            {timeStamp}
+          </>
         )}
-
-        <p
-          className={cn(
-            "mt-0.5 text-[10px]",
-            isFromUser ? "text-gray-400" : "text-emerald-100",
-          )}
-        >
-          {timeLabel(msg.createdAt)}
-          {!isFromUser && msg.readAt && (
-            <span className="ml-1 opacity-70">· Read</span>
-          )}
-        </p>
       </div>
     </div>
   );
