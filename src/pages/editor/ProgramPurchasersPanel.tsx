@@ -70,19 +70,13 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
           {(user.name ?? user.email)[0].toUpperCase()}
         </div>
-        {/* Avatar + name/email */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
-            {(user.name ?? user.email)[0].toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-              {user.name ?? user.email.split("@")[0]}
-            </p>
-            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-              {user.email}
-            </p>
-          </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+            {user.name ?? user.email.split("@")[0]}
+          </p>
+          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+            {user.email}
+          </p>
         </div>
       </div>
 
