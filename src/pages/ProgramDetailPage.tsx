@@ -14,6 +14,9 @@ import {
   Shrink,
   Dumbbell,
   Info,
+  Sheet,
+  ExternalLink,
+  Link2Off,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
@@ -39,6 +42,8 @@ import { StatCard, EmptySection } from "./editor/ProgramShared";
 import { BlockNode } from "./editor/BlockNode";
 import { MovementSlotsPanel } from "./editor/MovementSlotsPanel";
 import { AthleteSelectionsPanel } from "./editor/AthleteSelectionsPanel";
+import { ProgramPurchasersPanel } from "./editor/ProgramPurchasersPanel";
+import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
 
 /* ─── Main Page ───────────────────────────────────────────────────────── */
 
@@ -82,6 +87,7 @@ export function ProgramDetailPage() {
     id: string;
     name: string;
   } | null>(null);
+  const [showEditProgramModal, setShowEditProgramModal] = useState(false);
 
   const {
     data: tree,
@@ -292,170 +298,192 @@ export function ProgramDetailPage() {
               : ""}
           </p>
         </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setShowEditProgramModal(true)}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          Edit Program
+        </Button>
       </div>
 
-      {/* ── Summary Stats ──────────────────────────────────────────────── */}
-      {summaryStats && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard
-            label="Blocks"
-            value={summaryStats.totalBlocks}
-            icon={<Layers className="h-4 w-4" />}
-            color="text-blue-500"
-          />
-          <StatCard
-            label="Weeks"
-            value={summaryStats.totalWeeks}
-            icon={<Calendar className="h-4 w-4" />}
-            color="text-orange-500"
-          />
-          <StatCard
-            label="Training Days"
-            value={summaryStats.totalDays}
-            icon={<Sun className="h-4 w-4" />}
-            color="text-yellow-500"
-          />
-          <StatCard
-            label="Total Exercises"
-            value={summaryStats.totalExercises}
-            icon={<Dumbbell className="h-4 w-4" />}
-            color="text-purple-500"
-          />
-        </div>
+      {/* ── Unified Sheet Status Bar ────────────────────────────────────── */}
+      <SheetStatusBar
+        programSlug={tree.slug}
+        spreadsheetId={tree.googleSpreadsheetId ?? null}
+        onEdit={() => setShowEditProgramModal(true)}
+      />
+
+      {/* ── Content Tree (only when no sheet linked) ────────────────────── */}
+      {!tree.googleSpreadsheetId && (
+        <>
+          {/* Stats */}
+          {summaryStats && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard
+                label="Blocks"
+                value={summaryStats.totalBlocks}
+                icon={<Layers className="h-4 w-4" />}
+                color="text-blue-500"
+              />
+              <StatCard
+                label="Weeks"
+                value={summaryStats.totalWeeks}
+                icon={<Calendar className="h-4 w-4" />}
+                color="text-orange-500"
+              />
+              <StatCard
+                label="Training Days"
+                value={summaryStats.totalDays}
+                icon={<Sun className="h-4 w-4" />}
+                color="text-yellow-500"
+              />
+              <StatCard
+                label="Total Exercises"
+                value={summaryStats.totalExercises}
+                icon={<Dumbbell className="h-4 w-4" />}
+                color="text-purple-500"
+              />
+            </div>
+          )}
+
+          {/* Content Tree */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Program Structure
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={expandAll}
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                >
+                  <Expand className="h-3.5 w-3.5" /> Expand All
+                </button>
+                <button
+                  onClick={collapseAll}
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                >
+                  <Shrink className="h-3.5 w-3.5" /> Collapse All
+                </button>
+                <Button size="sm" onClick={() => setBlockModal({ open: true })}>
+                  <Plus className="h-3.5 w-3.5" /> Add Block
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+              <Info className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                <strong>Tip:</strong> Click &quot;Add Exercise&quot; in any day
+                to type directly like a spreadsheet. Press{" "}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono text-[10px] dark:bg-blue-800">
+                  Enter
+                </kbd>{" "}
+                to save &amp; continue adding,{" "}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono text-[10px] dark:bg-blue-800">
+                  Esc
+                </kbd>{" "}
+                to cancel.
+              </span>
+            </div>
+
+            {tree.blocks.length === 0 ? (
+              <EmptySection
+                icon={<Layers className="h-8 w-8" />}
+                message="No blocks yet. Add a block to start building the program."
+                actionLabel="Add First Block"
+                onAction={() => setBlockModal({ open: true })}
+              />
+            ) : (
+              <div className="space-y-3">
+                {tree.blocks
+                  .sort((a, b) => a.displayOrder - b.displayOrder)
+                  .map((block) => (
+                    <BlockNode
+                      key={block.id}
+                      programId={programId!}
+                      block={block}
+                      expanded={expandedBlocks.has(block.id)}
+                      onToggle={() => toggleBlock(block.id)}
+                      expandedWeeks={expandedWeeks}
+                      toggleWeek={toggleWeek}
+                      expandedDays={expandedDays}
+                      toggleDay={toggleDay}
+                      onEditBlock={() => setBlockModal({ open: true, block })}
+                      onDeleteBlock={() =>
+                        setDeleteTarget({
+                          type: "block",
+                          id: block.id,
+                          name: block.name,
+                        })
+                      }
+                      onAddWeek={(blockId) =>
+                        setWeekModal({ open: true, blockId })
+                      }
+                      onEditWeek={(week) => setWeekModal({ open: true, week })}
+                      onDeleteWeek={(week) =>
+                        setDeleteTarget({
+                          type: "week",
+                          id: week.id,
+                          name: week.title,
+                        })
+                      }
+                      onAddDay={(weekId) => setDayModal({ open: true, weekId })}
+                      onEditDay={(day) => setDayModal({ open: true, day })}
+                      onDeleteDay={(day) =>
+                        setDeleteTarget({
+                          type: "day",
+                          id: day.id,
+                          name: day.title,
+                        })
+                      }
+                      onEditExercise={(row) =>
+                        setExerciseRowModal({ open: true, row })
+                      }
+                      onDeleteExercise={(row) =>
+                        setDeleteTarget({
+                          type: "exercise",
+                          id: row.id,
+                          name:
+                            row.resolvedName ||
+                            row.exerciseNameOverride ||
+                            "exercise",
+                        })
+                      }
+                      onRefresh={refreshTree}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Movement Slots */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Movement Slots
+            </h2>
+            <MovementSlotsPanel programId={programId!} tree={tree} />
+          </div>
+
+          {/* Athlete Selections */}
+          {tree.movementSlots.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Athlete Selections
+              </h2>
+              <AthleteSelectionsPanel
+                programId={programId!}
+                slots={tree.movementSlots}
+              />
+            </div>
+          )}
+        </>
       )}
 
-      {/* ── Content Tree ───────────────────────────────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Program Structure
-          </h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={expandAll}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-              title="Expand All"
-            >
-              <Expand className="h-3.5 w-3.5" /> Expand All
-            </button>
-            <button
-              onClick={collapseAll}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-              title="Collapse All"
-            >
-              <Shrink className="h-3.5 w-3.5" /> Collapse All
-            </button>
-            <Button size="sm" onClick={() => setBlockModal({ open: true })}>
-              <Plus className="h-3.5 w-3.5" /> Add Block
-            </Button>
-          </div>
-        </div>
-
-        {/* Keyboard hint */}
-        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-          <Info className="h-3.5 w-3.5 shrink-0" />
-          <span>
-            <strong>Tip:</strong> Click &quot;Add Exercise&quot; in any day to
-            type directly like a spreadsheet. Press{" "}
-            <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono text-[10px] dark:bg-blue-800">
-              Enter
-            </kbd>{" "}
-            to save &amp; continue adding,{" "}
-            <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono text-[10px] dark:bg-blue-800">
-              Esc
-            </kbd>{" "}
-            to cancel.
-          </span>
-        </div>
-
-        {tree.blocks.length === 0 ? (
-          <EmptySection
-            icon={<Layers className="h-8 w-8" />}
-            message="No blocks yet. Add a block to start building the program."
-            actionLabel="Add First Block"
-            onAction={() => setBlockModal({ open: true })}
-          />
-        ) : (
-          <div className="space-y-3">
-            {tree.blocks
-              .sort((a, b) => a.displayOrder - b.displayOrder)
-              .map((block) => (
-                <BlockNode
-                  key={block.id}
-                  programId={programId!}
-                  block={block}
-                  expanded={expandedBlocks.has(block.id)}
-                  onToggle={() => toggleBlock(block.id)}
-                  expandedWeeks={expandedWeeks}
-                  toggleWeek={toggleWeek}
-                  expandedDays={expandedDays}
-                  toggleDay={toggleDay}
-                  onEditBlock={() => setBlockModal({ open: true, block })}
-                  onDeleteBlock={() =>
-                    setDeleteTarget({
-                      type: "block",
-                      id: block.id,
-                      name: block.name,
-                    })
-                  }
-                  onAddWeek={(blockId) => setWeekModal({ open: true, blockId })}
-                  onEditWeek={(week) => setWeekModal({ open: true, week })}
-                  onDeleteWeek={(week) =>
-                    setDeleteTarget({
-                      type: "week",
-                      id: week.id,
-                      name: week.title,
-                    })
-                  }
-                  onAddDay={(weekId) => setDayModal({ open: true, weekId })}
-                  onEditDay={(day) => setDayModal({ open: true, day })}
-                  onDeleteDay={(day) =>
-                    setDeleteTarget({
-                      type: "day",
-                      id: day.id,
-                      name: day.title,
-                    })
-                  }
-                  onEditExercise={(row) =>
-                    setExerciseRowModal({ open: true, row })
-                  }
-                  onDeleteExercise={(row) =>
-                    setDeleteTarget({
-                      type: "exercise",
-                      id: row.id,
-                      name:
-                        row.resolvedName ||
-                        row.exerciseNameOverride ||
-                        "exercise",
-                    })
-                  }
-                  onRefresh={refreshTree}
-                />
-              ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Movement Slots ────────────────────────────────────────── */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Movement Slots
-        </h2>
-        <MovementSlotsPanel programId={programId!} tree={tree} />
-      </div>
-
-      {/* ── Athlete Selections ─────────────────────────────────────── */}
-      {tree.movementSlots.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Athlete Selections
-          </h2>
-          <AthleteSelectionsPanel
-            programId={programId!}
-            slots={tree.movementSlots}
-          />
-        </div>
-      )}
+      {/* ── Purchasers ─────────────────────────────────────────────────── */}
+      <ProgramPurchasersPanel programId={programId!} />
 
       {/* ── Resources ──────────────────────────────────────────────────── */}
       <div className="space-y-4">
@@ -585,7 +613,6 @@ export function ProgramDetailPage() {
           }}
         />
       )}
-
       <ConfirmModal
         open={!!deleteTarget}
         title={`Delete ${deleteTarget?.type}`}
@@ -596,6 +623,97 @@ export function ProgramDetailPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+      {showEditProgramModal && (
+        <ProgramFormModal
+          program={tree}
+          onClose={() => setShowEditProgramModal(false)}
+          onSuccess={() => {
+            refreshTree();
+            setShowEditProgramModal(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── Unified Sheet Status Bar ──────────────────────────────────────────── */
+
+interface SheetStatusBarProps {
+  programSlug: string;
+  spreadsheetId: string | null;
+  onEdit: () => void;
+}
+
+function SheetStatusBar({
+  programSlug,
+  spreadsheetId,
+  onEdit,
+}: SheetStatusBarProps) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      {/* Main row */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+          <Sheet className="h-4 w-4" />
+        </div>
+
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="text-sm font-medium text-gray-900 dark:text-white">
+            Coaching Sheet
+          </span>
+          {spreadsheetId ? (
+            <code className="hidden truncate rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300 sm:block max-w-[220px]">
+              {spreadsheetId}
+            </code>
+          ) : (
+            <span className="text-xs text-gray-400">Not linked</span>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          {spreadsheetId && (
+            <a
+              href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open Sheet
+            </a>
+          )}
+          <button
+            onClick={onEdit}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+          >
+            <Pencil className="h-3 w-3" />
+            {spreadsheetId ? "Change" : "Link Sheet"}
+          </button>
+          {spreadsheetId && (
+            <button
+              onClick={onEdit}
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+              title="Unlink sheet"
+            >
+              <Link2Off className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* No-sheet hint */}
+      {!spreadsheetId && (
+        <div className="border-t border-dashed border-gray-200 px-4 py-2.5 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            No sheet linked — using the database editor below. Tab must be named{" "}
+            <code className="rounded bg-gray-100 px-1 font-mono dark:bg-gray-700">
+              {programSlug}
+            </code>{" "}
+            once linked.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

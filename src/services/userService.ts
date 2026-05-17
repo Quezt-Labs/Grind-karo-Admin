@@ -52,4 +52,14 @@ export const userService = {
     const { data } = await api.get(`/admin/progress/${id}`, { params });
     return data.data ?? data;
   },
+
+  async patchSpreadsheetId(
+    userId: string,
+    spreadsheetId: string | null,
+  ): Promise<{ success: true; spreadsheetId: string | null }> {
+    const { data } = await api.patch(`/admin/users/${userId}/spreadsheet-id`, {
+      spreadsheetId,
+    });
+    return data;
+  },
 };

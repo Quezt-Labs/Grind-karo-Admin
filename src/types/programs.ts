@@ -48,6 +48,10 @@ export interface Program {
   highlights: string[];
   displayOrder: number;
   isActive: boolean;
+  /** Only present in admin endpoints (GET /admin/programs, /admin/programs/:id) */
+  googleSpreadsheetId?: string | null;
+  /** Auto-assign spreadsheet: linked to buyer on every PAID purchase if they have no sheet yet */
+  autoAssignSheetId?: string | null;
   createdAt: string;
   updatedAt: string;
   totalReviews?: number;
@@ -69,6 +73,10 @@ export interface CreateProgramPayload {
   highlights?: string[];
   displayOrder?: number;
   isActive?: boolean;
+  /** Link this program to a specific Google Sheets workbook. Omit to leave unchanged; null to fall back to env GOOGLE_SPREADSHEET_ID. */
+  googleSpreadsheetId?: string | null;
+  /** Auto-assign: every new PAID purchase links this sheet to the buyer if they have none. */
+  autoAssignSheetId?: string | null;
 }
 
 export type UpdateProgramPayload = Partial<CreateProgramPayload>;
@@ -342,5 +350,83 @@ export interface ProgramPurchase {
   createdAt: string;
   updatedAt: string;
   program?: { id: string; name: string; slug: string };
-  user?: { id: string; name: string | null; email: string; role: string };
+  user?: {
+    id: string;
+    name: string | null;
+    email: string;
+    role: string;
+    spreadsheetId?: string | null;
+  };
+}
+
+// ---- Google Sheets (coach template / personal copy) ---------------------
+
+export interface SheetExerciseRow {
+  weekNumber: number;
+  dayNumber: number;
+  dayFocus: string;
+  category: string;
+  exerciseName: string;
+  goalRpe: string;
+  sets: number;
+  repScheme: string;
+  loadKg: string;
+  percentOneRm: string;
+  upperRange: string;
+  lowerRange: string;
+  notes: string;
+  sortOrder: number;
+}
+
+export type SheetTabName =
+  | "Program 1"
+  | "Program 2"
+  | "Program 3"
+  | "DELOAD WEEK"
+  | "Bro day";
+
+export type SheetsMyProgramData = Record<SheetTabName, SheetExerciseRow[]>;
+
+export interface SheetsMyProgramResponse {
+  success: true;
+  data: SheetsMyProgramData;
+}
+
+export type MovementSlotKey = "squat" | "bench" | "deadlift";
+export type MovementSlotPosition = "primary" | "secondary" | "tertiary";
+
+export interface MovementSelectionSlot {
+  primary: string;
+  secondary?: string;
+  tertiary?: string;
+}
+
+export type MovementSelectionData = Record<
+  MovementSlotKey,
+  MovementSelectionSlot
+>;
+
+export interface MovementSelectionResponse {
+  success: true;
+  data: MovementSelectionData;
+}
+
+export interface PatchMovementSelectionPayload {
+  movement: MovementSlotKey;
+  slot: MovementSlotPosition;
+  exerciseName: string;
+}
+
+export interface CreateClientSheetPayload {
+  userId: string;
+  clientEmail: string;
+  clientName: string;
+  /** Override which template to copy. Omit to let server use GOOGLE_TEMPLATE_SPREADSHEET_ID env. */
+  templateSpreadsheetId?: string;
+}
+
+export interface CreateClientSheetResponse {
+  success: true;
+  spreadsheetId: string;
+  sheetUrl: string;
 }

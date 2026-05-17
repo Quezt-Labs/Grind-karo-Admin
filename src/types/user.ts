@@ -6,6 +6,7 @@ export interface AdminUser {
   email: string;
   role: "USER" | "ADMIN";
   plan: string | null;
+  spreadsheetId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
