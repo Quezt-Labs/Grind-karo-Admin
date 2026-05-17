@@ -13,7 +13,6 @@ import {
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { programPurchaseService } from "@/services/programPurchaseService";
-import { userService } from "@/services/userService";
 import type { ProgramPurchase } from "@/types/programs";
 
 interface Props {
@@ -29,12 +28,15 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
   const user = purchase.user;
   if (!user) return null;
 
+  // Use purchase-level sheet (per-program). Falls back to user-level for display only.
+  const currentSheetId = purchase.spreadsheetId ?? user.spreadsheetId ?? null;
+
   const [editing, setEditing] = useState(false);
-  const [inputVal, setInputVal] = useState(user.spreadsheetId ?? "");
+  const [inputVal, setInputVal] = useState(currentSheetId ?? "");
 
   const mutation = useMutation({
     mutationFn: (sheetId: string | null) =>
-      userService.patchSpreadsheetId(user.id, sheetId),
+      programPurchaseService.patchSpreadsheetId(purchase.id, sheetId),
     onSuccess: () => {
       toast.success(`Sheet updated for ${user.name ?? user.email}`);
       setEditing(false);
@@ -45,7 +47,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
     },
   });
 
-  const hasSheet = !!user.spreadsheetId;
+  const hasSheet = !!currentSheetId;
 
   function handleSave() {
     const trimmed = inputVal.trim();
@@ -107,7 +109,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
             <button
               onClick={() => {
                 setEditing(false);
-                setInputVal(user.spreadsheetId ?? "");
+                setInputVal(currentSheetId ?? "");
               }}
               className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
             >
@@ -123,7 +125,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
                   Sheet linked
                 </span>
                 <a
-                  href={`https://docs.google.com/spreadsheets/d/${user.spreadsheetId}/edit`}
+                  href={`https://docs.google.com/spreadsheets/d/${currentSheetId}/edit`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded p-1 text-gray-400 hover:text-green-600"
@@ -133,7 +135,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
                 </a>
                 <button
                   onClick={() => {
-                    setInputVal(user.spreadsheetId ?? "");
+                    setInputVal(currentSheetId ?? "");
                     setEditing(true);
                   }}
                   className="rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"

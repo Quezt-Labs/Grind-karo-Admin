@@ -346,6 +346,7 @@ export interface ProgramPurchase {
   currency: string;
   razorpayOrderId: string | null;
   razorpayPaymentId: string | null;
+  spreadsheetId?: string | null;
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;

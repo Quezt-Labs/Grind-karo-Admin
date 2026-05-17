@@ -24,4 +24,15 @@ export const programPurchaseService = {
     const { data } = await api.post(`/admin/program-purchases/${id}/refund`);
     return data.data ?? data;
   },
+
+  async patchSpreadsheetId(
+    id: string,
+    spreadsheetId: string | null,
+  ): Promise<ProgramPurchase> {
+    const { data } = await api.patch(
+      `/admin/program-purchases/${id}/spreadsheet-id`,
+      { spreadsheetId },
+    );
+    return data.data ?? data;
+  },
 };
