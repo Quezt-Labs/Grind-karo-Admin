@@ -1,13 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, Send, Paperclip, Loader2 } from "lucide-react";
+import {
+  MessageCircle,
+  Send,
+  Paperclip,
+  Loader2,
+  Bell,
+  BellOff,
+  Info,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { chatService } from "@/services/chatService";
+import { pushService } from "@/services/pushService";
 import { uploadService } from "@/services/uploadService";
 import { cn } from "@/utils/cn";
 import { Spinner } from "@/components/ui/Spinner";
 import type { ChatInboxItem, ChatMessage } from "@/types/chat";
+import type { AdminUserPushStatus } from "@/types/push";
 
 // ---------- helpers ----------
 
@@ -66,6 +76,12 @@ export function ChatPage() {
   });
 
   const selectedInboxItem = inbox.find((i) => i.userId === selectedUserId);
+
+  const { data: pushStatus } = useQuery({
+    queryKey: ["admin-push-status", selectedUserId],
+    queryFn: () => pushService.getUserStatus(selectedUserId),
+    enabled: !!selectedUserId,
+  });
 
   // ---------- thread ----------
   const { data: messages = [], isLoading: threadLoading } = useQuery({
@@ -161,6 +177,11 @@ export function ChatPage() {
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {inbox.length} conversation{inbox.length !== 1 ? "s" : ""}
           </p>
+          <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-emerald-50 px-2 py-1.5 text-[10px] leading-snug text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">
+            <Info className="mt-0.5 h-3 w-3 shrink-0" />
+            Clients with notifications enabled get a push when you reply (if
+            they turned on coach messages in the app).
+          </p>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -200,7 +221,7 @@ export function ChatPage() {
                       selectedInboxItem.userEmail)[0].toUpperCase()
                   : "?"}
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   {selectedInboxItem?.userName ??
                     selectedInboxItem?.userEmail ??
@@ -212,6 +233,7 @@ export function ChatPage() {
                   </p>
                 )}
               </div>
+              {pushStatus && <PushStatusBadge status={pushStatus} />}
             </div>
 
             {/* Messages */}
@@ -571,6 +593,40 @@ function MessageBubble({
         )}
       </div>
     </div>
+  );
+}
+
+function PushStatusBadge({ status }: { status: AdminUserPushStatus }) {
+  if (!status.pushConfigured) {
+    return (
+      <span
+        className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+        title="Server push not configured"
+      >
+        Push off (server)
+      </span>
+    );
+  }
+
+  const on = status.deviceCount > 0 && status.chatNotificationsEnabled;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+        on
+          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+          : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400",
+      )}
+      title={
+        on
+          ? `${status.deviceCount} device(s) will get push for your replies`
+          : "Client has not enabled app notifications"
+      }
+    >
+      {on ? <Bell className="h-3 w-3" /> : <BellOff className="h-3 w-3" />}
+      {on ? "Push on" : "Push off"}
+    </span>
   );
 }
 

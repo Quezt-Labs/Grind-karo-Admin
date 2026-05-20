@@ -27,6 +27,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { userService } from "@/services/userService";
+import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { cn } from "@/utils/cn";
 import type { Purchase } from "@/types/user";
 
@@ -163,6 +164,8 @@ export function UserDetailPage() {
           />
         </div>
       )}
+
+      <UserPushPanel userId={user.id} />
 
       {/* Google Sheets Provisioning */}
       <ProvisionSheetSection
