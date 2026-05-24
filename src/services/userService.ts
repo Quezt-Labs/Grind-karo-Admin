@@ -5,6 +5,7 @@ import type {
   PaginatedResponse,
   UserPurchasesResponse,
   UserProgressResponse,
+  UserProgressEntry,
 } from "@/types/user";
 
 export interface UserFilters {
@@ -50,7 +51,16 @@ export const userService = {
     params?: { limit?: number; offset?: number },
   ): Promise<UserProgressResponse> {
     const { data } = await api.get(`/admin/progress/${id}`, { params });
-    return data.data ?? data;
+    const raw = data.data ?? data;
+    if (Array.isArray(raw)) {
+      return {
+        total: raw.length,
+        limit: params?.limit ?? 50,
+        offset: params?.offset ?? 0,
+        items: raw as UserProgressEntry[],
+      };
+    }
+    return raw;
   },
 
   async patchSpreadsheetId(

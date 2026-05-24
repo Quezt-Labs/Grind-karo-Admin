@@ -67,7 +67,9 @@ export interface UserPurchasesResponse {
 
 export interface UserProgressEntry {
   id: string;
-  imageUrl: string;
+  imageUrls: string[];
+  imageUrl?: string | null;
+  videoUrl: string | null;
   notes: string | null;
   weight: string | null;
   createdAt: string;

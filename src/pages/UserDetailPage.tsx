@@ -29,9 +29,16 @@ import { Input } from "@/components/ui/Input";
 import { userService } from "@/services/userService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { cn } from "@/utils/cn";
-import type { Purchase } from "@/types/user";
+import type { Purchase, UserProgressEntry } from "@/types/user";
 
 const PROGRESS_PAGE_SIZE = 12;
+const PHOTO_LABELS = ["Front", "Side", "Back"] as const;
+
+function progressEntryImages(entry: UserProgressEntry): string[] {
+  if (entry.imageUrls?.length) return entry.imageUrls;
+  if (entry.imageUrl) return [entry.imageUrl];
+  return [];
+}
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -174,12 +181,12 @@ export function UserDetailPage() {
         currentSpreadsheetId={user.spreadsheetId}
       />
 
-      {/* Progress Photos */}
+      {/* Progress check-ins */}
       <div>
         <div className="mb-4 flex items-center gap-2">
           <ImageIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Progress Photos
+            Progress check-ins
           </h2>
           {progressData && (
             <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
@@ -196,42 +203,68 @@ export function UserDetailPage() {
           <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center dark:border-gray-600 dark:bg-gray-800">
             <ImageIcon className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              No progress photos uploaded yet.
+              No weekly check-ins yet (3 photos + video).
             </p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {(progressData?.items ?? []).map((entry) => (
-                <a
-                  key={entry.id}
-                  href={entry.imageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
-                >
-                  <img
-                    src={entry.imageUrl}
-                    alt={`Progress ${formatDate(entry.createdAt)}`}
-                    className="aspect-3/4 w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                  />
-                  <div className="p-2">
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {formatDate(entry.createdAt)}
-                    </p>
-                    {entry.weight && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {entry.weight} kg
+            <div className="space-y-4">
+              {(progressData?.items ?? []).map((entry) => {
+                const images = progressEntryImages(entry);
+                return (
+                  <div
+                    key={entry.id}
+                    className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+                  >
+                    <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {formatDateTime(entry.createdAt)}
                       </p>
+                      {entry.weight && (
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                          {entry.weight} kg
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-0.5 bg-gray-100 dark:bg-gray-900">
+                      {images.map((url, i) => (
+                        <a
+                          key={`${entry.id}-${i}`}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative aspect-3/4 overflow-hidden bg-gray-200 dark:bg-gray-800"
+                        >
+                          <img
+                            src={url}
+                            alt={`${PHOTO_LABELS[i] ?? "Photo"} ${formatDate(entry.createdAt)}`}
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          />
+                          <span className="absolute left-1 top-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                            {PHOTO_LABELS[i] ?? i + 1}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                    {entry.videoUrl && (
+                      <div className="border-t border-gray-100 bg-black dark:border-gray-700">
+                        <video
+                          src={entry.videoUrl}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="max-h-72 w-full object-contain"
+                        />
+                      </div>
                     )}
                     {entry.notes && (
-                      <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
                         {entry.notes}
                       </p>
                     )}
                   </div>
-                </a>
-              ))}
+                );
+              })}
             </div>
 
             {(progressData?.total ?? 0) > PROGRESS_PAGE_SIZE && (
