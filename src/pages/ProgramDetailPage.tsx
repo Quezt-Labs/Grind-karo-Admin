@@ -14,6 +14,7 @@ import { ResourceFormModal } from "./editor/ResourceFormModal";
 import { formatINR } from "./editor/programConstants";
 import { EmptySection } from "./editor/ProgramShared";
 import { ProgramPurchasersPanel } from "./editor/ProgramPurchasersPanel";
+import { AthleteSelectionsPanel } from "./editor/AthleteSelectionsPanel";
 import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
 
 /* ─── Main Page ───────────────────────────────────────────────────────── */
@@ -113,6 +114,23 @@ export function ProgramDetailPage() {
 
       {/* ── Purchasers ─────────────────────────────────────────────────── */}
       <ProgramPurchasersPanel programId={programId!} />
+
+      {/* ── Athlete movement selections ────────────────────────────────── */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Athlete movement selections
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            View each athlete&apos;s exercise choices. Use Reset to unlock after
+            their first workout log so they can pick again.
+          </p>
+        </div>
+        <AthleteSelectionsPanel
+          programId={programId!}
+          slots={tree.movementSlots ?? []}
+        />
+      </div>
 
       {/* ── Resources ──────────────────────────────────────────────────── */}
       <div className="space-y-4">

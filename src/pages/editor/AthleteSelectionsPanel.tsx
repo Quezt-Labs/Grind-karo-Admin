@@ -136,7 +136,7 @@ export function AthleteSelectionsPanel({
           No movement slots defined for this program
         </p>
         <p className="text-xs text-gray-400">
-          Add slots above before viewing athlete selections
+          This program has no movement slots configured yet
         </p>
       </div>
     );
