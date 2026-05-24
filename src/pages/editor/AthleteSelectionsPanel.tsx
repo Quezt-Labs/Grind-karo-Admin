@@ -209,11 +209,13 @@ export function AthleteSelectionsPanel({
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {athlete.userName ?? "—"}
+                      {athlete.userName ?? athlete.userEmail ?? "—"}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {athlete.userEmail}
-                    </p>
+                    {athlete.userName && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {athlete.userEmail}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
