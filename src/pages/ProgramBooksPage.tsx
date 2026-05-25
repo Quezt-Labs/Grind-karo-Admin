@@ -21,8 +21,7 @@ function formatINR(rupees: number): string {
 }
 
 function formatBookPrice(book: ProgramBook): string {
-  const onSale =
-    book.salePrice != null && book.salePrice < book.regularPrice;
+  const onSale = book.salePrice != null && book.salePrice < book.regularPrice;
   if (onSale) return formatINR(book.salePrice!);
   if (book.regularPrice <= 0) return "Free";
   return formatINR(book.regularPrice);
