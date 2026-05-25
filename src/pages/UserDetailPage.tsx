@@ -446,9 +446,7 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
         <div className="flex items-center gap-3">
           <StatusBadge status={purchase.status} />
           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-            {formatINR(
-              isCoaching ? purchase.totalAmount : purchase.amount,
-            )}
+            {formatINR(isCoaching ? purchase.totalAmount : purchase.amount)}
           </span>
         </div>
       </div>
