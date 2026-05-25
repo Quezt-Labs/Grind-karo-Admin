@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Loader2,
   Link2,
+  Video,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +29,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { userService } from "@/services/userService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
+import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { cn } from "@/utils/cn";
 import type { Purchase, UserProgressEntry } from "@/types/user";
 
@@ -187,6 +189,13 @@ export function UserDetailPage() {
         userEmail={user.email}
         currentSpreadsheetId={user.spreadsheetId}
       />
+
+      <WorkoutSetVideosSection
+        userId={user.id}
+        enabled={user.workoutSetVideosEnabled !== false}
+      />
+
+      <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
 
       {/* Progress check-ins */}
       <div>
@@ -436,6 +445,71 @@ const linkSchema = z.object({
 });
 
 type LinkFormData = z.infer<typeof linkSchema>;
+
+interface WorkoutSetVideosSectionProps {
+  userId: string;
+  enabled: boolean;
+}
+
+function WorkoutSetVideosSection({
+  userId,
+  enabled: initialEnabled,
+}: WorkoutSetVideosSectionProps) {
+  const [enabled, setEnabled] = useState(initialEnabled);
+
+  const mutation = useMutation({
+    mutationFn: (next: boolean) =>
+      userService.patchWorkoutSetVideos(userId, next),
+    onSuccess: (res) => {
+      setEnabled(res.workoutSetVideosEnabled);
+      toast.success(
+        res.workoutSetVideosEnabled
+          ? "Set video uploads enabled for this athlete"
+          : "Set video uploads disabled for this athlete",
+      );
+    },
+    onError: () => {
+      toast.error("Failed to update set video setting");
+    },
+  });
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/30">
+            <Video className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              Workout set videos
+            </h3>
+            <p className="mt-1 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+              When enabled, this athlete can attach optional form-check videos
+              to each set while logging workouts. Default is on for everyone —
+              turn off selectively if not needed.
+            </p>
+          </div>
+        </div>
+        <label className="inline-flex cursor-pointer items-center gap-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {enabled ? "Enabled" : "Disabled"}
+          </span>
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            checked={enabled}
+            disabled={mutation.isPending}
+            onChange={(e) => mutation.mutate(e.target.checked)}
+          />
+          {mutation.isPending && (
+            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+          )}
+        </label>
+      </div>
+    </div>
+  );
+}
 
 interface ProvisionSheetSectionProps {
   userId: string;

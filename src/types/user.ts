@@ -7,6 +7,7 @@ export interface AdminUser {
   role: "USER" | "ADMIN";
   plan: string | null;
   spreadsheetId?: string | null;
+  workoutSetVideosEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -7,6 +7,7 @@ import type {
   UserProgressResponse,
   UserProgressEntry,
 } from "@/types/user";
+import type { AdminWorkoutLogsResponse } from "@/types/workoutLogs";
 
 export interface UserFilters {
   q?: string;
@@ -69,6 +70,27 @@ export const userService = {
   ): Promise<{ success: true; spreadsheetId: string | null }> {
     const { data } = await api.patch(`/admin/users/${userId}/spreadsheet-id`, {
       spreadsheetId,
+    });
+    return data;
+  },
+
+  async patchWorkoutSetVideos(
+    userId: string,
+    enabled: boolean,
+  ): Promise<{ success: true; workoutSetVideosEnabled: boolean }> {
+    const { data } = await api.patch(
+      `/admin/users/${userId}/workout-set-videos`,
+      { enabled },
+    );
+    return data;
+  },
+
+  async getWorkoutLogs(
+    userId: string,
+    params?: { programId?: string; limit?: number; offset?: number },
+  ): Promise<AdminWorkoutLogsResponse> {
+    const { data } = await api.get(`/admin/users/${userId}/workout-logs`, {
+      params,
     });
     return data;
   },
