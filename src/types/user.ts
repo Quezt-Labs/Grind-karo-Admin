@@ -120,7 +120,8 @@ export interface ListPlanUsersResponse {
 
 export type NotificationType =
   | "COACHING_SUBSCRIPTION_PAID"
-  | "PROGRAM_PURCHASE_PAID";
+  | "PROGRAM_PURCHASE_PAID"
+  | "BOOK_PURCHASE_PAID";
 
 export interface AdminNotification {
   id: string;

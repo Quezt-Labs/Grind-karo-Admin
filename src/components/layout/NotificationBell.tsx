@@ -1,7 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Bell, CreditCard, ShoppingBag, CheckCheck, X } from "lucide-react";
+import {
+  Bell,
+  CreditCard,
+  ShoppingBag,
+  CheckCheck,
+  X,
+  BookOpen,
+} from "lucide-react";
 import { cn } from "@/utils/cn";
 import { notificationService } from "@/services/notificationService";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -177,11 +184,15 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                     "mt-0.5 shrink-0 rounded-lg p-2",
                     n.type === "COACHING_SUBSCRIPTION_PAID"
                       ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                      : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
+                      : n.type === "BOOK_PURCHASE_PAID"
+                        ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                        : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
                   )}
                 >
                   {n.type === "COACHING_SUBSCRIPTION_PAID" ? (
                     <CreditCard className="h-4 w-4" />
+                  ) : n.type === "BOOK_PURCHASE_PAID" ? (
+                    <BookOpen className="h-4 w-4" />
                   ) : (
                     <ShoppingBag className="h-4 w-4" />
                   )}
