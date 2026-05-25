@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Upload, X, FileText } from "lucide-react";
+import { isAxiosError } from "axios";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
 import { uploadService } from "@/services/uploadService";
@@ -9,6 +10,18 @@ const MAX_PDF_BYTES = 50 * 1024 * 1024;
 interface PdfUploadFieldProps {
   pdfUrl: string | null;
   onPdfChange: (url: string | null) => void;
+}
+
+function uploadErrorMessage(error: unknown): string {
+  if (isAxiosError(error)) {
+    if (error.response?.status === 413) {
+      return "File too large for direct upload. Try again — we now send PDFs straight to storage.";
+    }
+    const msg = error.response?.data?.message;
+    if (typeof msg === "string") return msg;
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "Failed to upload PDF";
 }
 
 export function PdfUploadField({ pdfUrl, onPdfChange }: PdfUploadFieldProps) {
@@ -31,14 +44,13 @@ export function PdfUploadField({ pdfUrl, onPdfChange }: PdfUploadFieldProps) {
 
     setIsUploading(true);
     try {
-      const usePresign = file.size > 4 * 1024 * 1024;
-      const url = usePresign
-        ? await uploadService.presignUpload(file)
-        : (await uploadService.upload(file)).url;
+      // Always presign PDFs — POST /upload proxies bytes through nginx/EC2
+      // (often client_max_body_size 1MB → 413). Presign goes browser → S3.
+      const url = await uploadService.presignUpload(file);
       onPdfChange(url);
       toast.success("PDF uploaded");
-    } catch {
-      toast.error("Failed to upload PDF");
+    } catch (error) {
+      toast.error(uploadErrorMessage(error));
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
