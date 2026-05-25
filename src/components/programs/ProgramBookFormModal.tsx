@@ -1,4 +1,4 @@
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -41,7 +41,7 @@ export function ProgramBookFormModal({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<FormData>({
@@ -67,7 +67,7 @@ export function ProgramBookFormModal({
         },
   });
 
-  const pdfUrl = watch("pdfUrl");
+  const pdfUrl = useWatch({ control, name: "pdfUrl" });
 
   const createMut = useMutation({
     mutationFn: (d: FormData) =>

@@ -439,7 +439,7 @@ const linkSchema = z.object({
     .string()
     .min(1, "Sheet ID or URL is required")
     .refine(
-      (v) => /^[a-zA-Z0-9_\-\/:.?=&]+$/.test(v),
+      (v) => /^[a-zA-Z0-9_\-/:.?=&]+$/.test(v),
       "Must be a valid Sheets file ID or URL",
     ),
 });

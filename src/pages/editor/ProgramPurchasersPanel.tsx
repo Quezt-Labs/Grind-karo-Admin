@@ -26,10 +26,7 @@ interface UserSheetRowProps {
 
 function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
   const user = purchase.user;
-  if (!user) return null;
-
-  // Use purchase-level sheet (per-program). Falls back to user-level for display only.
-  const currentSheetId = purchase.spreadsheetId ?? user.spreadsheetId ?? null;
+  const currentSheetId = purchase.spreadsheetId ?? user?.spreadsheetId ?? null;
 
   const [editing, setEditing] = useState(false);
   const [inputVal, setInputVal] = useState(currentSheetId ?? "");
@@ -38,7 +35,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
     mutationFn: (sheetId: string | null) =>
       programPurchaseService.patchSpreadsheetId(purchase.id, sheetId),
     onSuccess: () => {
-      toast.success(`Sheet updated for ${user.name ?? user.email}`);
+      toast.success(`Sheet updated for ${user?.name ?? user?.email ?? "user"}`);
       setEditing(false);
       onSaved();
     },
@@ -46,6 +43,8 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
       toast.error("Failed to update sheet");
     },
   });
+
+  if (!user) return null;
 
   const hasSheet = !!currentSheetId;
 
