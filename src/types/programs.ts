@@ -230,16 +230,15 @@ export interface CreateResourcePayload {
 
 export type UpdateResourcePayload = Partial<CreateResourcePayload>;
 
-/** PDF book resource with program metadata (from GET /admin/program-books) */
+/** Standalone PDF book (GET /admin/program-books) */
 export interface ProgramBook {
   id: string;
-  programId: string;
-  programName: string;
-  programSlug: string;
   slug: string;
   title: string;
   body: string;
   pdfUrl: string | null;
+  regularPrice: number;
+  salePrice: number | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

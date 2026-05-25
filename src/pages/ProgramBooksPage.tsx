@@ -10,34 +10,42 @@ import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { ProgramBookFormModal } from "@/components/programs/ProgramBookFormModal";
 import { programBookService } from "@/services/programBookService";
-import { programService } from "@/services/programService";
 import type { ProgramBook } from "@/types/programs";
+
+function formatINR(rupees: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(rupees);
+}
+
+function formatBookPrice(book: ProgramBook): string {
+  const onSale =
+    book.salePrice != null && book.salePrice < book.regularPrice;
+  if (onSale) return formatINR(book.salePrice!);
+  if (book.regularPrice <= 0) return "Free";
+  return formatINR(book.regularPrice);
+}
 
 export function ProgramBooksPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [programFilter, setProgramFilter] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ProgramBook | null>(null);
   const [editTarget, setEditTarget] = useState<ProgramBook | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const queryClient = useQueryClient();
-
-  const { data: programs } = useQuery({
-    queryKey: ["programs"],
-    queryFn: programService.getAll,
-  });
 
   const {
     data: books,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["program-books", programFilter || "all"],
-    queryFn: () => programBookService.list(programFilter || undefined),
+    queryKey: ["program-books"],
+    queryFn: programBookService.list,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (book: ProgramBook) =>
-      programService.removeResource(book.programId, book.id),
+    mutationFn: (id: string) => programBookService.remove(id),
     onSuccess: () => {
       toast.success("Book deleted");
       queryClient.invalidateQueries({ queryKey: ["program-books"] });
@@ -57,8 +65,7 @@ export function ProgramBooksPage() {
     return books.filter(
       (b) =>
         b.title.toLowerCase().includes(term) ||
-        b.slug.toLowerCase().includes(term) ||
-        b.programName.toLowerCase().includes(term),
+        b.slug.toLowerCase().includes(term),
     );
   }, [books, searchTerm]);
 
@@ -73,7 +80,7 @@ export function ProgramBooksPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           title="Program Books"
-          description="Manage PDF books shown to athletes in Program Guide"
+          description="PDF books shown to all athletes in Program Guide"
         />
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4" />
@@ -81,24 +88,10 @@ export function ProgramBooksPage() {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <DebouncedSearch
-          placeholder="Search by title, slug, or program…"
-          onSearch={handleSearch}
-        />
-        <select
-          value={programFilter}
-          onChange={(e) => setProgramFilter(e.target.value)}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900"
-        >
-          <option value="">All programs</option>
-          {programs?.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <DebouncedSearch
+        placeholder="Search by title or slug…"
+        onSearch={handleSearch}
+      />
 
       {isError && (
         <ErrorAlert message="Failed to load program books. Try again." />
@@ -112,8 +105,8 @@ export function ProgramBooksPage() {
         <div className="rounded-xl border border-dashed border-gray-300 p-12 text-center dark:border-gray-600">
           <FileText className="mx-auto h-10 w-10 text-gray-400" />
           <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-            {searchTerm || programFilter
-              ? "No books match your filters."
+            {searchTerm
+              ? "No books match your search."
               : "No PDF books yet. Add one to get started."}
           </p>
         </div>
@@ -126,10 +119,10 @@ export function ProgramBooksPage() {
                   Title
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Program
+                  Slug
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Slug
+                  Price
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Order
@@ -158,11 +151,27 @@ export function ProgramBooksPage() {
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                    {book.programName}
-                  </td>
                   <td className="px-4 py-3 font-mono text-sm text-gray-500">
                     {book.slug}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {book.salePrice != null &&
+                    book.salePrice < book.regularPrice ? (
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {formatINR(book.salePrice)}
+                        </span>
+                        <span className="text-xs text-gray-400 line-through">
+                          {book.regularPrice > 0
+                            ? formatINR(book.regularPrice)
+                            : "Free"}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {formatBookPrice(book)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {book.sortOrder}
@@ -203,11 +212,9 @@ export function ProgramBooksPage() {
         </div>
       )}
 
-      {(showCreateModal || editTarget) && programs && (
+      {(showCreateModal || editTarget) && (
         <ProgramBookFormModal
-          programs={programs}
           book={editTarget ?? undefined}
-          defaultProgramId={programFilter || undefined}
           onClose={() => {
             setShowCreateModal(false);
             setEditTarget(null);
@@ -223,7 +230,7 @@ export function ProgramBooksPage() {
         confirmLabel="Delete"
         variant="danger"
         isLoading={deleteMutation.isPending}
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
