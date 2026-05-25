@@ -28,7 +28,10 @@ export interface PaginatedResponse<T> {
 
 // ---- User Purchases -----------------------------------------------------
 
-export type PurchaseKind = "coaching_subscription" | "program_purchase";
+export type PurchaseKind =
+  | "coaching_subscription"
+  | "program_purchase"
+  | "book_purchase";
 
 export interface CoachingPurchase {
   kind: "coaching_subscription";
@@ -57,7 +60,20 @@ export interface ProgramPurchase {
   createdAt: string;
 }
 
-export type Purchase = CoachingPurchase | ProgramPurchase;
+export interface BookPurchase {
+  kind: "book_purchase";
+  id: string;
+  bookId: string;
+  bookName: string;
+  bookSlug: string;
+  status: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+  amount: number;
+  currency: string;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export type Purchase = CoachingPurchase | ProgramPurchase | BookPurchase;
 
 export interface UserPurchasesResponse {
   user: AdminUser;

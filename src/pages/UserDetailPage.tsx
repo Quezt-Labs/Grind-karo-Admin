@@ -17,6 +17,7 @@ import {
   Loader2,
   Link2,
   Video,
+  BookOpen,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -104,15 +105,19 @@ export function UserDetailPage() {
     const programs = data.purchases.filter(
       (p) => p.kind === "program_purchase",
     );
+    const books = data.purchases.filter((p) => p.kind === "book_purchase");
     const totalSpent = data.purchases.reduce((sum, p) => {
       if (p.kind === "coaching_subscription") return sum + p.totalAmount;
       if (p.kind === "program_purchase" && p.status === "PAID")
+        return sum + p.amount;
+      if (p.kind === "book_purchase" && p.status === "PAID")
         return sum + p.amount;
       return sum;
     }, 0);
     return {
       coachingCount: coaching.length,
       programCount: programs.length,
+      bookCount: books.length,
       totalSpent,
     };
   }, [data]);
@@ -162,7 +167,7 @@ export function UserDetailPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             icon={<CreditCard className="h-5 w-5" />}
             label="Coaching Subscriptions"
@@ -172,6 +177,11 @@ export function UserDetailPage() {
             icon={<ShoppingBag className="h-5 w-5" />}
             label="Program Purchases"
             value={String(stats.programCount)}
+          />
+          <StatCard
+            icon={<BookOpen className="h-5 w-5" />}
+            label="Book Purchases"
+            value={String(stats.bookCount)}
           />
           <StatCard
             icon={<CreditCard className="h-5 w-5" />}
@@ -386,6 +396,17 @@ function StatCard({
 
 function PurchaseCard({ purchase }: { purchase: Purchase }) {
   const isCoaching = purchase.kind === "coaching_subscription";
+  const isBook = purchase.kind === "book_purchase";
+  const label = isCoaching
+    ? "Coaching Subscription"
+    : isBook
+      ? "Book Purchase"
+      : "Program Purchase";
+  const name = isCoaching
+    ? purchase.planName
+    : isBook
+      ? purchase.bookName
+      : purchase.programName;
 
   return (
     <div className="rounded-xl border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -396,22 +417,23 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
               "mt-0.5 rounded-lg p-2",
               isCoaching
                 ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
+                : isBook
+                  ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                  : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
             )}
           >
             {isCoaching ? (
               <CreditCard className="h-4 w-4" />
+            ) : isBook ? (
+              <BookOpen className="h-4 w-4" />
             ) : (
               <ShoppingBag className="h-4 w-4" />
             )}
           </div>
           <div>
-            <p className="font-medium text-gray-900 dark:text-white">
-              {isCoaching ? purchase.planName : purchase.programName}
-            </p>
+            <p className="font-medium text-gray-900 dark:text-white">{name}</p>
             <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-              {isCoaching ? "Coaching Subscription" : "Program Purchase"} ·{" "}
-              {formatDateTime(purchase.createdAt)}
+              {label} · {formatDateTime(purchase.createdAt)}
             </p>
             {isCoaching && (
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -424,7 +446,9 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
         <div className="flex items-center gap-3">
           <StatusBadge status={purchase.status} />
           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-            {formatINR(isCoaching ? purchase.totalAmount : purchase.amount)}
+            {formatINR(
+              isCoaching ? purchase.totalAmount : purchase.amount,
+            )}
           </span>
         </div>
       </div>
