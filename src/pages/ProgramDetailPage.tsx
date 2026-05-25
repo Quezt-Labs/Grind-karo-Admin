@@ -78,6 +78,8 @@ export function ProgramDetailPage() {
     return <ErrorAlert message="Failed to load program." />;
   }
 
+  const guideResources = tree.resources.filter((r) => r.resourceType !== "pdf");
+
   return (
     <div className="space-y-6">
       {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -132,7 +134,7 @@ export function ProgramDetailPage() {
         />
       </div>
 
-      {/* ── Resources ──────────────────────────────────────────────────── */}
+      {/* ── Resources (markdown) ───────────────────────────────────────── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -143,16 +145,16 @@ export function ProgramDetailPage() {
           </Button>
         </div>
 
-        {tree.resources.length === 0 ? (
+        {guideResources.length === 0 ? (
           <EmptySection
             icon={<FileText className="h-8 w-8" />}
-            message="No resources yet. Add markdown reference pages."
+            message="No resources yet."
             actionLabel="Add Resource"
             onAction={() => setResourceModal({ open: true })}
           />
         ) : (
           <div className="space-y-2">
-            {tree.resources
+            {guideResources
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((res) => (
                 <div

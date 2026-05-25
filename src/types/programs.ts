@@ -204,12 +204,16 @@ export interface CreateExerciseRowPayload {
 export type UpdateExerciseRowPayload = Partial<CreateExerciseRowPayload>;
 
 // ---- Resources ----------------------------------------------------------
+export type ProgramResourceType = "markdown" | "pdf";
+
 export interface ProgramResource {
   id: string;
   programId: string;
   slug: string;
   title: string;
   body: string;
+  resourceType?: ProgramResourceType;
+  pdfUrl?: string | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -218,11 +222,28 @@ export interface ProgramResource {
 export interface CreateResourcePayload {
   slug: string;
   title: string;
-  body: string;
+  resourceType?: ProgramResourceType;
+  body?: string;
+  pdfUrl?: string | null;
   sortOrder?: number;
 }
 
 export type UpdateResourcePayload = Partial<CreateResourcePayload>;
+
+/** PDF book resource with program metadata (from GET /admin/program-books) */
+export interface ProgramBook {
+  id: string;
+  programId: string;
+  programName: string;
+  programSlug: string;
+  slug: string;
+  title: string;
+  body: string;
+  pdfUrl: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ---- Movement Slots -----------------------------------------------------
 export type SlotCategory =

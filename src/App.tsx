@@ -16,6 +16,7 @@ import { NotFoundPage } from "@/pages/NotFoundPage";
 import { ExercisesPage } from "@/pages/ExercisesPage";
 import { ProgramsPage } from "@/pages/ProgramsPage";
 import { ProgramDetailPage } from "@/pages/ProgramDetailPage";
+import { ProgramBooksPage } from "@/pages/ProgramBooksPage";
 import { ProgramPurchasesPage } from "@/pages/ProgramPurchasesPage";
 import { ProgramReviewsPage } from "@/pages/ProgramReviewsPage";
 import { LandingPagesPage } from "@/pages/LandingPagesPage";
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="/reviews" element={<ReviewsPage />} />
               <Route path="/programs" element={<ProgramsPage />} />
               <Route path="/programs/:id" element={<ProgramDetailPage />} />
+              <Route path="/program-books" element={<ProgramBooksPage />} />
               <Route path="/exercises" element={<ExercisesPage />} />
               <Route
                 path="/program-purchases"

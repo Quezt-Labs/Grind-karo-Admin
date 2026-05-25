@@ -15,6 +15,7 @@ import {
   MonitorSmartphone,
   Ticket,
   MessageCircle,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useSidebarStore } from "@/store/sidebarStore";
@@ -40,6 +41,7 @@ const iconMap: Record<string, ReactNode> = {
   MonitorSmartphone: <MonitorSmartphone className="h-5 w-5" />,
   Ticket: <Ticket className="h-5 w-5" />,
   MessageCircle: <MessageCircle className="h-5 w-5" />,
+  FileText: <FileText className="h-5 w-5" />,
 };
 
 const NAV_ITEMS = [
@@ -47,6 +49,7 @@ const NAV_ITEMS = [
   { path: "/landing-pages", label: "Landing Page", icon: "MonitorSmartphone" },
   { path: "/plans", label: "Coaching", icon: "CreditCard" },
   { path: "/programs", label: "Programs", icon: "BookOpen" },
+  { path: "/program-books", label: "Program Books", icon: "FileText" },
   { path: "/addons", label: "Add-ons", icon: "Puzzle" },
   {
     path: "/program-purchases",

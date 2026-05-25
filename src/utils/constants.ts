@@ -6,6 +6,7 @@ export const NAV_ITEMS = [
   { path: "/addons", label: "Add-ons", icon: "Puzzle" },
   { path: "/subscriptions", label: "Subscriptions", icon: "Award" },
   { path: "/programs", label: "Programs", icon: "BookOpen" },
+  { path: "/program-books", label: "Program Books", icon: "FileText" },
   { path: "/exercises", label: "Exercises", icon: "Dumbbell" },
   {
     path: "/program-purchases",

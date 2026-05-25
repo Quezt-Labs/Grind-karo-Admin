@@ -7,84 +7,101 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { PdfUploadField } from "@/components/shared/PdfUploadField";
 import { programService } from "@/services/programService";
-import type { ProgramResource } from "@/types/programs";
+import type { Program, ProgramBook } from "@/types/programs";
 
 const schema = z.object({
+  programId: z.string().uuid({ message: "Select a program" }),
   slug: z
     .string()
     .min(1)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   title: z.string().min(1),
-  body: z.string().min(1, "Body is required"),
+  body: z.string().optional(),
+  pdfUrl: z.string().url({ message: "Upload a PDF file" }),
   sortOrder: z.coerce.number().min(0),
 });
 
 type FormData = z.infer<typeof schema>;
 
-interface ResourceFormModalProps {
-  programId: string;
-  resource?: ProgramResource;
+interface ProgramBookFormModalProps {
+  programs: Program[];
+  book?: ProgramBook;
+  defaultProgramId?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function ResourceFormModal({
-  programId,
-  resource,
+export function ProgramBookFormModal({
+  programs,
+  book,
+  defaultProgramId,
   onClose,
   onSuccess,
-}: ResourceFormModalProps) {
-  const isEdit = !!resource;
+}: ProgramBookFormModalProps) {
+  const isEdit = !!book;
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
-    defaultValues: resource
+    defaultValues: book
       ? {
-          slug: resource.slug,
-          title: resource.title,
-          body: resource.body,
-          sortOrder: resource.sortOrder,
+          programId: book.programId,
+          slug: book.slug,
+          title: book.title,
+          body: book.body,
+          pdfUrl: book.pdfUrl ?? "",
+          sortOrder: book.sortOrder,
         }
       : {
+          programId: defaultProgramId ?? "",
           slug: "",
           title: "",
           body: "",
+          pdfUrl: "",
           sortOrder: 0,
         },
   });
 
+  const pdfUrl = watch("pdfUrl");
+
   const createMut = useMutation({
     mutationFn: (d: FormData) =>
-      programService.createResource(programId, {
+      programService.createResource(d.programId, {
         slug: d.slug,
         title: d.title,
-        resourceType: "markdown",
-        body: d.body,
+        resourceType: "pdf",
+        body: d.body?.trim() || "",
+        pdfUrl: d.pdfUrl,
         sortOrder: d.sortOrder,
       }),
     onSuccess: () => {
-      toast.success("Resource created");
+      toast.success("Book created");
       onSuccess();
     },
+    onError: () => toast.error("Failed to create book"),
   });
 
   const updateMut = useMutation({
     mutationFn: (d: FormData) =>
-      programService.updateResource(programId, resource!.id, {
+      programService.updateResource(d.programId, book!.id, {
         slug: d.slug,
         title: d.title,
-        resourceType: "markdown",
-        body: d.body,
+        resourceType: "pdf",
+        body: d.body?.trim() || "",
+        pdfUrl: d.pdfUrl,
         sortOrder: d.sortOrder,
       }),
     onSuccess: () => {
-      toast.success("Resource updated");
+      toast.success("Book updated");
       onSuccess();
     },
+    onError: () => toast.error("Failed to update book"),
   });
 
   const isSaving = createMut.isPending || updateMut.isPending;
@@ -99,7 +116,7 @@ export function ResourceFormModal({
       <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {isEdit ? "Edit Resource" : "Add Resource"}
+            {isEdit ? "Edit Program Book" : "Add Program Book"}
           </h2>
           <button
             onClick={onClose}
@@ -109,39 +126,72 @@ export function ResourceFormModal({
           </button>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Program
+            </label>
+            <select
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900"
+              disabled={isEdit}
+              {...register("programId")}
+            >
+              <option value="">Select program…</option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            {errors.programId && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.programId.message}
+              </p>
+            )}
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              id="res-slug"
+              id="book-slug"
               label="Slug"
-              placeholder="warmup"
+              placeholder="gut-cut"
               error={errors.slug?.message}
               {...register("slug")}
             />
             <Input
-              id="res-title"
+              id="book-title"
               label="Title"
-              placeholder="Warmup"
+              placeholder="GUT Cut"
               error={errors.title?.message}
               {...register("title")}
             />
           </div>
 
+          <PdfUploadField
+            pdfUrl={pdfUrl || null}
+            onPdfChange={(url) =>
+              setValue("pdfUrl", url ?? "", { shouldValidate: true })
+            }
+          />
+          {errors.pdfUrl && (
+            <p className="text-sm text-red-600">{errors.pdfUrl.message}</p>
+          )}
+
           <Textarea
-            id="res-body"
-            label="Body (Markdown)"
-            rows={10}
-            placeholder="# Warmup&#10;&#10;Use the built-in calculator..."
-            error={errors.body?.message}
+            id="book-body"
+            label="Description (optional)"
+            rows={3}
+            placeholder="Short note shown to athletes above the PDF…"
             {...register("body")}
           />
 
           <Input
-            id="res-order"
+            id="book-order"
             label="Sort Order"
             type="number"
             min={0}
             {...register("sortOrder")}
           />
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" type="button" onClick={onClose}>
               Cancel
