@@ -40,6 +40,13 @@ function progressEntryImages(entry: UserProgressEntry): string[] {
   return [];
 }
 
+function progressEntryHasMedia(entry: UserProgressEntry): boolean {
+  return progressEntryImages(entry).length > 0 || !!entry.videoUrl;
+}
+
+const PROGRESS_MEDIA_REMOVED =
+  "Media removed after 30 days — weight and notes are kept.";
+
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -183,7 +190,7 @@ export function UserDetailPage() {
 
       {/* Progress check-ins */}
       <div>
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <ImageIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Progress check-ins
@@ -193,6 +200,9 @@ export function UserDetailPage() {
               {progressData.total}
             </span>
           )}
+          <span className="w-full text-xs text-gray-500 dark:text-gray-400 sm:w-auto sm:ml-auto">
+            Photos/videos auto-deleted after 30 days
+          </span>
         </div>
 
         {progressLoading ? (
@@ -211,6 +221,7 @@ export function UserDetailPage() {
             <div className="space-y-4">
               {(progressData?.items ?? []).map((entry) => {
                 const images = progressEntryImages(entry);
+                const hasMedia = progressEntryHasMedia(entry);
                 return (
                   <div
                     key={entry.id}
@@ -226,35 +237,43 @@ export function UserDetailPage() {
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-3 gap-0.5 bg-gray-100 dark:bg-gray-900">
-                      {images.map((url, i) => (
-                        <a
-                          key={`${entry.id}-${i}`}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group relative aspect-3/4 overflow-hidden bg-gray-200 dark:bg-gray-800"
-                        >
-                          <img
-                            src={url}
-                            alt={`${PHOTO_LABELS[i] ?? "Photo"} ${formatDate(entry.createdAt)}`}
-                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                          />
-                          <span className="absolute left-1 top-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                            {PHOTO_LABELS[i] ?? i + 1}
-                          </span>
-                        </a>
-                      ))}
-                    </div>
-                    {entry.videoUrl && (
-                      <div className="border-t border-gray-100 bg-black dark:border-gray-700">
-                        <video
-                          src={entry.videoUrl}
-                          controls
-                          playsInline
-                          preload="metadata"
-                          className="max-h-72 w-full object-contain"
-                        />
+                    {hasMedia ? (
+                      <>
+                        <div className="grid grid-cols-3 gap-0.5 bg-gray-100 dark:bg-gray-900">
+                          {images.map((url, i) => (
+                            <a
+                              key={`${entry.id}-${i}`}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group relative aspect-3/4 overflow-hidden bg-gray-200 dark:bg-gray-800"
+                            >
+                              <img
+                                src={url}
+                                alt={`${PHOTO_LABELS[i] ?? "Photo"} ${formatDate(entry.createdAt)}`}
+                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                              />
+                              <span className="absolute left-1 top-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                                {PHOTO_LABELS[i] ?? i + 1}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                        {entry.videoUrl && (
+                          <div className="border-t border-gray-100 bg-black dark:border-gray-700">
+                            <video
+                              src={entry.videoUrl}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="max-h-72 w-full object-contain"
+                            />
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-xs italic text-gray-500 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
+                        {PROGRESS_MEDIA_REMOVED}
                       </div>
                     )}
                     {entry.notes && (
