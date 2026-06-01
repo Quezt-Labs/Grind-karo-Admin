@@ -6,12 +6,21 @@ import type {
   UserPurchasesResponse,
   UserProgressResponse,
   UserProgressEntry,
+  CoachingSetupListResponse,
+  CoachingSetupStatusFilter,
 } from "@/types/user";
 import type { AdminWorkoutLogsResponse } from "@/types/workoutLogs";
 
 export interface UserFilters {
   q?: string;
   role?: "USER" | "ADMIN";
+  limit?: number;
+  offset?: number;
+}
+
+export interface CoachingSetupFilters {
+  q?: string;
+  status?: CoachingSetupStatusFilter;
   limit?: number;
   offset?: number;
 }
@@ -34,6 +43,20 @@ export const userService = {
     const { data } = await api.get("/admin/users/purchasers", {
       params: filters,
     });
+    return data;
+  },
+
+  async getCoachingSetup(
+    filters?: CoachingSetupFilters,
+  ): Promise<CoachingSetupListResponse> {
+    const { data } = await api.get("/admin/users/coaching-setup", {
+      params: filters,
+    });
+    return data;
+  },
+
+  async getUserInfo(userId: string) {
+    const { data } = await api.get(`/admin/users/${userId}/info`);
     return data;
   },
 

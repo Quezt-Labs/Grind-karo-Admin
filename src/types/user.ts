@@ -132,6 +132,37 @@ export interface ListPlanUsersResponse {
   items: PlanUserItem[];
 }
 
+// ---- Coaching setup queue -----------------------------------------------
+
+export type CoachingSetupStatus = "needs_intake" | "awaiting_sheet" | "ready";
+
+export type CoachingSetupStatusFilter = CoachingSetupStatus | "all";
+
+export interface CoachingSetupMember {
+  id: string;
+  name: string | null;
+  email: string;
+  setupStatus: CoachingSetupStatus;
+  planName: string;
+  expiresAt: string;
+  subscribedAt: string;
+  spreadsheetId?: string | null;
+}
+
+export interface CoachingSetupCounts {
+  needsIntake: number;
+  awaitingSheet: number;
+  ready: number;
+}
+
+export interface CoachingSetupListResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  counts: CoachingSetupCounts;
+  items: CoachingSetupMember[];
+}
+
 // ---- Notifications ------------------------------------------------------
 
 export type NotificationType =

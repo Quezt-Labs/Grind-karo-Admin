@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, ShoppingCart } from "lucide-react";
+import { Users, ShoppingCart, ClipboardList } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { userService } from "@/services/userService";
@@ -14,13 +14,17 @@ import {
 } from "@/components/ui/ShadSelect";
 import { AllUsersSection } from "./users/AllUsersSection";
 import { PurchasersSection } from "./users/PurchasersSection";
+import { CoachingSetupSection } from "./users/CoachingSetupSection";
 import { formatINR } from "./users/usersConstants";
 import type { Tab } from "./users/usersConstants";
+import type { CoachingSetupStatusFilter } from "@/types/user";
 
 export function UsersPage() {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"" | "USER" | "ADMIN">("");
+  const [coachingSetupFilter, setCoachingSetupFilter] =
+    useState<CoachingSetupStatusFilter>("awaiting_sheet");
 
   const handleSearch = useCallback((value: string) => {
     setSearch(value);
@@ -55,6 +59,21 @@ export function UsersPage() {
     enabled: tab === "purchasers",
   });
 
+  const {
+    data: coachingSetupData,
+    isLoading: coachingSetupLoading,
+    isError: coachingSetupError,
+  } = useQuery({
+    queryKey: ["admin-coaching-setup", search, coachingSetupFilter],
+    queryFn: () =>
+      userService.getCoachingSetup({
+        q: search || undefined,
+        status: coachingSetupFilter,
+        limit: 500,
+      }),
+    enabled: tab === "coaching-setup",
+  });
+
   const userRows = useMemo(() => {
     if (!usersData?.items) return [];
     return usersData.items.map((u) => ({
@@ -79,6 +98,19 @@ export function UsersPage() {
     }));
   }, [purchasersData]);
 
+  const coachingSetupRows = useMemo(() => {
+    if (!coachingSetupData?.items) return [];
+    return coachingSetupData.items.map((m) => ({
+      id: m.id,
+      name: m.name || "—",
+      email: m.email,
+      planName: m.planName,
+      setupStatus: m.setupStatus,
+      subscribedAt: new Date(m.subscribedAt).toLocaleDateString(),
+      expiresAt: new Date(m.expiresAt).toLocaleDateString(),
+    }));
+  }, [coachingSetupData]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -102,6 +134,12 @@ export function UsersPage() {
                 label: "Purchasers",
                 count: purchasersData?.total,
                 icon: <ShoppingCart className="h-3.5 w-3.5" />,
+              },
+              {
+                key: "coaching-setup",
+                label: "Coaching setup",
+                count: coachingSetupData?.counts.awaitingSheet,
+                icon: <ClipboardList className="h-3.5 w-3.5" />,
               },
             ] as const
           ).map((t) => (
@@ -174,6 +212,17 @@ export function UsersPage() {
           rows={purchaserRows}
           isLoading={purchasersLoading}
           isError={purchasersError}
+        />
+      )}
+
+      {tab === "coaching-setup" && (
+        <CoachingSetupSection
+          rows={coachingSetupRows}
+          isLoading={coachingSetupLoading}
+          isError={coachingSetupError}
+          statusFilter={coachingSetupFilter}
+          onStatusFilterChange={setCoachingSetupFilter}
+          counts={coachingSetupData?.counts}
         />
       )}
     </div>

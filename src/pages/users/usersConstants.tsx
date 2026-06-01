@@ -27,7 +27,55 @@ export type PurchaserRow = {
   lastPurchase: string;
 };
 
-export type Tab = "all" | "purchasers";
+export type Tab = "all" | "purchasers" | "coaching-setup";
+
+export type CoachingSetupRow = {
+  id: string;
+  name: string;
+  email: string;
+  planName: string;
+  setupStatus: string;
+  subscribedAt: string;
+  expiresAt: string;
+};
+
+export const coachingSetupStatusLabel: Record<string, string> = {
+  needs_intake: "Needs intake",
+  awaiting_sheet: "Awaiting sheet",
+  ready: "Ready",
+};
+
+export function CoachingSetupStatusBadge({ status }: { status: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+        status === "ready" &&
+          "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+        status === "awaiting_sheet" &&
+          "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+        status === "needs_intake" &&
+          "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+      )}
+    >
+      {coachingSetupStatusLabel[status] ?? status}
+    </span>
+  );
+}
+
+export const coachingSetupColumns: Column<CoachingSetupRow>[] = [
+  { key: "name", header: "Name", sortable: true },
+  { key: "email", header: "Email", sortable: true },
+  { key: "planName", header: "Plan", sortable: true },
+  {
+    key: "setupStatus",
+    header: "Status",
+    sortable: true,
+    render: (value) => <CoachingSetupStatusBadge status={value as string} />,
+  },
+  { key: "subscribedAt", header: "Subscribed", sortable: true },
+  { key: "expiresAt", header: "Expires", sortable: true },
+];
 
 export const userColumns: Column<UserRow>[] = [
   { key: "name", header: "Name", sortable: true },

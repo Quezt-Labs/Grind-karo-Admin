@@ -32,7 +32,12 @@ import { userService } from "@/services/userService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { cn } from "@/utils/cn";
-import type { Purchase, UserProgressEntry } from "@/types/user";
+import type {
+  Purchase,
+  UserProgressEntry,
+  CoachingSetupStatus,
+} from "@/types/user";
+import { CoachingSetupStatusBadge } from "./users/usersConstants";
 
 const PROGRESS_PAGE_SIZE = 12;
 const PHOTO_LABELS = ["Front", "Side", "Back"] as const;
@@ -96,6 +101,36 @@ export function UserDetailPage() {
       }),
     enabled: !!id,
   });
+
+  const hasActiveCoaching = useMemo(() => {
+    if (!data?.purchases) return false;
+    const now = Date.now();
+    return data.purchases.some(
+      (p) =>
+        p.kind === "coaching_subscription" &&
+        p.status === "ACTIVE" &&
+        new Date(p.expiresAt).getTime() > now,
+    );
+  }, [data?.purchases]);
+
+  const {
+    data: intakeData,
+    isError: intakeMissing,
+    isLoading: intakeLoading,
+  } = useQuery({
+    queryKey: ["admin-user-info", id],
+    queryFn: () => userService.getUserInfo(id!),
+    enabled: !!id && !!data && hasActiveCoaching,
+    retry: false,
+  });
+
+  const coachingSetupStatus = useMemo((): CoachingSetupStatus | null => {
+    if (!hasActiveCoaching || !data) return null;
+    if (intakeLoading) return null;
+    if (intakeMissing || !intakeData) return "needs_intake";
+    if (!data.user.spreadsheetId?.trim()) return "awaiting_sheet";
+    return "ready";
+  }, [hasActiveCoaching, data, intakeData, intakeMissing, intakeLoading]);
 
   const stats = useMemo(() => {
     if (!data) return null;
@@ -198,6 +233,7 @@ export function UserDetailPage() {
         userId={user.id}
         userEmail={user.email}
         currentSpreadsheetId={user.spreadsheetId}
+        coachingSetupStatus={coachingSetupStatus}
       />
 
       <WorkoutSetVideosSection
@@ -537,12 +573,14 @@ interface ProvisionSheetSectionProps {
   userId: string;
   userEmail: string;
   currentSpreadsheetId?: string | null;
+  coachingSetupStatus?: CoachingSetupStatus | null;
 }
 
 function ProvisionSheetSection({
   userId,
   userEmail,
   currentSpreadsheetId,
+  coachingSetupStatus,
 }: ProvisionSheetSectionProps) {
   const [linkedId, setLinkedId] = useState<string | null>(
     currentSpreadsheetId ?? null,
@@ -603,6 +641,11 @@ function ProvisionSheetSection({
             <p className="text-xs text-green-700 dark:text-green-400">
               Personal coaching spreadsheet for this athlete.
             </p>
+            {coachingSetupStatus && (
+              <div className="mt-1.5">
+                <CoachingSetupStatusBadge status={coachingSetupStatus} />
+              </div>
+            )}
           </div>
         </div>
         <button
@@ -612,6 +655,21 @@ function ProvisionSheetSection({
           {showGuide ? "Hide Guide" : "How it works?"}
         </button>
       </div>
+
+      {coachingSetupStatus === "awaiting_sheet" && !linkedId && (
+        <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+          <strong>Action needed:</strong> Intake is complete — paste the
+          athlete&apos;s Google Sheet ID below to unlock their program in the
+          app.
+        </div>
+      )}
+
+      {coachingSetupStatus === "needs_intake" && (
+        <div className="mb-3 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2.5 text-xs text-orange-900 dark:border-orange-700 dark:bg-orange-900/20 dark:text-orange-200">
+          Athlete hasn&apos;t submitted the coaching intake form yet. You can
+          still prepare their sheet in advance.
+        </div>
+      )}
 
       {/* Coach Guide */}
       {showGuide && (
