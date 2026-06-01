@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ClipboardList, Eye, Link2 } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
-import { coachingSetupColumns, type CoachingSetupRow } from "./usersConstants";
+import { coachingSetupColumns } from "./coachingSetupColumns";
+import type { CoachingSetupRow } from "./usersConstants";
 import {
   Select,
   SelectContent,

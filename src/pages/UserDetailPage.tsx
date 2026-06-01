@@ -37,7 +37,7 @@ import type {
   UserProgressEntry,
   CoachingSetupStatus,
 } from "@/types/user";
-import { CoachingSetupStatusBadge } from "./users/usersConstants";
+import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 
 const PROGRESS_PAGE_SIZE = 12;
 const PHOTO_LABELS = ["Front", "Side", "Back"] as const;
@@ -102,16 +102,10 @@ export function UserDetailPage() {
     enabled: !!id,
   });
 
-  const hasActiveCoaching = useMemo(() => {
-    if (!data?.purchases) return false;
-    const now = Date.now();
-    return data.purchases.some(
-      (p) =>
-        p.kind === "coaching_subscription" &&
-        p.status === "ACTIVE" &&
-        new Date(p.expiresAt).getTime() > now,
-    );
-  }, [data?.purchases]);
+  const hasActiveCoaching =
+    data?.purchases.some(
+      (p) => p.kind === "coaching_subscription" && p.status === "ACTIVE",
+    ) ?? false;
 
   const {
     data: intakeData,
