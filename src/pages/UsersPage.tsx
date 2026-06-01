@@ -138,7 +138,7 @@ export function UsersPage() {
               {
                 key: "coaching-setup",
                 label: "Coaching setup",
-                count: coachingSetupData?.counts.awaitingSheet,
+                count: coachingSetupData?.counts?.awaitingSheet,
                 icon: <ClipboardList className="h-3.5 w-3.5" />,
               },
             ] as const
