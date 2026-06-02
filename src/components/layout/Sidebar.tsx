@@ -50,7 +50,8 @@ const NAV_ITEMS = [
   { path: "/plans", label: "Coaching", icon: "CreditCard" },
   { path: "/programs", label: "Programs", icon: "BookOpen" },
   { path: "/program-books", label: "Program Books", icon: "FileText" },
-  { path: "/addons", label: "Add-ons", icon: "Puzzle" },
+  { path: "/addons", label: "Coaching Add-ons", icon: "Puzzle" },
+  { path: "/program-addons", label: "Program Add-ons", icon: "Puzzle" },
   {
     path: "/program-purchases",
     label: "Program Purchases",

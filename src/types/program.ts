@@ -71,6 +71,32 @@ export interface CreateCoachingAddonPayload {
 
 export type UpdateCoachingAddonPayload = Partial<CreateCoachingAddonPayload>;
 
+// ---- Program add-ons (admin) --------------------------------------------
+export interface ProgramAddon {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  price: number;
+  grantsFormCheck: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProgramAddonPayload {
+  slug: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  grantsFormCheck?: boolean;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export type UpdateProgramAddonPayload = Partial<CreateProgramAddonPayload>;
+
 // ---- Plan ↔ Add-on links ------------------------------------------------
 export interface PlanAddonLink {
   planId: string;

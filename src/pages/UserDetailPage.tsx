@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/Input";
 import { userService } from "@/services/userService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
+import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
 import { cn } from "@/utils/cn";
 import type {
@@ -234,9 +235,13 @@ export function UserDetailPage() {
       <WorkoutSetVideosSection
         userId={user.id}
         enabled={user.workoutSetVideosEnabled !== false}
+        adminFlag={user.workoutSetVideosEnabled}
+        hasActiveCoaching={hasActiveCoaching}
       />
 
       <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
+
+      <UserSheetsWorkoutVideosPanel userId={user.id} />
 
       <UserWeeklySummariesPanel userId={user.id} />
 
@@ -504,13 +509,25 @@ type LinkFormData = z.infer<typeof linkSchema>;
 interface WorkoutSetVideosSectionProps {
   userId: string;
   enabled: boolean;
+  adminFlag?: boolean;
+  hasActiveCoaching: boolean;
 }
 
 function WorkoutSetVideosSection({
   userId,
   enabled: initialEnabled,
+  adminFlag,
+  hasActiveCoaching,
 }: WorkoutSetVideosSectionProps) {
   const [enabled, setEnabled] = useState(initialEnabled);
+
+  const computedSource = hasActiveCoaching
+    ? "Active coaching (included free)"
+    : adminFlag === false
+      ? "Disabled — admin override"
+      : adminFlag === true
+        ? "Admin override (on) or Form Check add-on"
+        : "Requires Form Check add-on or active coaching";
 
   const mutation = useMutation({
     mutationFn: (next: boolean) =>
@@ -537,12 +554,15 @@ function WorkoutSetVideosSection({
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white">
-              Workout set videos
+              Form Check (set videos)
             </h3>
             <p className="mt-1 max-w-xl text-sm text-gray-500 dark:text-gray-400">
-              When enabled, this athlete can attach optional form-check videos
-              to each set while logging workouts. Default is on for everyone —
-              turn off selectively if not needed.
+              Toggle is an admin override. Computed entitlement:{" "}
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                {computedSource}
+              </span>
+              . Coaching clients get form check free; program-only buyers need
+              the Form Check add-on.
             </p>
           </div>
         </div>

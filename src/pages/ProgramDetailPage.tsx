@@ -15,6 +15,7 @@ import { formatINR } from "./editor/programConstants";
 import { EmptySection } from "./editor/ProgramShared";
 import { ProgramPurchasersPanel } from "./editor/ProgramPurchasersPanel";
 import { AthleteSelectionsPanel } from "./editor/AthleteSelectionsPanel";
+import { ProgramAddonsPanel } from "@/components/programs/ProgramAddonsPanel";
 import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
 
 /* ─── Main Page ───────────────────────────────────────────────────────── */
@@ -116,6 +117,8 @@ export function ProgramDetailPage() {
 
       {/* ── Purchasers ─────────────────────────────────────────────────── */}
       <ProgramPurchasersPanel programId={programId!} />
+
+      <ProgramAddonsPanel programId={programId!} />
 
       {/* ── Athlete movement selections ────────────────────────────────── */}
       <div className="space-y-4">
