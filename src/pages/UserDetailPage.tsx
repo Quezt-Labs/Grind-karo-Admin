@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/Input";
 import { userService } from "@/services/userService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
+import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
 import { cn } from "@/utils/cn";
 import type {
   Purchase,
@@ -236,6 +237,8 @@ export function UserDetailPage() {
       />
 
       <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
+
+      <UserWeeklySummariesPanel userId={user.id} />
 
       {/* Progress check-ins */}
       <div>

@@ -1,6 +1,9 @@
 export interface SetVideoEntryDto {
   setNumber: number;
   videoUrl: string;
+  coachComment?: string | null;
+  coachCommentId?: string | null;
+  coachCommentUpdatedAt?: string | null;
 }
 
 export interface AdminWorkoutLogRow {

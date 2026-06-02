@@ -1,13 +1,17 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   Dumbbell,
+  Loader2,
+  MessageSquare,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { userService } from "@/services/userService";
+import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/utils/cn";
 import type { Purchase } from "@/types/user";
@@ -33,7 +37,67 @@ function rowHasSetVideos(
   return (row.setVideos?.length ?? 0) > 0;
 }
 
-function SetVideosGrid({ videos }: { videos: SetVideoEntryDto[] }) {
+function SetVideoCommentEditor({
+  exerciseLogId,
+  video,
+  queryKey,
+}: {
+  exerciseLogId: string;
+  video: SetVideoEntryDto;
+  queryKey: unknown[];
+}) {
+  const queryClient = useQueryClient();
+  const [comment, setComment] = useState(video.coachComment ?? "");
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      workoutVideoCommentService.upsert({
+        exerciseLogId,
+        setNumber: video.setNumber,
+        comment: comment.trim(),
+      }),
+    onSuccess: () => {
+      toast.success("Comment saved");
+      void queryClient.invalidateQueries({ queryKey });
+    },
+    onError: () => toast.error("Failed to save comment"),
+  });
+
+  return (
+    <div className="border-t border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-800/60">
+      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+        <MessageSquare className="h-3 w-3" />
+        Coach comment
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        rows={2}
+        placeholder="Form-check feedback for the client…"
+        className="w-full resize-y rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+      />
+      <button
+        type="button"
+        disabled={!comment.trim() || saveMutation.isPending}
+        onClick={() => saveMutation.mutate()}
+        className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+      >
+        {saveMutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+        Save comment
+      </button>
+    </div>
+  );
+}
+
+function SetVideosGrid({
+  exerciseLogId,
+  videos,
+  queryKey,
+}: {
+  exerciseLogId: string;
+  videos: SetVideoEntryDto[];
+  queryKey: unknown[];
+}) {
   const sorted = [...videos].sort((a, b) => a.setNumber - b.setNumber);
   return (
     <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -51,6 +115,11 @@ function SetVideosGrid({ videos }: { videos: SetVideoEntryDto[] }) {
             playsInline
             preload="metadata"
             className="aspect-video w-full bg-black object-contain"
+          />
+          <SetVideoCommentEditor
+            exerciseLogId={exerciseLogId}
+            video={v}
+            queryKey={queryKey}
           />
         </div>
       ))}
@@ -81,8 +150,13 @@ export function UserWorkoutLogsPanel({
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
   }, [purchases]);
 
+  const queryKey = useMemo(
+    () => ["admin-user-workout-logs", userId, programId, offset] as const,
+    [userId, programId, offset],
+  );
+
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-user-workout-logs", userId, programId, offset],
+    queryKey,
     queryFn: () =>
       userService.getWorkoutLogs(userId, {
         programId: programId || undefined,
@@ -250,7 +324,11 @@ export function UserWorkoutLogsPanel({
                             </p>
                           )}
                           {rowHasSetVideos(row) && (
-                            <SetVideosGrid videos={row.setVideos} />
+                            <SetVideosGrid
+                              exerciseLogId={row.id}
+                              videos={row.setVideos}
+                              queryKey={[...queryKey]}
+                            />
                           )}
                         </div>
                       ))}
