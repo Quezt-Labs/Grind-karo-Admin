@@ -49,6 +49,16 @@ button:disabled,
   cursor: not-allowed;
 }
 
+/* Hide scrollbars but keep scroll (sidebar nav, etc.) */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Improve touch targets and scrolling on mobile */
 @media (max-width: 640px) {
   input,

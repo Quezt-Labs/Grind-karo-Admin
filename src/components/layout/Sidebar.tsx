@@ -146,7 +146,7 @@ export function Sidebar() {
           </button>
         </div>
 
-        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-3">
+        <nav className="scrollbar-none min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-3">
           {NAV_SECTIONS.map((section) => (
             <div key={section.title} className="mb-4 last:mb-0">
               <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-gray-500">
