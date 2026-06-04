@@ -38,6 +38,7 @@ import type {
   Purchase,
   UserProgressEntry,
   CoachingSetupStatus,
+  FormCheckQuota,
 } from "@/types/user";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 
@@ -237,6 +238,7 @@ export function UserDetailPage() {
         enabled={user.workoutSetVideosEnabled !== false}
         adminFlag={user.workoutSetVideosEnabled}
         hasActiveCoaching={hasActiveCoaching}
+        formCheckQuota={data.formCheckQuota}
       />
 
       <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
@@ -511,6 +513,28 @@ interface WorkoutSetVideosSectionProps {
   enabled: boolean;
   adminFlag?: boolean;
   hasActiveCoaching: boolean;
+  formCheckQuota?: FormCheckQuota;
+}
+
+function FormCheckQuotaSummary({ quota }: { quota: FormCheckQuota }) {
+  if (quota.weeklyLimit == null) {
+    return (
+      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+        Form checks: unlimited this week ({quota.usedThisWeek} delivered).
+      </p>
+    );
+  }
+
+  const remaining = quota.remainingThisWeek ?? 0;
+  return (
+    <p
+      className={`mt-2 text-xs ${remaining <= 0 ? "text-amber-700 dark:text-amber-300" : "text-gray-500 dark:text-gray-400"}`}
+    >
+      Form checks this week: {quota.usedThisWeek}/{quota.weeklyLimit} used
+      {remaining > 0 ? ` · ${remaining} remaining` : " · limit reached"} (
+      {quota.planName ?? quota.planSlug}). Resets after {quota.weekEnd}.
+    </p>
+  );
 }
 
 function WorkoutSetVideosSection({
@@ -518,6 +542,7 @@ function WorkoutSetVideosSection({
   enabled: initialEnabled,
   adminFlag,
   hasActiveCoaching,
+  formCheckQuota,
 }: WorkoutSetVideosSectionProps) {
   const [enabled, setEnabled] = useState(initialEnabled);
 
@@ -564,6 +589,7 @@ function WorkoutSetVideosSection({
               . Coaching clients get form check free; program-only buyers need
               the Form Check add-on.
             </p>
+            {formCheckQuota && <FormCheckQuotaSummary quota={formCheckQuota} />}
           </div>
         </div>
         <label className="inline-flex cursor-pointer items-center gap-2">

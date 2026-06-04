@@ -4,6 +4,8 @@ import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
 import { uploadService } from "@/services/uploadService";
 
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB — matches backend upload cap
+
 interface ImageUploadFieldProps {
   imageUrl: string | null;
   onImageChange: (url: string | null) => void;
@@ -20,9 +22,9 @@ export function ImageUploadField({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxSize = 2 * 1024 * 1024; // 2MB
+    const maxSize = MAX_IMAGE_SIZE;
     if (file.size > maxSize) {
-      toast.error("Image must be less than 2 MB");
+      toast.error("Image must be less than 10 MB");
       return;
     }
 
@@ -77,7 +79,7 @@ export function ImageUploadField({
             {isUploading ? "Uploading..." : "Click to upload image"}
           </span>
           <span className="text-xs text-gray-400 dark:text-gray-500">
-            PNG, JPG, WebP up to 2 MB
+            PNG, JPG, WebP up to 10 MB
           </span>
         </button>
       )}

@@ -75,9 +75,20 @@ export interface BookPurchase {
 
 export type Purchase = CoachingPurchase | ProgramPurchase | BookPurchase;
 
+export interface FormCheckQuota {
+  weeklyLimit: number | null;
+  usedThisWeek: number;
+  remainingThisWeek: number | null;
+  weekStart: string;
+  weekEnd: string;
+  planSlug: string | null;
+  planName: string | null;
+}
+
 export interface UserPurchasesResponse {
   user: AdminUser;
   purchases: Purchase[];
+  formCheckQuota: FormCheckQuota;
 }
 
 // ---- User Progress ------------------------------------------------------

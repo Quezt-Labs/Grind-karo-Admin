@@ -38,16 +38,19 @@ function rowHasSetVideos(
 }
 
 function SetVideoCommentEditor({
+  userId,
   exerciseLogId,
   video,
   queryKey,
 }: {
+  userId: string;
   exerciseLogId: string;
   video: SetVideoEntryDto;
   queryKey: unknown[];
 }) {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState(video.coachComment ?? "");
+  const hadComment = Boolean(video.coachComment?.trim());
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -59,8 +62,12 @@ function SetVideoCommentEditor({
     onSuccess: () => {
       toast.success("Comment saved");
       void queryClient.invalidateQueries({ queryKey });
+      if (!hadComment) {
+        void queryClient.invalidateQueries({
+          queryKey: ["admin-user-purchases", userId],
+        });
+      }
     },
-    onError: () => toast.error("Failed to save comment"),
   });
 
   return (
@@ -90,10 +97,12 @@ function SetVideoCommentEditor({
 }
 
 function SetVideosGrid({
+  userId,
   exerciseLogId,
   videos,
   queryKey,
 }: {
+  userId: string;
   exerciseLogId: string;
   videos: SetVideoEntryDto[];
   queryKey: unknown[];
@@ -117,6 +126,7 @@ function SetVideosGrid({
             className="aspect-video w-full bg-black object-contain"
           />
           <SetVideoCommentEditor
+            userId={userId}
             exerciseLogId={exerciseLogId}
             video={v}
             queryKey={queryKey}
@@ -325,6 +335,7 @@ export function UserWorkoutLogsPanel({
                           )}
                           {rowHasSetVideos(row) && (
                             <SetVideosGrid
+                              userId={userId}
                               exerciseLogId={row.id}
                               videos={row.setVideos}
                               queryKey={[...queryKey]}

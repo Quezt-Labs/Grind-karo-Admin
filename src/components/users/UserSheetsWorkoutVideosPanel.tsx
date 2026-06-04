@@ -20,14 +20,17 @@ function formatDateTime(iso: string): string {
 }
 
 function SheetVideoCommentEditor({
+  userId,
   video,
   queryKey,
 }: {
+  userId: string;
   video: AdminSheetsSetVideo;
   queryKey: unknown[];
 }) {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState(video.coachComment ?? "");
+  const hadComment = Boolean(video.coachComment?.trim());
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -38,8 +41,12 @@ function SheetVideoCommentEditor({
     onSuccess: () => {
       toast.success("Comment saved");
       void queryClient.invalidateQueries({ queryKey });
+      if (!hadComment) {
+        void queryClient.invalidateQueries({
+          queryKey: ["admin-user-purchases", userId],
+        });
+      }
     },
-    onError: () => toast.error("Failed to save comment"),
   });
 
   return (
@@ -129,7 +136,11 @@ export function UserSheetsWorkoutVideosPanel({
                 preload="metadata"
                 className="aspect-video w-full bg-black object-contain"
               />
-              <SheetVideoCommentEditor video={video} queryKey={[...queryKey]} />
+              <SheetVideoCommentEditor
+                userId={userId}
+                video={video}
+                queryKey={[...queryKey]}
+              />
             </div>
           ))}
         </div>
