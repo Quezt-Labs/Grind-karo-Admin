@@ -17,6 +17,7 @@ import {
   Loader2,
   Link2,
   Video,
+  MessageCircle,
   BookOpen,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -233,12 +234,14 @@ export function UserDetailPage() {
         coachingSetupStatus={coachingSetupStatus}
       />
 
-      <WorkoutSetVideosSection
+      <CoachingEntitlementsSection
         userId={user.id}
         enabled={user.workoutSetVideosEnabled !== false}
         adminFlag={user.workoutSetVideosEnabled}
-        hasActiveCoaching={hasActiveCoaching}
+        formCheckEnabled={data.formCheckEnabled ?? false}
+        chatEnabled={data.chatEnabled ?? false}
         formCheckQuota={data.formCheckQuota}
+        purchases={purchases}
       />
 
       <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
@@ -508,12 +511,21 @@ const linkSchema = z.object({
 
 type LinkFormData = z.infer<typeof linkSchema>;
 
-interface WorkoutSetVideosSectionProps {
+interface CoachingEntitlementsSectionProps {
   userId: string;
   enabled: boolean;
   adminFlag?: boolean;
-  hasActiveCoaching: boolean;
+  formCheckEnabled: boolean;
+  chatEnabled: boolean;
   formCheckQuota?: FormCheckQuota;
+  purchases: Purchase[];
+}
+
+function activeCoachingPlans(purchases: Purchase[]) {
+  return purchases.filter(
+    (p): p is Extract<Purchase, { kind: "coaching_subscription" }> =>
+      p.kind === "coaching_subscription" && p.status === "ACTIVE",
+  );
 }
 
 function FormCheckQuotaSummary({ quota }: { quota: FormCheckQuota }) {
@@ -537,22 +549,35 @@ function FormCheckQuotaSummary({ quota }: { quota: FormCheckQuota }) {
   );
 }
 
-function WorkoutSetVideosSection({
+function CoachingEntitlementsSection({
   userId,
   enabled: initialEnabled,
   adminFlag,
-  hasActiveCoaching,
+  formCheckEnabled,
+  chatEnabled,
   formCheckQuota,
-}: WorkoutSetVideosSectionProps) {
+  purchases,
+}: CoachingEntitlementsSectionProps) {
   const [enabled, setEnabled] = useState(initialEnabled);
+  const activePlans = activeCoachingPlans(purchases);
+  const hasActiveCoaching = activePlans.length > 0;
+  const miniOnly =
+    hasActiveCoaching &&
+    activePlans.every((p) => p.planSlug.toLowerCase() === "mini");
 
-  const computedSource = hasActiveCoaching
-    ? "Active coaching (included free)"
-    : adminFlag === false
-      ? "Disabled — admin override"
-      : adminFlag === true
-        ? "Admin override (on) or Form Check add-on"
-        : "Requires Form Check add-on or active coaching";
+  const computedFormCheckSource = formCheckEnabled
+    ? miniOnly && adminFlag === true
+      ? "Admin override (MINI plan excludes form check by default)"
+      : hasActiveCoaching && !miniOnly
+        ? "Active MEGA/ULTRA coaching"
+        : adminFlag === true
+          ? "Admin override or Form Check add-on"
+          : "Form Check add-on"
+    : miniOnly
+      ? "MINI plan — not included (use admin toggle to grant)"
+      : adminFlag === false
+        ? "Disabled — admin override"
+        : "Requires MEGA/ULTRA coaching or Form Check add-on";
 
   const mutation = useMutation({
     mutationFn: (next: boolean) =>
@@ -573,28 +598,61 @@ function WorkoutSetVideosSection({
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <div className="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/30">
             <Video className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-semibold text-gray-900 dark:text-white">
-              Form Check (set videos)
+              Coaching entitlements
             </h3>
-            <p className="mt-1 max-w-xl text-sm text-gray-500 dark:text-gray-400">
-              Toggle is an admin override. Computed entitlement:{" "}
-              <span className="font-medium text-gray-700 dark:text-gray-300">
-                {computedSource}
+            {hasActiveCoaching && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Active:{" "}
+                {activePlans
+                  .map((p) => `${p.planName} (${p.planSlug})`)
+                  .join(" · ")}
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                  formCheckEnabled
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+                )}
+              >
+                <Video className="h-3 w-3" />
+                Form check: {formCheckEnabled ? "On" : "Off"}
               </span>
-              . Coaching clients get form check free; program-only buyers need
-              the Form Check add-on.
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                  chatEnabled
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+                )}
+              >
+                <MessageCircle className="h-3 w-3" />
+                Coach chat: {chatEnabled ? "On" : "Off"}
+              </span>
+            </div>
+            <p className="mt-3 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                Form check source:
+              </span>{" "}
+              {computedFormCheckSource}. MINI has no form check or chat; MEGA
+              (2/week) and ULTRA (4/week) include both.
             </p>
-            {formCheckQuota && <FormCheckQuotaSummary quota={formCheckQuota} />}
+            {formCheckQuota && formCheckQuota.weeklyLimit != null && (
+              <FormCheckQuotaSummary quota={formCheckQuota} />
+            )}
           </div>
         </div>
-        <label className="inline-flex cursor-pointer items-center gap-2">
+        <label className="inline-flex shrink-0 cursor-pointer items-center gap-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {enabled ? "Enabled" : "Disabled"}
+            Set videos {enabled ? "on" : "off"}
           </span>
           <input
             type="checkbox"

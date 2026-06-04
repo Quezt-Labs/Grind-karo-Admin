@@ -89,6 +89,8 @@ export interface UserPurchasesResponse {
   user: AdminUser;
   purchases: Purchase[];
   formCheckQuota: FormCheckQuota;
+  formCheckEnabled: boolean;
+  chatEnabled: boolean;
 }
 
 // ---- User Progress ------------------------------------------------------
