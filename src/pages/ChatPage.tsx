@@ -9,6 +9,7 @@ import {
   Bell,
   BellOff,
   Info,
+  ChevronLeft,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { chatService } from "@/services/chatService";
@@ -165,11 +166,19 @@ export function ChatPage() {
     [selectedUserId, sendMutation],
   );
 
+  const showInbox = !selectedUserId;
+  const showThread = !!selectedUserId;
+
   // ---------- render ----------
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div className="admin-bleed-x flex h-[calc(100dvh-3.5rem-1.5rem)] min-h-[min(70dvh,640px)] flex-col overflow-hidden rounded-none border border-gray-200 bg-white sm:h-[calc(100dvh-4rem-2rem)] sm:rounded-xl lg:h-[calc(100dvh-4rem-3rem)] dark:border-gray-700 dark:bg-gray-900 md:flex-row">
       {/* ── Inbox sidebar ─────────────────────────────────────── */}
-      <aside className="flex w-72 shrink-0 flex-col border-r border-gray-200 dark:border-gray-700">
+      <aside
+        className={cn(
+          "flex w-full shrink-0 flex-col border-gray-200 dark:border-gray-700 md:w-72 md:border-r",
+          showInbox ? "flex min-h-0 flex-1 md:flex-none" : "hidden md:flex",
+        )}
+      >
         <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
           <h1 className="text-base font-semibold text-gray-900 dark:text-white">
             Chat
@@ -208,14 +217,27 @@ export function ChatPage() {
       </aside>
 
       {/* ── Conversation pane ──────────────────────────────────── */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          showThread ? "flex" : "hidden md:flex",
+        )}
+      >
         {!selectedUserId ? (
           <EmptyState />
         ) : (
           <>
             {/* Thread header */}
-            <div className="flex items-center gap-3 border-b border-gray-200 px-5 py-3 dark:border-gray-700">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+            <div className="flex items-center gap-2 border-b border-gray-200 px-3 py-2.5 dark:border-gray-700 sm:gap-3 sm:px-5 sm:py-3">
+              <button
+                type="button"
+                onClick={() => selectUser("")}
+                className="shrink-0 rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 md:hidden"
+                aria-label="Back to conversations"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                 {selectedInboxItem
                   ? (selectedInboxItem.userName ??
                       selectedInboxItem.userEmail)[0].toUpperCase()
@@ -237,7 +259,7 @@ export function ChatPage() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
+            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-1 sm:px-5 sm:py-4">
               {threadLoading ? (
                 <div className="flex justify-center pt-10">
                   <Spinner />
@@ -253,8 +275,8 @@ export function ChatPage() {
             </div>
 
             {/* Compose */}
-            <div className="border-t border-gray-200 px-4 py-3 dark:border-gray-700">
-              <div className="flex items-end gap-2">
+            <div className="shrink-0 border-t border-gray-200 px-3 py-2.5 dark:border-gray-700 sm:px-4 sm:py-3">
+              <div className="flex items-end gap-1.5 sm:gap-2">
                 {/* Media upload */}
                 <input
                   ref={fileInputRef}

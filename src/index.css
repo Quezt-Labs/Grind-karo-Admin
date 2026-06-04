@@ -59,6 +59,50 @@ button:disabled,
   display: none;
 }
 
+/* Admin main content — scroll without layout shift */
+.admin-page-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(156 163 175 / 0.5) transparent;
+}
+
+.admin-page-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-page-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgb(156 163 175 / 0.45);
+}
+
+/* Tables / wide blocks on small screens */
+.table-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+}
+
+/* Full-bleed panels (chat) — cancel main horizontal padding */
+.admin-bleed-x {
+  margin-left: -0.75rem;
+  margin-right: -0.75rem;
+  width: calc(100% + 1.5rem);
+}
+
+@media (min-width: 640px) {
+  .admin-bleed-x {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    width: calc(100% + 2rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-bleed-x {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    width: calc(100% + 3rem);
+  }
+}
+
 /* Improve touch targets and scrolling on mobile */
 @media (max-width: 640px) {
   input,

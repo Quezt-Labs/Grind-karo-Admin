@@ -10,19 +10,19 @@ export function Navbar() {
   const { isDark, toggle: toggleDark } = useDarkMode();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-white px-4 dark:bg-gray-800 lg:px-6">
-      {/* Left */}
-      <div className="flex items-center gap-3">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-white px-3 dark:bg-gray-800 sm:h-16 sm:px-4 lg:px-6">
+      <div className="flex min-w-0 items-center gap-2">
         <button
+          type="button"
           onClick={() => setMobileOpen(true)}
           className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
+          aria-label="Open menu"
         >
           <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </button>
       </div>
 
-      {/* Right */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
         <ChatBell />
         <ContactInboxBell />
         <NotificationBell />

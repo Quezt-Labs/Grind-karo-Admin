@@ -127,7 +127,7 @@ export function Sidebar() {
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-3 sm:h-16 sm:px-4">
           <div className="flex min-w-0 items-center gap-2">
             <img
               src="/grind-karo-logo.png"

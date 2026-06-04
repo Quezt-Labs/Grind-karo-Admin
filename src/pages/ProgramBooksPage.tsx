@@ -111,103 +111,105 @@ export function ProgramBooksPage() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Title
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Slug
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Price
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Order
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filtered.map((book) => (
-                <tr
-                  key={book.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-900/30"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 shrink-0 text-red-500" />
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {book.title}
-                      </span>
-                    </div>
-                    {book.body && (
-                      <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
-                        {book.body}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-sm text-gray-500">
-                    {book.slug}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {book.salePrice != null &&
-                    book.salePrice < book.regularPrice ? (
-                      <div className="flex flex-col">
+          <div className="table-scroll">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Title
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Slug
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Price
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Order
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filtered.map((book) => (
+                  <tr
+                    key={book.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-900/30"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 shrink-0 text-red-500" />
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {formatINR(book.salePrice)}
-                        </span>
-                        <span className="text-xs text-gray-400 line-through">
-                          {book.regularPrice > 0
-                            ? formatINR(book.regularPrice)
-                            : "Free"}
+                          {book.title}
                         </span>
                       </div>
-                    ) : (
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {formatBookPrice(book)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {book.sortOrder}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      {book.pdfUrl && (
-                        <a
-                          href={book.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-700"
-                          title="Open PDF"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
+                      {book.body && (
+                        <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
+                          {book.body}
+                        </p>
                       )}
-                      <button
-                        onClick={() => setEditTarget(book)}
-                        className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-700"
-                        title="Edit"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(book)}
-                        className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-gray-700"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm text-gray-500">
+                      {book.slug}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {book.salePrice != null &&
+                      book.salePrice < book.regularPrice ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatINR(book.salePrice)}
+                          </span>
+                          <span className="text-xs text-gray-400 line-through">
+                            {book.regularPrice > 0
+                              ? formatINR(book.regularPrice)
+                              : "Free"}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {formatBookPrice(book)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {book.sortOrder}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        {book.pdfUrl && (
+                          <a
+                            href={book.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-700"
+                            title="Open PDF"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                        <button
+                          onClick={() => setEditTarget(book)}
+                          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-700"
+                          title="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(book)}
+                          className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-gray-700"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
