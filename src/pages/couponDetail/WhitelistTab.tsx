@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { couponService } from "@/services/couponService";
 import { planService } from "@/services/planService";
+import { programService } from "@/services/programService";
 import type { Coupon } from "@/types/coupon";
 
 interface WhitelistTabProps {
@@ -23,10 +24,7 @@ export const WhitelistTab = memo(function WhitelistTab({
 
   const { data: programs } = useQuery({
     queryKey: ["programs-all-list"],
-    queryFn: async () => {
-      const mod = await import("@/services/programService");
-      return mod.programService.getAll();
-    },
+    queryFn: () => programService.getAll(),
     enabled: coupon.scope === "SPECIFIC",
   });
 

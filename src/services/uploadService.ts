@@ -49,12 +49,21 @@ export const uploadService = {
     });
     const presign: PresignResponse = data.data ?? data;
 
-    // 2. Build multipart form — all policy fields first, file LAST
+    // 2. Build multipart form — all policy fields first, file LAST.
+    // S3 policy pins Content-Type; MediaRecorder blobs often use
+    // `audio/webm;codecs=opus` — re-wrap so the part matches the signed MIME.
+    const signedType =
+      presign.fields["Content-Type"] ?? normalizePresignContentType(file);
+    const uploadFile =
+      file.type !== signedType
+        ? new File([file], file.name, { type: signedType })
+        : file;
+
     const form = new FormData();
     for (const [k, v] of Object.entries(presign.fields)) {
       form.append(k, v);
     }
-    form.append("file", file);
+    form.append("file", uploadFile);
 
     // 3. Upload directly to S3 with progress tracking
     await new Promise<void>((resolve, reject) => {

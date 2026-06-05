@@ -12,6 +12,7 @@ import {
 import toast from "react-hot-toast";
 import { userService } from "@/services/userService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
+import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/utils/cn";
 import type { Purchase } from "@/types/user";
@@ -118,13 +119,7 @@ function SetVideosGrid({
           <div className="border-b border-gray-200 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-400">
             Set {v.setNumber}
           </div>
-          <video
-            src={v.videoUrl}
-            controls
-            playsInline
-            preload="metadata"
-            className="aspect-video w-full bg-black object-contain"
-          />
+          <FormCheckVideoPlayer src={v.videoUrl} compact />
           <SetVideoCommentEditor
             userId={userId}
             exerciseLogId={exerciseLogId}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -8,9 +8,6 @@ import {
   Calendar,
   Mail,
   User,
-  ImageIcon,
-  ChevronLeft,
-  ChevronRight,
   Sheet,
   CheckCircle2,
   ExternalLink,
@@ -20,6 +17,12 @@ import {
   MessageCircle,
   BookOpen,
   RefreshCw,
+  Settings2,
+  Activity,
+  ClipboardList,
+  StickyNote,
+  BarChart3,
+  ImageIcon,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,30 +40,17 @@ import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
 import { UserSheetsExerciseNotesPanel } from "@/components/users/UserSheetsExerciseNotesPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
+import { UserProgressPanel } from "@/components/users/UserProgressPanel";
 import { cn } from "@/utils/cn";
 import type {
   Purchase,
-  UserProgressEntry,
   CoachingSetupStatus,
   FormCheckQuota,
 } from "@/types/user";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 
-const PROGRESS_PAGE_SIZE = 12;
-const PHOTO_LABELS = ["Front", "Side", "Back"] as const;
-
-function progressEntryImages(entry: UserProgressEntry): string[] {
-  if (entry.imageUrls?.length) return entry.imageUrls;
-  if (entry.imageUrl) return [entry.imageUrl];
-  return [];
-}
-
-function progressEntryHasMedia(entry: UserProgressEntry): boolean {
-  return progressEntryImages(entry).length > 0 || !!entry.videoUrl;
-}
-
-const PROGRESS_MEDIA_REMOVED =
-  "Media removed after 30 days — weight and notes are kept.";
+type MainTab = "setup" | "activity" | "purchases";
+type ActivitySection = "videos" | "logs" | "notes" | "summaries" | "progress";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -92,7 +82,9 @@ export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [progressOffset, setProgressOffset] = useState(0);
+  const [mainTab, setMainTab] = useState<MainTab>("activity");
+  const [activitySection, setActivitySection] =
+    useState<ActivitySection>("videos");
   const [sheetIdOverride, setSheetIdOverride] = useState<
     string | null | undefined
   >(undefined);
@@ -100,16 +92,6 @@ export function UserDetailPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-user-purchases", id],
     queryFn: () => userService.getPurchases(id!),
-    enabled: !!id,
-  });
-
-  const { data: progressData, isLoading: progressLoading } = useQuery({
-    queryKey: ["admin-user-progress", id, progressOffset],
-    queryFn: () =>
-      userService.getProgress(id!, {
-        limit: PROGRESS_PAGE_SIZE,
-        offset: progressOffset,
-      }),
     enabled: !!id,
   });
 
@@ -149,6 +131,15 @@ export function UserDetailPage() {
     effectiveSpreadsheetId,
   ]);
 
+  useEffect(() => {
+    if (
+      coachingSetupStatus === "awaiting_sheet" ||
+      coachingSetupStatus === "needs_intake"
+    ) {
+      setMainTab("setup");
+    }
+  }, [coachingSetupStatus]);
+
   const stats = useMemo(() => {
     if (!data) return null;
     const coaching = data.purchases.filter(
@@ -187,22 +178,28 @@ export function UserDetailPage() {
   }
 
   const { user, purchases } = data;
+  const chatEnabled = data.chatEnabled ?? false;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-start gap-4">
         <button
           onClick={() => navigate("/users")}
           className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {user.name || "Unnamed User"}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {user.name || "Unnamed User"}
+            </h1>
+            {coachingSetupStatus && (
+              <CoachingSetupStatusBadge status={coachingSetupStatus} />
+            )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <Mail className="h-3.5 w-3.5" /> {user.email}
             </span>
@@ -215,228 +212,209 @@ export function UserDetailPage() {
             </span>
           </div>
         </div>
+        {chatEnabled && (
+          <Link
+            to={`/chat?userId=${user.id}`}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Open chat
+          </Link>
+        )}
       </div>
 
-      {/* Stats */}
+      {/* Stats — compact strip */}
       {stats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           <StatCard
-            icon={<CreditCard className="h-5 w-5" />}
-            label="Coaching Subscriptions"
+            icon={<CreditCard className="h-4 w-4" />}
+            label="Coaching"
             value={String(stats.coachingCount)}
+            compact
           />
           <StatCard
-            icon={<ShoppingBag className="h-5 w-5" />}
-            label="Program Purchases"
+            icon={<ShoppingBag className="h-4 w-4" />}
+            label="Programs"
             value={String(stats.programCount)}
+            compact
           />
           <StatCard
-            icon={<BookOpen className="h-5 w-5" />}
-            label="Book Purchases"
+            icon={<BookOpen className="h-4 w-4" />}
+            label="Books"
             value={String(stats.bookCount)}
+            compact
           />
           <StatCard
-            icon={<CreditCard className="h-5 w-5" />}
-            label="Total Spent"
+            icon={<CreditCard className="h-4 w-4" />}
+            label="Total spent"
             value={formatINR(stats.totalSpent)}
+            compact
           />
         </div>
       )}
 
-      <UserPushPanel userId={user.id} />
-
-      {/* Google Sheets Provisioning */}
-      <ProvisionSheetSection
-        userId={user.id}
-        userEmail={user.email}
-        currentSpreadsheetId={user.spreadsheetId}
-        sheetContentRevision={user.sheetContentRevision ?? 0}
-        coachingSetupStatus={coachingSetupStatus}
-        onSheetIdChange={setSheetIdOverride}
-        onInvalidateUser={() =>
-          void queryClient.invalidateQueries({
-            queryKey: ["admin-user-purchases", user.id],
-          })
-        }
-      />
-
-      <CoachingEntitlementsSection
-        userId={user.id}
-        enabled={user.workoutSetVideosEnabled !== false}
-        adminFlag={user.workoutSetVideosEnabled}
-        formCheckEnabled={data.formCheckEnabled ?? false}
-        chatEnabled={data.chatEnabled ?? false}
-        formCheckQuota={data.formCheckQuota}
-        purchases={purchases}
-      />
-
-      <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
-
-      <UserSheetsExerciseNotesPanel userId={user.id} />
-
-      <UserSheetsWorkoutVideosPanel userId={user.id} />
-
-      <UserWeeklySummariesPanel userId={user.id} />
-
-      {/* Progress check-ins */}
-      <div>
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <ImageIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Progress check-ins
-          </h2>
-          {progressData && (
-            <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-              {progressData.total}
-            </span>
-          )}
-          <span className="w-full text-xs text-gray-500 dark:text-gray-400 sm:w-auto sm:ml-auto">
-            Photos/videos auto-deleted after 30 days
-          </span>
-        </div>
-
-        {progressLoading ? (
-          <div className="flex justify-center py-10">
-            <Spinner />
-          </div>
-        ) : (progressData?.items ?? []).length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center dark:border-gray-600 dark:bg-gray-800">
-            <ImageIcon className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No weekly check-ins yet (3 photos + video).
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-4">
-              {(progressData?.items ?? []).map((entry) => {
-                const images = progressEntryImages(entry);
-                const hasMedia = progressEntryHasMedia(entry);
-                return (
-                  <div
-                    key={entry.id}
-                    className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
-                  >
-                    <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {formatDateTime(entry.createdAt)}
-                      </p>
-                      {entry.weight && (
-                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                          {entry.weight} kg
-                        </span>
-                      )}
-                    </div>
-                    {hasMedia ? (
-                      <>
-                        <div className="grid grid-cols-3 gap-0.5 bg-gray-100 dark:bg-gray-900">
-                          {images.map((url, i) => (
-                            <a
-                              key={`${entry.id}-${i}`}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group relative aspect-3/4 overflow-hidden bg-gray-200 dark:bg-gray-800"
-                            >
-                              <img
-                                src={url}
-                                alt={`${PHOTO_LABELS[i] ?? "Photo"} ${formatDate(entry.createdAt)}`}
-                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                              />
-                              <span className="absolute left-1 top-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                                {PHOTO_LABELS[i] ?? i + 1}
-                              </span>
-                            </a>
-                          ))}
-                        </div>
-                        {entry.videoUrl && (
-                          <div className="border-t border-gray-100 bg-black dark:border-gray-700">
-                            <video
-                              src={entry.videoUrl}
-                              controls
-                              playsInline
-                              preload="metadata"
-                              className="max-h-72 w-full object-contain"
-                            />
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-xs italic text-gray-500 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
-                        {PROGRESS_MEDIA_REMOVED}
-                      </div>
-                    )}
-                    {entry.notes && (
-                      <p className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
-                        {entry.notes}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {(progressData?.total ?? 0) > PROGRESS_PAGE_SIZE && (
-              <div className="mt-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                <span>
-                  Showing {progressOffset + 1}–
-                  {Math.min(
-                    progressOffset + PROGRESS_PAGE_SIZE,
-                    progressData?.total ?? 0,
-                  )}{" "}
-                  of {progressData?.total ?? 0}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() =>
-                      setProgressOffset((o) =>
-                        Math.max(0, o - PROGRESS_PAGE_SIZE),
-                      )
-                    }
-                    disabled={progressOffset === 0}
-                    className="rounded-lg border p-1.5 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-700"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      setProgressOffset((o) => o + PROGRESS_PAGE_SIZE)
-                    }
-                    disabled={
-                      progressOffset + PROGRESS_PAGE_SIZE >=
-                      (progressData?.total ?? 0)
-                    }
-                    className="rounded-lg border p-1.5 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-700"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+      {/* Main tabs */}
+      <div className="flex gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+        {(
+          [
+            {
+              key: "setup" as const,
+              label: "Coaching setup",
+              icon: <Settings2 className="h-3.5 w-3.5" />,
+            },
+            {
+              key: "activity" as const,
+              label: "Athlete activity",
+              icon: <Activity className="h-3.5 w-3.5" />,
+            },
+            {
+              key: "purchases" as const,
+              label: "Purchases",
+              icon: <ShoppingBag className="h-3.5 w-3.5" />,
+              count: purchases.length,
+            },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setMainTab(t.key)}
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              mainTab === t.key
+                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
             )}
-          </>
-        )}
+          >
+            {t.icon}
+            {t.label}
+            {"count" in t && t.count !== undefined && (
+              <span className="rounded-full bg-gray-200/80 px-1.5 py-0.5 text-xs dark:bg-gray-600/50">
+                {t.count}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Purchase Timeline */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-          Purchase History
-        </h2>
+      {/* Tab panels */}
+      {mainTab === "setup" && (
+        <div className="space-y-4">
+          <ProvisionSheetSection
+            userId={user.id}
+            userEmail={user.email}
+            currentSpreadsheetId={user.spreadsheetId}
+            sheetContentRevision={user.sheetContentRevision ?? 0}
+            coachingSetupStatus={coachingSetupStatus}
+            onSheetIdChange={setSheetIdOverride}
+            onInvalidateUser={() =>
+              void queryClient.invalidateQueries({
+                queryKey: ["admin-user-purchases", user.id],
+              })
+            }
+          />
+          <CoachingEntitlementsSection
+            userId={user.id}
+            enabled={user.workoutSetVideosEnabled !== false}
+            adminFlag={user.workoutSetVideosEnabled}
+            formCheckEnabled={data.formCheckEnabled ?? false}
+            chatEnabled={chatEnabled}
+            formCheckQuota={data.formCheckQuota}
+            purchases={purchases}
+          />
+          <UserPushPanel userId={user.id} />
+        </div>
+      )}
 
-        {purchases.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No purchases yet.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {purchases.map((purchase) => (
-              <PurchaseCard key={purchase.id} purchase={purchase} />
+      {mainTab === "activity" && (
+        <div className="space-y-4">
+          <div className="flex gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+            {(
+              [
+                {
+                  key: "videos" as const,
+                  label: "Form-check videos",
+                  icon: <Video className="h-3.5 w-3.5" />,
+                },
+                {
+                  key: "logs" as const,
+                  label: "Workout logs",
+                  icon: <ClipboardList className="h-3.5 w-3.5" />,
+                },
+                {
+                  key: "notes" as const,
+                  label: "Exercise notes",
+                  icon: <StickyNote className="h-3.5 w-3.5" />,
+                },
+                {
+                  key: "summaries" as const,
+                  label: "Weekly summaries",
+                  icon: <BarChart3 className="h-3.5 w-3.5" />,
+                },
+                {
+                  key: "progress" as const,
+                  label: "Progress photos",
+                  icon: <ImageIcon className="h-3.5 w-3.5" />,
+                },
+              ] as const
+            ).map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setActivitySection(s.key)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                  activitySection === s.key
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200",
+                )}
+              >
+                {s.icon}
+                {s.label}
+              </button>
             ))}
           </div>
-        )}
-      </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
+            {activitySection === "videos" && (
+              <UserSheetsWorkoutVideosPanel userId={user.id} />
+            )}
+            {activitySection === "logs" && (
+              <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
+            )}
+            {activitySection === "notes" && (
+              <UserSheetsExerciseNotesPanel userId={user.id} />
+            )}
+            {activitySection === "summaries" && (
+              <UserWeeklySummariesPanel userId={user.id} />
+            )}
+            {activitySection === "progress" && (
+              <UserProgressPanel userId={user.id} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {mainTab === "purchases" && (
+        <div>
+          <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+            Purchase history
+          </h2>
+          {purchases.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No purchases yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {purchases.map((purchase) => (
+                <PurchaseCard key={purchase.id} purchase={purchase} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -445,19 +423,38 @@ function StatCard({
   icon,
   label,
   value,
+  compact = false,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  compact?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      <div className="rounded-lg bg-primary-50 p-2.5 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400">
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-xl border bg-white dark:border-gray-700 dark:bg-gray-800",
+        compact ? "p-3" : "gap-4 p-4",
+      )}
+    >
+      <div
+        className={cn(
+          "rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400",
+          compact ? "p-2" : "p-2.5",
+        )}
+      >
         {icon}
       </div>
-      <div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-lg font-bold text-gray-900 dark:text-white">
+      <div className="min-w-0">
+        <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+          {label}
+        </p>
+        <p
+          className={cn(
+            "font-bold text-gray-900 dark:text-white",
+            compact ? "text-base" : "text-lg",
+          )}
+        >
           {value}
         </p>
       </div>
@@ -636,63 +633,58 @@ function CoachingEntitlementsSection({
   });
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/30">
-            <Video className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <div className="min-w-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/30">
+              <Video className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
             <h3 className="font-semibold text-gray-900 dark:text-white">
               Coaching entitlements
             </h3>
-            {hasActiveCoaching && (
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Active:{" "}
-                {activePlans
-                  .map((p) => `${p.planName} (${p.planSlug})`)
-                  .join(" · ")}
-              </p>
-            )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                  formCheckEnabled
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-                )}
-              >
-                <Video className="h-3 w-3" />
-                Form check: {formCheckEnabled ? "On" : "Off"}
-              </span>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                  chatEnabled
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-                )}
-              >
-                <MessageCircle className="h-3 w-3" />
-                Coach chat: {chatEnabled ? "On" : "Off"}
-              </span>
-            </div>
-            <p className="mt-3 max-w-xl text-sm text-gray-500 dark:text-gray-400">
-              <span className="font-medium text-gray-700 dark:text-gray-300">
-                Form check source:
-              </span>{" "}
-              {computedFormCheckSource}. MINI has no form check or chat; MEGA
-              (2/week) and ULTRA (4/week) include both.
-            </p>
-            {formCheckQuota && formCheckQuota.weeklyLimit != null && (
-              <FormCheckQuotaSummary quota={formCheckQuota} />
-            )}
           </div>
+          {hasActiveCoaching && (
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {activePlans
+                .map((p) => `${p.planName} (${p.planSlug})`)
+                .join(" · ")}
+            </p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                formCheckEnabled
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+              )}
+            >
+              <Video className="h-3 w-3" />
+              Form check {formCheckEnabled ? "on" : "off"}
+            </span>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                chatEnabled
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+              )}
+            >
+              <MessageCircle className="h-3 w-3" />
+              Chat {chatEnabled ? "on" : "off"}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {computedFormCheckSource}
+          </p>
+          {formCheckQuota && formCheckQuota.weeklyLimit != null && (
+            <FormCheckQuotaSummary quota={formCheckQuota} />
+          )}
         </div>
-        <label className="inline-flex shrink-0 cursor-pointer items-center gap-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Set videos {enabled ? "on" : "off"}
+        <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/40">
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            Set videos
           </span>
           <input
             type="checkbox"

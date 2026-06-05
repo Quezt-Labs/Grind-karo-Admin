@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MessageSquare } from "lucide-react";
 import toast from "react-hot-toast";
+import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   SheetWeekFilter,
@@ -177,13 +178,7 @@ export function UserSheetsWorkoutVideosPanel({
                   · Set {video.setNumber} · {formatDateTime(video.createdAt)}
                 </p>
               </div>
-              <video
-                src={video.videoUrl}
-                controls
-                playsInline
-                preload="metadata"
-                className="aspect-video w-full bg-black object-contain"
-              />
+              <FormCheckVideoPlayer src={video.videoUrl} />
               <SheetVideoCommentEditor
                 userId={userId}
                 video={video}

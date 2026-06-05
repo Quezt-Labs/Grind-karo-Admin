@@ -41,16 +41,15 @@ export function useVoiceRecorder() {
     return new Promise((resolve) => {
       rec.onstop = () => {
         rec.stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, {
-          type: rec.mimeType || "audio/webm",
-        });
+        const mime = (rec.mimeType || "audio/webm").split(";")[0]!;
+        const blob = new Blob(chunksRef.current, { type: mime });
         if (blob.size === 0) {
           resolve(null);
           return;
         }
         resolve(
           new File([blob], `voice-${Date.now()}.webm`, {
-            type: blob.type,
+            type: mime,
           }),
         );
       };
