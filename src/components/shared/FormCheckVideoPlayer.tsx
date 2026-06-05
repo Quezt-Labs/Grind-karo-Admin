@@ -95,13 +95,27 @@ export function FormCheckVideoPlayer({
   }, []);
 
   const enterFullscreen = useCallback(async () => {
-    const el = containerRef.current;
-    if (!el) return;
+    const video = videoRef.current;
+    const container = containerRef.current;
+    if (!video) return;
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
-      } else {
-        await el.requestFullscreen();
+        return;
+      }
+      if (video.requestFullscreen) {
+        await video.requestFullscreen();
+        return;
+      }
+      const webkit = video as HTMLVideoElement & {
+        webkitEnterFullscreen?: () => void;
+      };
+      if (webkit.webkitEnterFullscreen) {
+        webkit.webkitEnterFullscreen();
+        return;
+      }
+      if (container?.requestFullscreen) {
+        await container.requestFullscreen();
       }
     } catch {
       /* ignored */

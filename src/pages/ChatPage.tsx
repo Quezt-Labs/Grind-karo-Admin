@@ -18,7 +18,10 @@ import { chatService } from "@/services/chatService";
 import { pushService } from "@/services/pushService";
 import { uploadService } from "@/services/uploadService";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { ChatAudioPlayer } from "@/components/chat/ChatAudioPlayer";
+import { ChatVideoPlayer } from "@/components/chat/ChatVideoPlayer";
 import { cn } from "@/utils/cn";
+import { isVideoMediaUrl } from "@/utils/mediaUrl";
 import { Spinner } from "@/components/ui/Spinner";
 import type { ChatInboxItem, ChatMessage } from "@/types/chat";
 import type { AdminUserPushStatus } from "@/types/push";
@@ -145,10 +148,11 @@ export function ChatPage() {
     async (file: File) => {
       if (!selectedUserId) return;
       const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
       const isAudio =
         file.type.startsWith("audio/") || /^voice-\d+\./.test(file.name);
-      if (!isImage && !isAudio) {
-        toast.error("Only images and audio files are supported.");
+      if (!isImage && !isVideo && !isAudio) {
+        toast.error("Only images, videos, and audio files are supported.");
         return;
       }
       setUploading(true);
@@ -156,7 +160,7 @@ export function ChatPage() {
         const mediaUrl = await uploadService.presignUpload(file);
         sendMutation.mutate({
           userId: selectedUserId,
-          type: isImage ? "IMAGE" : "AUDIO",
+          type: isAudio ? "AUDIO" : "IMAGE",
           mediaUrl,
         });
       } catch {
@@ -301,12 +305,31 @@ export function ChatPage() {
 
             {/* Compose */}
             <div className="shrink-0 border-t border-gray-200 px-3 py-2.5 dark:border-gray-700 sm:px-4 sm:py-3">
+              {voice.recording && (
+                <div
+                  className="mb-2 flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900/40 dark:bg-red-900/20"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                  </span>
+                  <p className="min-w-0 flex-1 text-xs font-medium text-red-700 dark:text-red-300">
+                    Recording voice note… tap stop when done
+                  </p>
+                  <span className="shrink-0 font-mono text-xs tabular-nums text-gray-700 dark:text-gray-200">
+                    {formatRecordTime(voice.elapsedSec)}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-end gap-1.5 sm:gap-2">
                 {/* Media upload */}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,audio/*"
+                  accept="image/*,video/*,audio/*"
                   className="hidden"
                   onChange={handleFileChange}
                 />
@@ -316,7 +339,7 @@ export function ChatPage() {
                     uploading || sendMutation.isPending || !!voice.recording
                   }
                   className="mb-0.5 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                  title="Send image or audio file"
+                  title="Send image, video, or audio file"
                 >
                   {uploading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -347,12 +370,6 @@ export function ChatPage() {
                     <Mic className="h-5 w-5" />
                   )}
                 </button>
-
-                {voice.recording && (
-                  <span className="mb-2 text-xs font-medium text-red-600 dark:text-red-400">
-                    {voice.elapsedSec}s
-                  </span>
-                )}
 
                 {/* Text input */}
                 <textarea
@@ -401,7 +418,10 @@ function InboxRow({
     item.latestMessage.type === "TEXT"
       ? item.latestMessage.content
       : item.latestMessage.type === "IMAGE"
-        ? "📷 Image"
+        ? item.latestMessage.mediaUrl &&
+          isVideoMediaUrl(item.latestMessage.mediaUrl)
+          ? "🎬 Video"
+          : "📷 Image"
         : "🎵 Audio";
 
   return (
@@ -482,99 +502,10 @@ function MessageList({ messages }: { messages: ChatMessage[] }) {
   );
 }
 
-function AudioPlayer({
-  src,
-  isFromUser,
-}: {
-  src: string;
-  isFromUser: boolean;
-}) {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-
-  function togglePlay() {
-    const el = audioRef.current;
-    if (!el) return;
-    if (playing) {
-      el.pause();
-    } else {
-      void el.play();
-    }
-    setPlaying((p) => !p);
-  }
-
-  function formatTime(s: number) {
-    if (!isFinite(s) || isNaN(s)) return "0:00";
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, "0")}`;
-  }
-
-  return (
-    <div className="flex items-center gap-2.5" style={{ minWidth: "210px" }}>
-      <audio
-        ref={audioRef}
-        src={src}
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
-        onEnded={() => {
-          setPlaying(false);
-          setCurrentTime(0);
-        }}
-        className="hidden"
-      />
-
-      {/* Play / Pause */}
-      <button
-        onClick={togglePlay}
-        className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80",
-          isFromUser
-            ? "bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-white"
-            : "bg-white/20 text-white",
-        )}
-      >
-        {playing ? (
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
-            <rect x="6" y="4" width="4" height="16" rx="1" />
-            <rect x="14" y="4" width="4" height="16" rx="1" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
-            <path d="M8 5.14v14l11-7-11-7z" />
-          </svg>
-        )}
-      </button>
-
-      {/* Scrubber + times */}
-      <div className="flex flex-1 flex-col gap-1">
-        <input
-          type="range"
-          min={0}
-          max={duration || 100}
-          value={currentTime}
-          onChange={(e) => {
-            const val = Number(e.target.value);
-            if (audioRef.current) audioRef.current.currentTime = val;
-            setCurrentTime(val);
-          }}
-          className="h-1 w-full cursor-pointer rounded-full"
-          style={{ accentColor: isFromUser ? "#10b981" : "white" }}
-        />
-        <div
-          className={cn(
-            "flex justify-between text-[10px]",
-            isFromUser ? "text-gray-400" : "text-emerald-100",
-          )}
-        >
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-      </div>
-    </div>
-  );
+function formatRecordTime(totalSec: number): string {
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function MessageBubble({
@@ -622,16 +553,20 @@ function MessageBubble({
 
         {msg.type === "IMAGE" && msg.mediaUrl && (
           <>
-            <button
-              onClick={() => setLightbox(true)}
-              className="block cursor-zoom-in"
-            >
-              <img
-                src={msg.mediaUrl}
-                alt="Shared image"
-                className="block w-full max-w-xs object-cover transition-opacity hover:opacity-90"
-              />
-            </button>
+            {isVideoMediaUrl(msg.mediaUrl) ? (
+              <ChatVideoPlayer src={msg.mediaUrl} isFromUser={isFromUser} />
+            ) : (
+              <button
+                onClick={() => setLightbox(true)}
+                className="block cursor-zoom-in"
+              >
+                <img
+                  src={msg.mediaUrl}
+                  alt="Shared image"
+                  className="block w-full max-w-xs object-cover transition-opacity hover:opacity-90"
+                />
+              </button>
+            )}
             <div className="px-3 pb-2 pt-1.5">
               {msg.content && (
                 <p className="mb-0.5 wrap-break-word text-xs opacity-80">
@@ -642,7 +577,7 @@ function MessageBubble({
             </div>
 
             {/* Lightbox */}
-            {lightbox && (
+            {lightbox && !isVideoMediaUrl(msg.mediaUrl) && (
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
                 onClick={() => setLightbox(false)}
@@ -660,7 +595,7 @@ function MessageBubble({
 
         {msg.type === "AUDIO" && msg.mediaUrl && (
           <>
-            <AudioPlayer src={msg.mediaUrl} isFromUser={isFromUser} />
+            <ChatAudioPlayer src={msg.mediaUrl} isFromUser={isFromUser} />
             {msg.content && (
               <p className="mt-1 wrap-break-word text-xs opacity-80">
                 {msg.content}
