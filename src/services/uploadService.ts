@@ -5,6 +5,17 @@ export interface UploadResponse {
   key: string;
 }
 
+/** Strip codec params (e.g. `audio/webm;codecs=opus` → `audio/webm`). */
+function normalizePresignContentType(file: File): string {
+  const raw = file.type?.trim();
+  if (raw) {
+    return raw.split(";")[0]!.trim().toLowerCase();
+  }
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext === "webm") return "audio/webm";
+  return raw ?? "";
+}
+
 export interface PresignResponse {
   key: string;
   url: string;
@@ -33,7 +44,7 @@ export const uploadService = {
     // 1. Get presigned policy from API
     const { data } = await api.post("/upload/presign", {
       filename: file.name,
-      contentType: file.type,
+      contentType: normalizePresignContentType(file),
       sizeBytes: file.size,
     });
     const presign: PresignResponse = data.data ?? data;
