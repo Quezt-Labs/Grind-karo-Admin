@@ -15,14 +15,53 @@ export interface AdminSheetsSetVideo {
   coachCommentUpdatedAt?: string | null;
 }
 
+export interface AdminSheetsExerciseNote {
+  id: string;
+  tabName: string;
+  weekNumber: number;
+  dayNumber: number;
+  exerciseName: string;
+  category: string;
+  notes: string;
+  completed: boolean;
+  updatedAt: string;
+}
+
 export interface UpsertSheetsVideoCommentPayload {
   sheetsSetVideoId: string;
   comment: string;
 }
 
 export const sheetsSetVideoService = {
-  async listForUser(userId: string): Promise<AdminSheetsSetVideo[]> {
-    const { data } = await api.get(`/sheets/admin/users/${userId}/set-videos`);
+  async listForUser(
+    userId: string,
+    weekNumber?: number,
+  ): Promise<AdminSheetsSetVideo[]> {
+    const params =
+      weekNumber != null ? { weekNumber: String(weekNumber) } : undefined;
+    const { data } = await api.get(`/sheets/admin/users/${userId}/set-videos`, {
+      params,
+    });
+    return data.data ?? data;
+  },
+
+  async listSheetWeeks(userId: string): Promise<number[]> {
+    const { data } = await api.get(`/sheets/admin/users/${userId}/sheet-weeks`);
+    return data.data ?? data;
+  },
+};
+
+export const sheetsExerciseNotesService = {
+  async listForUser(
+    userId: string,
+    weekNumber?: number,
+  ): Promise<AdminSheetsExerciseNote[]> {
+    const params =
+      weekNumber != null ? { weekNumber: String(weekNumber) } : undefined;
+    const { data } = await api.get(
+      `/sheets/admin/users/${userId}/exercise-notes`,
+      { params },
+    );
     return data.data ?? data;
   },
 };

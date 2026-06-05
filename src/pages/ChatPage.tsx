@@ -10,11 +10,14 @@ import {
   BellOff,
   Info,
   ChevronLeft,
+  Mic,
+  Square,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { chatService } from "@/services/chatService";
 import { pushService } from "@/services/pushService";
 import { uploadService } from "@/services/uploadService";
+import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { cn } from "@/utils/cn";
 import { Spinner } from "@/components/ui/Spinner";
 import type { ChatInboxItem, ChatMessage } from "@/types/chat";
@@ -56,6 +59,7 @@ export function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const voice = useVoiceRecorder();
 
   // Sync URL param → selection
   useEffect(() => {
@@ -73,7 +77,8 @@ export function ChatPage() {
   const { data: inbox = [], isLoading: inboxLoading } = useQuery({
     queryKey: ["chat-inbox"],
     queryFn: () => chatService.getInbox(),
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 
   const selectedInboxItem = inbox.find((i) => i.userId === selectedUserId);
@@ -136,19 +141,16 @@ export function ChatPage() {
     }
   }
 
-  const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !selectedUserId) return;
-      e.target.value = "";
-
+  const uploadAndSendFile = useCallback(
+    async (file: File) => {
+      if (!selectedUserId) return;
       const isImage = file.type.startsWith("image/");
-      const isAudio = file.type.startsWith("audio/");
+      const isAudio =
+        file.type.startsWith("audio/") || /^voice-\d+\./.test(file.name);
       if (!isImage && !isAudio) {
         toast.error("Only images and audio files are supported.");
         return;
       }
-
       setUploading(true);
       try {
         const mediaUrl = await uploadService.presignUpload(file);
@@ -165,6 +167,29 @@ export function ChatPage() {
     },
     [selectedUserId, sendMutation],
   );
+
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = "";
+      await uploadAndSendFile(file);
+    },
+    [uploadAndSendFile],
+  );
+
+  async function handleVoiceToggle() {
+    if (voice.recording) {
+      const file = await voice.stop();
+      if (file) await uploadAndSendFile(file);
+      return;
+    }
+    try {
+      await voice.start();
+    } catch {
+      toast.error("Microphone access denied.");
+    }
+  }
 
   const showInbox = !selectedUserId;
   const showThread = !!selectedUserId;
@@ -287,9 +312,11 @@ export function ChatPage() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading || sendMutation.isPending}
+                  disabled={
+                    uploading || sendMutation.isPending || !!voice.recording
+                  }
                   className="mb-0.5 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                  title="Send image or audio"
+                  title="Send image or audio file"
                 >
                   {uploading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -297,6 +324,35 @@ export function ChatPage() {
                     <Paperclip className="h-5 w-5" />
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleVoiceToggle()}
+                  disabled={uploading || sendMutation.isPending}
+                  className={cn(
+                    "mb-0.5 rounded-lg p-2 disabled:opacity-50",
+                    voice.recording
+                      ? "bg-red-100 text-red-600 animate-pulse dark:bg-red-900/30 dark:text-red-400"
+                      : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200",
+                  )}
+                  title={
+                    voice.recording
+                      ? "Stop and send voice note"
+                      : "Record voice note"
+                  }
+                >
+                  {voice.recording ? (
+                    <Square className="h-5 w-5 fill-current" />
+                  ) : (
+                    <Mic className="h-5 w-5" />
+                  )}
+                </button>
+
+                {voice.recording && (
+                  <span className="mb-2 text-xs font-medium text-red-600 dark:text-red-400">
+                    {voice.elapsedSec}s
+                  </span>
+                )}
 
                 {/* Text input */}
                 <textarea

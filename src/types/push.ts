@@ -3,6 +3,7 @@ export interface AdminUserPushStatus {
   deviceCount: number;
   workoutRemindersEnabled: boolean;
   chatNotificationsEnabled: boolean;
+  weeklySummaryEnabled: boolean;
   reminderHour: number;
   reminderMinute: number;
   timezone: string;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CreditCard,
@@ -35,6 +35,7 @@ import { sheetsService } from "@/services/sheetsService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
+import { UserSheetsExerciseNotesPanel } from "@/components/users/UserSheetsExerciseNotesPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
 import { cn } from "@/utils/cn";
 import type {
@@ -90,7 +91,11 @@ function formatDateTime(iso: string): string {
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [progressOffset, setProgressOffset] = useState(0);
+  const [sheetIdOverride, setSheetIdOverride] = useState<
+    string | null | undefined
+  >(undefined);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-user-purchases", id],
@@ -124,13 +129,25 @@ export function UserDetailPage() {
     retry: false,
   });
 
+  const effectiveSpreadsheetId =
+    sheetIdOverride !== undefined
+      ? sheetIdOverride
+      : (data?.user.spreadsheetId ?? null);
+
   const coachingSetupStatus = useMemo((): CoachingSetupStatus | null => {
     if (!hasActiveCoaching || !data) return null;
     if (intakeLoading) return null;
     if (intakeMissing || !intakeData) return "needs_intake";
-    if (!data.user.spreadsheetId?.trim()) return "awaiting_sheet";
+    if (!effectiveSpreadsheetId?.trim()) return "awaiting_sheet";
     return "ready";
-  }, [hasActiveCoaching, data, intakeData, intakeMissing, intakeLoading]);
+  }, [
+    hasActiveCoaching,
+    data,
+    intakeData,
+    intakeMissing,
+    intakeLoading,
+    effectiveSpreadsheetId,
+  ]);
 
   const stats = useMemo(() => {
     if (!data) return null;
@@ -235,6 +252,12 @@ export function UserDetailPage() {
         currentSpreadsheetId={user.spreadsheetId}
         sheetContentRevision={user.sheetContentRevision ?? 0}
         coachingSetupStatus={coachingSetupStatus}
+        onSheetIdChange={setSheetIdOverride}
+        onInvalidateUser={() =>
+          void queryClient.invalidateQueries({
+            queryKey: ["admin-user-purchases", user.id],
+          })
+        }
       />
 
       <CoachingEntitlementsSection
@@ -248,6 +271,8 @@ export function UserDetailPage() {
       />
 
       <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
+
+      <UserSheetsExerciseNotesPanel userId={user.id} />
 
       <UserSheetsWorkoutVideosPanel userId={user.id} />
 
@@ -535,19 +560,31 @@ function FormCheckQuotaSummary({ quota }: { quota: FormCheckQuota }) {
   if (quota.weeklyLimit == null) {
     return (
       <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-        Form checks: unlimited this week ({quota.usedThisWeek} delivered).
+        Form checks: unlimited ({quota.usedThisWeek} program weeks reviewed this
+        block).
       </p>
     );
   }
 
   const remaining = quota.remainingThisWeek ?? 0;
+  const weekGate =
+    quota.formCheckWeekAllowed === false
+      ? ` · Not a form-check week (sub week ${quota.subscriptionWeek ?? "?"})`
+      : quota.formCheckWeekAllowed === true
+        ? ` · Form-check week (sub week ${quota.subscriptionWeek})`
+        : "";
+
   return (
     <p
       className={`mt-2 text-xs ${remaining <= 0 ? "text-amber-700 dark:text-amber-300" : "text-gray-500 dark:text-gray-400"}`}
     >
-      Form checks this week: {quota.usedThisWeek}/{quota.weeklyLimit} used
-      {remaining > 0 ? ` · ${remaining} remaining` : " · limit reached"} (
-      {quota.planName ?? quota.planSlug}). Resets after {quota.weekEnd}.
+      Form checks ({quota.weekStart}): {quota.usedThisWeek}/{quota.weeklyLimit}{" "}
+      program weeks used
+      {remaining > 0 ? ` · ${remaining} remaining` : " · limit reached"}
+      {weekGate} ({quota.planName ?? quota.planSlug}).
+      {quota.programWeeksReviewed && quota.programWeeksReviewed.length > 0 && (
+        <> Reviewed sheet weeks: W{quota.programWeeksReviewed.join(", W")}.</>
+      )}
     </p>
   );
 }
@@ -679,6 +716,8 @@ interface ProvisionSheetSectionProps {
   currentSpreadsheetId?: string | null;
   sheetContentRevision?: number;
   coachingSetupStatus?: CoachingSetupStatus | null;
+  onSheetIdChange?: (spreadsheetId: string | null) => void;
+  onInvalidateUser?: () => void;
 }
 
 function ProvisionSheetSection({
@@ -687,6 +726,8 @@ function ProvisionSheetSection({
   currentSpreadsheetId,
   sheetContentRevision = 0,
   coachingSetupStatus,
+  onSheetIdChange,
+  onInvalidateUser,
 }: ProvisionSheetSectionProps) {
   const [linkedId, setLinkedId] = useState<string | null>(
     currentSpreadsheetId ?? null,
@@ -694,6 +735,10 @@ function ProvisionSheetSection({
   const [revision, setRevision] = useState(sheetContentRevision);
   const [showGuide, setShowGuide] = useState(false);
   const [linking, setLinking] = useState(false);
+
+  useEffect(() => {
+    setLinkedId(currentSpreadsheetId ?? null);
+  }, [currentSpreadsheetId]);
 
   useEffect(() => {
     setRevision(sheetContentRevision);
@@ -722,6 +767,8 @@ function ProvisionSheetSection({
     onSuccess: (res) => {
       toast.success("Sheet linked!");
       setLinkedId(res.spreadsheetId);
+      onSheetIdChange?.(res.spreadsheetId);
+      onInvalidateUser?.();
       setLinking(false);
       resetLink();
     },
@@ -733,6 +780,8 @@ function ProvisionSheetSection({
     onSuccess: () => {
       toast.success("Sheet unlinked.");
       setLinkedId(null);
+      onSheetIdChange?.(null);
+      onInvalidateUser?.();
     },
     onError: () => toast.error("Failed to unlink sheet."),
   });
@@ -867,8 +916,8 @@ function ProvisionSheetSection({
             {linkedId}
           </code>
           <p className="mb-2 text-xs text-green-700 dark:text-green-400">
-            Sheet revision: {revision} — bump via Notify refresh
-            after coach edits the workbook.
+            Sheet revision: {revision} — bump via Notify refresh after coach
+            edits the workbook.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <a

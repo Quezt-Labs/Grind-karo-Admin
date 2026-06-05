@@ -45,11 +45,19 @@ export const workoutSummaryService = {
   async generate(
     userId: string,
     weekStart: string,
+    sendPush = false,
   ): Promise<WorkoutWeeklySummary> {
     const { data } = await api.post(
       `/admin/users/${userId}/workout-summaries/generate`,
-      { weekStart },
+      { weekStart, sendPush },
     );
     return data.data ?? data;
+  },
+
+  async resendPush(summaryId: string): Promise<{ sent: boolean }> {
+    const { data } = await api.post(
+      `/admin/workout-summaries/${summaryId}/resend-push`,
+    );
+    return data;
   },
 };

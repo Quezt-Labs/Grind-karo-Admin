@@ -85,6 +85,16 @@ function SummaryCard({
     onError: () => toast.error("Failed to save note"),
   });
 
+  const resendPush = useMutation({
+    mutationFn: () => workoutSummaryService.resendPush(summary.id),
+    onSuccess: (res) => {
+      toast.success(
+        res.sent ? "Summary push sent" : "No push sent (no activity)",
+      );
+    },
+    onError: () => toast.error("Failed to send summary push"),
+  });
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <button
@@ -148,6 +158,17 @@ function SummaryCard({
               )}
               Save note
             </button>
+            <button
+              type="button"
+              disabled={resendPush.isPending}
+              onClick={() => resendPush.mutate()}
+              className="mt-2 ml-2 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+            >
+              {resendPush.isPending && (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              )}
+              Resend push
+            </button>
           </div>
         </div>
       )}
@@ -171,7 +192,7 @@ export function UserWeeklySummariesPanel({
 
   const regenerate = useMutation({
     mutationFn: () =>
-      workoutSummaryService.generate(userId, getPreviousMondayISO()),
+      workoutSummaryService.generate(userId, getPreviousMondayISO(), true),
     onSuccess: () => {
       toast.success("Summary regenerated");
       void queryClient.invalidateQueries({

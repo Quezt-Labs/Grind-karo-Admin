@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, Loader2, MessageSquare } from "lucide-react";
+import { Loader2, MessageSquare } from "lucide-react";
 import toast from "react-hot-toast";
 import { Spinner } from "@/components/ui/Spinner";
+import {
+  SheetWeekFilter,
+  SheetPanelIcon,
+} from "@/components/users/UserSheetsExerciseNotesPanel";
 import {
   sheetsSetVideoCommentService,
   sheetsSetVideoService,
@@ -82,19 +86,42 @@ interface UserSheetsWorkoutVideosPanelProps {
 export function UserSheetsWorkoutVideosPanel({
   userId,
 }: UserSheetsWorkoutVideosPanelProps) {
-  const queryKey = ["admin-user-sheets-set-videos", userId] as const;
+  const [weekFilter, setWeekFilter] = useState<number | "all">("all");
+
+  const { data: weeks = [] } = useQuery({
+    queryKey: ["admin-user-sheet-weeks", userId],
+    queryFn: () => sheetsSetVideoService.listSheetWeeks(userId),
+  });
+
+  const queryKey = [
+    "admin-user-sheets-set-videos",
+    userId,
+    weekFilter,
+  ] as const;
 
   const { data, isLoading } = useQuery({
     queryKey,
-    queryFn: () => sheetsSetVideoService.listForUser(userId),
+    queryFn: () =>
+      sheetsSetVideoService.listForUser(
+        userId,
+        weekFilter === "all" ? undefined : weekFilter,
+      ),
   });
 
   const videos = data ?? [];
 
+  const formCheckWeeks = useMemo(() => {
+    const set = new Set<number>();
+    for (const v of videos) {
+      if (v.coachComment?.trim()) set.add(v.weekNumber);
+    }
+    return set;
+  }, [videos]);
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <FileSpreadsheet className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+        <SheetPanelIcon />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
           Sheet workout videos
         </h2>
@@ -103,7 +130,21 @@ export function UserSheetsWorkoutVideosPanel({
             {videos.length}
           </span>
         )}
+        <div className="ml-auto">
+          <SheetWeekFilter
+            weeks={weeks}
+            value={weekFilter}
+            onChange={setWeekFilter}
+          />
+        </div>
       </div>
+
+      {weekFilter !== "all" && formCheckWeeks.has(weekFilter) && (
+        <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-900 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-200">
+          Form check delivered for Week {weekFilter} (counts as one review for
+          this program week).
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-8">
@@ -121,9 +162,16 @@ export function UserSheetsWorkoutVideosPanel({
               className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
             >
               <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {video.exerciseName}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {video.exerciseName}
+                  </p>
+                  {video.coachComment?.trim() && (
+                    <span className="shrink-0 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
+                      Reviewed
+                    </span>
+                  )}
+                </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   {video.tabName} · W{video.weekNumber} · Day {video.dayNumber}{" "}
                   · Set {video.setNumber} · {formatDateTime(video.createdAt)}

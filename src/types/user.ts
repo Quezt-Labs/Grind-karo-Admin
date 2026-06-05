@@ -84,6 +84,9 @@ export interface FormCheckQuota {
   weekEnd: string;
   planSlug: string | null;
   planName: string | null;
+  subscriptionWeek?: number;
+  formCheckWeekAllowed?: boolean;
+  programWeeksReviewed?: number[];
 }
 
 export interface UserPurchasesResponse {
@@ -182,7 +185,8 @@ export interface CoachingSetupListResponse {
 export type NotificationType =
   | "COACHING_SUBSCRIPTION_PAID"
   | "PROGRAM_PURCHASE_PAID"
-  | "BOOK_PURCHASE_PAID";
+  | "BOOK_PURCHASE_PAID"
+  | "CHAT_MESSAGE";
 
 export interface AdminNotification {
   id: string;

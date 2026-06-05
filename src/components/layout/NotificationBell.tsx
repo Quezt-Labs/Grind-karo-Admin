@@ -8,6 +8,7 @@ import {
   CheckCheck,
   X,
   BookOpen,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { notificationService } from "@/services/notificationService";
@@ -110,8 +111,12 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   function handleClickNotification(n: AdminNotification) {
     markReadMutation.mutate(n.id);
 
-    // Deep-link based on type
     const userId = n.payload.userId as string | undefined;
+    if (n.type === "CHAT_MESSAGE" && userId) {
+      navigate(`/chat?userId=${userId}`);
+      onClose();
+      return;
+    }
     if (userId) {
       navigate(`/users/${userId}`);
       onClose();
@@ -186,13 +191,17 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                       ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
                       : n.type === "BOOK_PURCHASE_PAID"
                         ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
-                        : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
+                        : n.type === "CHAT_MESSAGE"
+                          ? "bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400"
+                          : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
                   )}
                 >
                   {n.type === "COACHING_SUBSCRIPTION_PAID" ? (
                     <CreditCard className="h-4 w-4" />
                   ) : n.type === "BOOK_PURCHASE_PAID" ? (
                     <BookOpen className="h-4 w-4" />
+                  ) : n.type === "CHAT_MESSAGE" ? (
+                    <MessageCircle className="h-4 w-4" />
                   ) : (
                     <ShoppingBag className="h-4 w-4" />
                   )}

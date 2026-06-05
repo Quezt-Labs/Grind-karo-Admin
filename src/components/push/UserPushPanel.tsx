@@ -112,11 +112,17 @@ export function UserPushPanel({ userId, compact }: UserPushPanelProps) {
       </div>
 
       {!compact && (
-        <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+        <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3 lg:grid-cols-5">
           <div>
             <dt className="text-gray-500 dark:text-gray-400">Coach chat</dt>
             <dd className="font-medium text-gray-900 dark:text-white">
               {data.chatNotificationsEnabled ? "On" : "Off"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-gray-500 dark:text-gray-400">Weekly summary</dt>
+            <dd className="font-medium text-gray-900 dark:text-white">
+              {data.weeklySummaryEnabled ? "On" : "Off"}
             </dd>
           </div>
           <div>
