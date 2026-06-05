@@ -55,4 +55,14 @@ export const sheetsService = {
     );
     return data;
   },
+
+  /** Coach edited athlete sheet — athlete app refreshes cached layout. */
+  async notifySheetUpdated(
+    userId: string,
+  ): Promise<{ success: true; sheetContentRevision: number }> {
+    const { data } = await api.post(
+      `/sheets/admin/users/${userId}/notify-sheet-updated`,
+    );
+    return data;
+  },
 };

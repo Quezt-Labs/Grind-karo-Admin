@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
@@ -19,6 +19,7 @@ import {
   Video,
   MessageCircle,
   BookOpen,
+  RefreshCw,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +31,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { userService } from "@/services/userService";
+import { sheetsService } from "@/services/sheetsService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
@@ -231,6 +233,7 @@ export function UserDetailPage() {
         userId={user.id}
         userEmail={user.email}
         currentSpreadsheetId={user.spreadsheetId}
+        sheetContentRevision={user.sheetContentRevision ?? 0}
         coachingSetupStatus={coachingSetupStatus}
       />
 
@@ -674,6 +677,7 @@ interface ProvisionSheetSectionProps {
   userId: string;
   userEmail: string;
   currentSpreadsheetId?: string | null;
+  sheetContentRevision?: number;
   coachingSetupStatus?: CoachingSetupStatus | null;
 }
 
@@ -681,13 +685,19 @@ function ProvisionSheetSection({
   userId,
   userEmail,
   currentSpreadsheetId,
+  sheetContentRevision = 0,
   coachingSetupStatus,
 }: ProvisionSheetSectionProps) {
   const [linkedId, setLinkedId] = useState<string | null>(
     currentSpreadsheetId ?? null,
   );
+  const [revision, setRevision] = useState(sheetContentRevision);
   const [showGuide, setShowGuide] = useState(false);
   const [linking, setLinking] = useState(false);
+
+  useEffect(() => {
+    setRevision(sheetContentRevision);
+  }, [sheetContentRevision]);
 
   const sheetUrl = linkedId
     ? `https://docs.google.com/spreadsheets/d/${linkedId}/edit`
@@ -725,6 +735,18 @@ function ProvisionSheetSection({
       setLinkedId(null);
     },
     onError: () => toast.error("Failed to unlink sheet."),
+  });
+
+  const notifySheetMutation = useMutation({
+    mutationFn: () => sheetsService.notifySheetUpdated(userId),
+    onSuccess: (res) => {
+      setRevision(res.sheetContentRevision);
+      toast.success(
+        `Athlete notified to refresh sheet (revision ${res.sheetContentRevision}).`,
+      );
+    },
+    onError: () =>
+      toast.error("Failed to notify athlete. Check sheet is linked."),
   });
 
   return (
@@ -844,6 +866,10 @@ function ProvisionSheetSection({
           <code className="mb-2 block break-all font-mono text-xs text-green-700 dark:text-green-400">
             {linkedId}
           </code>
+          <p className="mb-2 text-xs text-green-700 dark:text-green-400">
+            Sheet revision: {revision} — bump via Notify refresh
+            after coach edits the workbook.
+          </p>
           <div className="flex flex-wrap items-center gap-2">
             <a
               href={sheetUrl!}
@@ -859,6 +885,20 @@ function ProvisionSheetSection({
               className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-800 hover:bg-green-50 dark:border-green-700 dark:bg-transparent dark:text-green-300"
             >
               Change Sheet
+            </button>
+            <button
+              type="button"
+              onClick={() => notifySheetMutation.mutate()}
+              disabled={notifySheetMutation.isPending}
+              title="Use after editing the Google Sheet so the athlete's app reloads layout"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-800 hover:bg-green-50 disabled:opacity-50 dark:border-green-700 dark:bg-transparent dark:text-green-300"
+            >
+              {notifySheetMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Notify refresh
             </button>
             <button
               onClick={() => unlinkMutation.mutate()}
