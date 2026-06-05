@@ -1,6 +1,8 @@
 import type { MonthlyRevenuePoint } from "@/types/dashboardOverview";
 import { cn } from "@/utils/cn";
 
+const BAR_AREA_PX = 160;
+
 function formatINRShort(rupees: number): string {
   if (rupees >= 100_000) return `₹${(rupees / 100_000).toFixed(1)}L`;
   if (rupees >= 1_000) return `₹${(rupees / 1_000).toFixed(1)}k`;
@@ -17,18 +19,25 @@ export function RevenueChart({ data, className }: RevenueChartProps) {
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="flex h-48 items-end gap-2 sm:gap-3">
+      <div className="flex gap-2 sm:gap-3">
         {data.map((point) => {
-          const heightPct = Math.max(
-            4,
-            Math.round((point.revenue / maxRevenue) * 100),
-          );
+          const barPx =
+            point.revenue > 0
+              ? Math.max(
+                  4,
+                  Math.round((point.revenue / maxRevenue) * BAR_AREA_PX),
+                )
+              : 0;
+
           return (
             <div
               key={point.month}
-              className="flex min-w-0 flex-1 flex-col items-center gap-2"
+              className="flex min-w-0 flex-1 flex-col items-center"
             >
-              <div className="flex h-full w-full flex-col justify-end">
+              <div
+                className="flex w-full flex-col items-center justify-end"
+                style={{ height: BAR_AREA_PX }}
+              >
                 <span
                   className="mb-1 text-center text-[10px] font-medium tabular-nums text-gray-500 dark:text-gray-400"
                   title={`${point.revenue.toLocaleString("en-IN")} · ${point.salesCount} sales`}
@@ -36,12 +45,17 @@ export function RevenueChart({ data, className }: RevenueChartProps) {
                   {point.revenue > 0 ? formatINRShort(point.revenue) : "—"}
                 </span>
                 <div
-                  className="w-full rounded-t-md bg-emerald-500 transition-all dark:bg-emerald-600"
-                  style={{ height: `${heightPct}%` }}
+                  className={cn(
+                    "w-full rounded-t-md transition-all",
+                    barPx > 0
+                      ? "bg-emerald-500 dark:bg-emerald-600"
+                      : "bg-gray-200 dark:bg-gray-700",
+                  )}
+                  style={{ height: barPx }}
                   title={`${point.label}: ₹${point.revenue.toLocaleString("en-IN")} (${point.salesCount} sales)`}
                 />
               </div>
-              <span className="truncate text-center text-[10px] font-medium text-gray-600 dark:text-gray-300">
+              <span className="mt-2 truncate text-center text-[10px] font-medium text-gray-600 dark:text-gray-300">
                 {point.label.replace(/\s\d{4}$/, "")}
               </span>
             </div>
