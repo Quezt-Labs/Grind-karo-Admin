@@ -13,6 +13,7 @@ import {
   sheetsSetVideoService,
   type AdminSheetsSetVideo,
 } from "@/services/sheetsSetVideoService";
+import type { FormCheckQuota } from "@/types/user";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-IN", {
@@ -24,14 +25,48 @@ function formatDateTime(iso: string): string {
   });
 }
 
+function FormCheckQuotaHint({
+  quota,
+  weekNumber,
+  weekAlreadyReviewed,
+}: {
+  quota?: FormCheckQuota;
+  weekNumber: number;
+  weekAlreadyReviewed: boolean;
+}) {
+  if (!quota || quota.weeklyLimit == null) return null;
+
+  const remaining = quota.remainingThisWeek ?? 0;
+  const weekGate =
+    quota.formCheckWeekAllowed === false
+      ? " · Not a delivery week for this plan"
+      : "";
+
+  return (
+    <p className="mb-2 text-[10px] leading-relaxed text-gray-500 dark:text-gray-400">
+      {quota.weekStart}: {quota.usedThisWeek}/{quota.weeklyLimit} program weeks
+      used
+      {remaining > 0 ? ` · ${remaining} remaining` : " · limit reached"}
+      {weekGate}
+      {weekAlreadyReviewed
+        ? " · Extra comments on W" + weekNumber + " don't count toward quota."
+        : null}
+    </p>
+  );
+}
+
 function SheetVideoCommentEditor({
   userId,
   video,
   queryKey,
+  quota,
+  weekAlreadyReviewed,
 }: {
   userId: string;
   video: AdminSheetsSetVideo;
   queryKey: unknown[];
+  quota?: FormCheckQuota;
+  weekAlreadyReviewed: boolean;
 }) {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState(video.coachComment ?? "");
@@ -60,6 +95,11 @@ function SheetVideoCommentEditor({
         <MessageSquare className="h-3 w-3" />
         Coach comment
       </div>
+      <FormCheckQuotaHint
+        quota={quota}
+        weekNumber={video.weekNumber}
+        weekAlreadyReviewed={weekAlreadyReviewed}
+      />
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
@@ -82,12 +122,15 @@ function SheetVideoCommentEditor({
 
 interface UserSheetsWorkoutVideosPanelProps {
   userId: string;
+  formCheckQuota?: FormCheckQuota;
 }
 
 export function UserSheetsWorkoutVideosPanel({
   userId,
+  formCheckQuota,
 }: UserSheetsWorkoutVideosPanelProps) {
   const [weekFilter, setWeekFilter] = useState<number | "all">("all");
+  const [reviewFilter, setReviewFilter] = useState<"all" | "unreviewed">("all");
 
   const { data: weeks = [] } = useQuery({
     queryKey: ["admin-user-sheet-weeks", userId],
@@ -109,15 +152,33 @@ export function UserSheetsWorkoutVideosPanel({
       ),
   });
 
-  const videos = data ?? [];
+  const rawVideos = useMemo(() => data ?? [], [data]);
 
   const formCheckWeeks = useMemo(() => {
     const set = new Set<number>();
-    for (const v of videos) {
+    for (const v of rawVideos) {
       if (v.coachComment?.trim()) set.add(v.weekNumber);
     }
     return set;
-  }, [videos]);
+  }, [rawVideos]);
+
+  const videos = useMemo(() => {
+    const filtered =
+      reviewFilter === "unreviewed"
+        ? rawVideos.filter((v) => !v.coachComment?.trim())
+        : rawVideos;
+
+    return [...filtered].sort((a, b) => {
+      const aReviewed = Boolean(a.coachComment?.trim());
+      const bReviewed = Boolean(b.coachComment?.trim());
+      if (aReviewed !== bReviewed) return aReviewed ? 1 : -1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [rawVideos, reviewFilter]);
+
+  const unreviewedCount = rawVideos.filter(
+    (v) => !v.coachComment?.trim(),
+  ).length;
 
   return (
     <div>
@@ -129,9 +190,22 @@ export function UserSheetsWorkoutVideosPanel({
         {data && (
           <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
             {videos.length}
+            {reviewFilter === "all" && unreviewedCount > 0
+              ? ` · ${unreviewedCount} pending`
+              : ""}
           </span>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <select
+            value={reviewFilter}
+            onChange={(e) =>
+              setReviewFilter(e.target.value as "all" | "unreviewed")
+            }
+            className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+          >
+            <option value="all">All videos</option>
+            <option value="unreviewed">Needs review</option>
+          </select>
           <SheetWeekFilter
             weeks={weeks}
             value={weekFilter}
@@ -140,10 +214,29 @@ export function UserSheetsWorkoutVideosPanel({
         </div>
       </div>
 
+      {formCheckQuota && formCheckQuota.weeklyLimit != null && (
+        <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+          Form checks this block ({formCheckQuota.weekStart}):{" "}
+          <span className="font-semibold">
+            {formCheckQuota.usedThisWeek}/{formCheckQuota.weeklyLimit}
+          </span>{" "}
+          program weeks reviewed
+          {formCheckQuota.remainingThisWeek != null &&
+          formCheckQuota.remainingThisWeek > 0
+            ? ` · ${formCheckQuota.remainingThisWeek} remaining`
+            : formCheckQuota.remainingThisWeek === 0
+              ? " · limit reached"
+              : ""}
+          {formCheckQuota.formCheckWeekAllowed === false
+            ? ` · Sub week ${formCheckQuota.subscriptionWeek ?? "?"} is not a delivery week`
+            : ""}
+        </div>
+      )}
+
       {weekFilter !== "all" && formCheckWeeks.has(weekFilter) && (
         <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-900 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-200">
           Form check delivered for Week {weekFilter} (counts as one review for
-          this program week).
+          this program week). Additional comments this week are free.
         </div>
       )}
 
@@ -153,7 +246,9 @@ export function UserSheetsWorkoutVideosPanel({
         </div>
       ) : videos.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
-          No sheet workout videos uploaded yet.
+          {reviewFilter === "unreviewed"
+            ? "No videos waiting for review."
+            : "No sheet workout videos uploaded yet."}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -167,9 +262,13 @@ export function UserSheetsWorkoutVideosPanel({
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">
                     {video.exerciseName}
                   </p>
-                  {video.coachComment?.trim() && (
+                  {video.coachComment?.trim() ? (
                     <span className="shrink-0 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
                       Reviewed
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                      Pending
                     </span>
                   )}
                 </div>
@@ -183,6 +282,8 @@ export function UserSheetsWorkoutVideosPanel({
                 userId={userId}
                 video={video}
                 queryKey={[...queryKey]}
+                quota={formCheckQuota}
+                weekAlreadyReviewed={formCheckWeeks.has(video.weekNumber)}
               />
             </div>
           ))}

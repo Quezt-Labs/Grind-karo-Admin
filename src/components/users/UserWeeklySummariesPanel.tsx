@@ -111,7 +111,6 @@ function FormCheckFeedbackPreview({
 }
 
 function SummaryCard({ summary }: { summary: WorkoutWeeklySummary }) {
-  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const formCheckFeedback = summary.stats.formCheckFeedback ?? [];
 

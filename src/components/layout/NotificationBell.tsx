@@ -117,6 +117,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       onClose();
       return;
     }
+    if (n.type === "FORM_CHECK_VIDEO_UPLOAD") {
+      navigate("/form-checks");
+      onClose();
+      return;
+    }
     if (userId) {
       navigate(`/users/${userId}`);
       onClose();

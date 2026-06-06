@@ -131,14 +131,15 @@ export function UserDetailPage() {
     effectiveSpreadsheetId,
   ]);
 
-  useEffect(() => {
+  const resolvedMainTab = useMemo((): MainTab => {
     if (
       coachingSetupStatus === "awaiting_sheet" ||
       coachingSetupStatus === "needs_intake"
     ) {
-      setMainTab("setup");
+      return "setup";
     }
-  }, [coachingSetupStatus]);
+    return mainTab;
+  }, [coachingSetupStatus, mainTab]);
 
   const stats = useMemo(() => {
     if (!data) return null;
@@ -281,7 +282,7 @@ export function UserDetailPage() {
             onClick={() => setMainTab(t.key)}
             className={cn(
               "flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              mainTab === t.key
+              resolvedMainTab === t.key
                 ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
                 : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
             )}
@@ -298,7 +299,7 @@ export function UserDetailPage() {
       </div>
 
       {/* Tab panels */}
-      {mainTab === "setup" && (
+      {resolvedMainTab === "setup" && (
         <div className="space-y-4">
           <ProvisionSheetSection
             userId={user.id}
@@ -326,7 +327,7 @@ export function UserDetailPage() {
         </div>
       )}
 
-      {mainTab === "activity" && (
+      {resolvedMainTab === "activity" && (
         <div className="space-y-4">
           <div className="flex gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
             {(
@@ -377,7 +378,10 @@ export function UserDetailPage() {
 
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
             {activitySection === "videos" && (
-              <UserSheetsWorkoutVideosPanel userId={user.id} />
+              <UserSheetsWorkoutVideosPanel
+                userId={user.id}
+                formCheckQuota={data.formCheckQuota}
+              />
             )}
             {activitySection === "logs" && (
               <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
@@ -395,7 +399,7 @@ export function UserDetailPage() {
         </div>
       )}
 
-      {mainTab === "purchases" && (
+      {resolvedMainTab === "purchases" && (
         <div>
           <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
             Purchase history

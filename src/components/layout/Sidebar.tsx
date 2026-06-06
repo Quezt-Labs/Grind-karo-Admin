@@ -16,6 +16,7 @@ import {
   MonitorSmartphone,
   Ticket,
   MessageCircle,
+  Video,
   FileText,
   Inbox,
   ChevronDown,
@@ -53,6 +54,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: "/coupons", label: "Coupons", icon: Ticket },
       { path: "/users", label: "Users", icon: Users },
+      { path: "/form-checks", label: "Form checks", icon: Video },
       { path: "/chat", label: "Chat", icon: MessageCircle },
     ],
   },

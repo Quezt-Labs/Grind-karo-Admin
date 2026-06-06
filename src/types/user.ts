@@ -186,7 +186,8 @@ export type NotificationType =
   | "COACHING_SUBSCRIPTION_PAID"
   | "PROGRAM_PURCHASE_PAID"
   | "BOOK_PURCHASE_PAID"
-  | "CHAT_MESSAGE";
+  | "CHAT_MESSAGE"
+  | "FORM_CHECK_VIDEO_UPLOAD";
 
 export interface AdminNotification {
   id: string;

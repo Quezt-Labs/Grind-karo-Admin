@@ -8,6 +8,7 @@ import { PageLoader } from "@/components/shared/PageLoader";
 import { LoginPage } from "@/pages/LoginPage";
 import {
   AddonsPage,
+  FormCheckInboxPage,
   ChatPage,
   ContactSubmissionsPage,
   CouponDetailPage,
@@ -72,6 +73,7 @@ export default function App() {
                 <Route path="/contact" element={<ContactSubmissionsPage />} />
                 <Route path="/coupons" element={<CouponsPage />} />
                 <Route path="/coupons/:id" element={<CouponDetailPage />} />
+                <Route path="/form-checks" element={<FormCheckInboxPage />} />
                 <Route path="/chat" element={<ChatPage />} />
               </Route>
             </Route>

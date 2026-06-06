@@ -37,15 +37,12 @@ export function FormCheckVideoPlayer({
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [pipSupported, setPipSupported] = useState(false);
-
-  useEffect(() => {
-    setPipSupported(
+  const [pipSupported] = useState(
+    () =>
       typeof document !== "undefined" &&
-        "pictureInPictureEnabled" in document &&
-        document.pictureInPictureEnabled,
-    );
-  }, []);
+      "pictureInPictureEnabled" in document &&
+      document.pictureInPictureEnabled,
+  );
 
   useEffect(() => {
     const el = videoRef.current;

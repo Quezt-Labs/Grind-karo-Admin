@@ -148,7 +148,7 @@ export function DashboardPage() {
       paidAtLabel: formatDateTime(sale.paidAt),
       customerLabel: sale.userName ?? sale.userEmail,
     }));
-  }, [data?.recentSales]);
+  }, [data]);
 
   const topCustomerRows: (TopCustomerRow & { id: string })[] = useMemo(() => {
     if (!data?.topCustomers) return [];
@@ -159,7 +159,7 @@ export function DashboardPage() {
       customerLabel: c.userName ?? c.userEmail,
       lastPurchaseLabel: formatDateTime(c.lastPurchaseAt),
     }));
-  }, [data?.topCustomers]);
+  }, [data]);
 
   const recentSaleColumns: Column<RecentSaleRow>[] = [
     {

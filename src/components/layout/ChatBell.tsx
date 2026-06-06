@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -17,10 +17,21 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
+function pickLatestUnreadThread(inbox: ChatInboxItem[]): ChatInboxItem | null {
+  const unread = inbox.filter((i) => i.unreadCount > 0);
+  if (unread.length === 0) return null;
+  return [...unread].sort(
+    (a, b) =>
+      new Date(b.latestMessage.createdAt).getTime() -
+      new Date(a.latestMessage.createdAt).getTime(),
+  )[0]!;
+}
+
 export function ChatBell() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const prevUnreadRef = useRef<number | null>(null);
 
   const { data: unreadCount = 0 } = useQuery({
@@ -31,7 +42,7 @@ export function ChatBell() {
   });
 
   const { data: inbox = [] } = useQuery({
-    queryKey: ["chat-inbox-panel"],
+    queryKey: ["chat-inbox"],
     queryFn: () => chatService.getInbox(),
     refetchInterval: 15_000,
     refetchOnWindowFocus: true,
@@ -40,30 +51,37 @@ export function ChatBell() {
   useEffect(() => {
     const prev = prevUnreadRef.current;
     if (prev != null && unreadCount > prev) {
-      const latest = inbox.find((i) => i.unreadCount > 0);
-      const name = latest?.userName ?? latest?.userEmail ?? "Client";
-      toast(
-        (t) => (
-          <button
-            type="button"
-            className="text-left text-sm"
-            onClick={() => {
-              toast.dismiss(t.id);
-              if (latest) navigate(`/chat?userId=${latest.userId}`);
-              else navigate("/chat");
-            }}
-          >
-            <span className="font-semibold">New message</span>
-            <span className="mt-0.5 block text-gray-600 dark:text-gray-300">
-              {name}
-            </span>
-          </button>
-        ),
-        { duration: 6000 },
-      );
+      void queryClient
+        .fetchQuery({
+          queryKey: ["chat-inbox"],
+          queryFn: () => chatService.getInbox(),
+        })
+        .then((freshInbox) => {
+          const latest = pickLatestUnreadThread(freshInbox);
+          const name = latest?.userName ?? latest?.userEmail ?? "Client";
+          toast(
+            (t) => (
+              <button
+                type="button"
+                className="text-left text-sm"
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  if (latest) navigate(`/chat?userId=${latest.userId}`);
+                  else navigate("/chat");
+                }}
+              >
+                <span className="font-semibold">New message</span>
+                <span className="mt-0.5 block text-gray-600 dark:text-gray-300">
+                  {name}
+                </span>
+              </button>
+            ),
+            { duration: 6000 },
+          );
+        });
     }
     prevUnreadRef.current = unreadCount;
-  }, [unreadCount, inbox, navigate]);
+  }, [unreadCount, queryClient, navigate]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -106,12 +124,6 @@ function ChatInboxPanel({
 }) {
   const navigate = useNavigate();
 
-  const { isLoading } = useQuery({
-    queryKey: ["chat-inbox-panel"],
-    queryFn: () => chatService.getInbox(),
-    refetchInterval: 15_000,
-  });
-
   function handleUserClick(item: ChatInboxItem) {
     navigate(`/chat?userId=${item.userId}`);
     onClose();
@@ -139,16 +151,7 @@ function ChatInboxPanel({
       </div>
 
       <div className="max-h-80 overflow-y-auto">
-        {isLoading && inbox.length === 0 ? (
-          <div className="space-y-2 p-3">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-14 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700"
-              />
-            ))}
-          </div>
-        ) : inbox.length === 0 ? (
+        {inbox.length === 0 ? (
           <div className="py-8 text-center">
             <MessageCircle className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />
             <p className="mt-2 text-sm text-gray-400">No conversations yet</p>
