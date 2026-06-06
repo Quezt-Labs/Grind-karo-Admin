@@ -85,6 +85,10 @@ function SheetVideoCommentEditor({
         void queryClient.invalidateQueries({
           queryKey: ["admin-user-purchases", userId],
         });
+        void queryClient.invalidateQueries({
+          queryKey: ["form-check-pending-count"],
+        });
+        void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
       }
     },
   });

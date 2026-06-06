@@ -2,13 +2,13 @@ import api from "./api";
 
 export interface FormCheckInboxItem {
   id: string;
-  source: "sheet";
+  source: "sheet" | "program";
   userId: string;
   userName: string | null;
   userEmail: string;
-  tabName: string;
-  weekNumber: number;
-  dayNumber: number;
+  tabName: string | null;
+  weekNumber: number | null;
+  dayNumber: number | null;
   setNumber: number;
   exerciseName: string;
   videoUrl: string;
@@ -16,6 +16,10 @@ export interface FormCheckInboxItem {
   coachComment: string | null;
   coachCommentId: string | null;
   reviewed: boolean;
+  exerciseLogId?: string;
+  programId?: string;
+  workoutLogId?: string;
+  programName?: string | null;
 }
 
 export interface FormCheckInboxResponse {

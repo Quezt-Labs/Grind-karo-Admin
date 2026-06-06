@@ -11,6 +11,7 @@ import {
   type FormCheckInboxItem,
 } from "@/services/formCheckInboxService";
 import { sheetsSetVideoCommentService } from "@/services/sheetsSetVideoService";
+import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import { cn } from "@/utils/cn";
 
 function formatDateTime(iso: string): string {
@@ -27,11 +28,23 @@ function InboxCommentEditor({ video }: { video: FormCheckInboxItem }) {
   const [comment, setComment] = useState(video.coachComment ?? "");
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      sheetsSetVideoCommentService.upsert({
+    mutationFn: () => {
+      const trimmed = comment.trim();
+      if (video.source === "program") {
+        if (!video.exerciseLogId) {
+          throw new Error("Missing exercise log");
+        }
+        return workoutVideoCommentService.upsert({
+          exerciseLogId: video.exerciseLogId,
+          setNumber: video.setNumber,
+          comment: trimmed,
+        });
+      }
+      return sheetsSetVideoCommentService.upsert({
         sheetsSetVideoId: video.id,
-        comment: comment.trim(),
-      }),
+        comment: trimmed,
+      });
+    },
     onSuccess: () => {
       toast.success("Comment saved");
       void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
@@ -68,6 +81,14 @@ function InboxCommentEditor({ video }: { video: FormCheckInboxItem }) {
   );
 }
 
+function formatVideoContext(video: FormCheckInboxItem): string {
+  if (video.source === "program") {
+    const programLabel = video.programName ?? "Program";
+    return `${programLabel} · Set ${video.setNumber} · ${formatDateTime(video.createdAt)}`;
+  }
+  return `${video.tabName ?? "Sheet"} · W${video.weekNumber} · Day ${video.dayNumber} · Set ${video.setNumber} · ${formatDateTime(video.createdAt)}`;
+}
+
 function InboxVideoCard({ video }: { video: FormCheckInboxItem }) {
   const athleteLabel = video.userName ?? video.userEmail;
 
@@ -86,19 +107,30 @@ function InboxVideoCard({ video }: { video: FormCheckInboxItem }) {
               {video.exerciseName}
             </p>
           </div>
-          {video.reviewed ? (
-            <span className="shrink-0 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
-              Reviewed
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                video.source === "program"
+                  ? "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300"
+                  : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+              )}
+            >
+              {video.source === "program" ? "Program" : "Sheet"}
             </span>
-          ) : (
-            <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-              Pending
-            </span>
-          )}
+            {video.reviewed ? (
+              <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
+                Reviewed
+              </span>
+            ) : (
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                Pending
+              </span>
+            )}
+          </div>
         </div>
         <p className="text-[11px] text-gray-500 dark:text-gray-400">
-          {video.tabName} · W{video.weekNumber} · Day {video.dayNumber} · Set{" "}
-          {video.setNumber} · {formatDateTime(video.createdAt)}
+          {formatVideoContext(video)}
         </p>
       </div>
       <FormCheckVideoPlayer src={video.videoUrl} />

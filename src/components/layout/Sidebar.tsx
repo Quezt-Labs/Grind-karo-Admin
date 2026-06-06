@@ -29,6 +29,7 @@ import { authService } from "@/services/authService";
 import { APP_NAME } from "@/utils/constants";
 import toast from "react-hot-toast";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { useFormCheckPendingCount } from "@/hooks/useFormCheckPendingCount";
 
 type NavItem = {
   path: string;
@@ -133,11 +134,13 @@ function NavItemLink({
   active,
   onNavigate,
   compact = false,
+  badgeCount,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate: () => void;
   compact?: boolean;
+  badgeCount?: number;
 }) {
   const Icon = item.icon;
 
@@ -164,6 +167,11 @@ function NavItemLink({
         )}
       />
       <span className="truncate">{item.label}</span>
+      {badgeCount != null && badgeCount > 0 && (
+        <span className="ml-auto shrink-0 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
+          {badgeCount > 99 ? "99+" : badgeCount}
+        </span>
+      )}
     </NavLink>
   );
 }
@@ -176,6 +184,7 @@ function CollapsibleNavSection({
   onToggle,
   onNavigate,
   pathname,
+  badgeByPath,
 }: {
   section: NavSection;
   expanded: boolean;
@@ -184,6 +193,7 @@ function CollapsibleNavSection({
   onToggle: () => void;
   onNavigate: () => void;
   pathname: string;
+  badgeByPath?: Record<string, number>;
 }) {
   return (
     <div
@@ -254,6 +264,7 @@ function CollapsibleNavSection({
                   item={item}
                   active={isNavActive(pathname, item.path)}
                   onNavigate={onNavigate}
+                  badgeCount={badgeByPath?.[item.path]}
                 />
               </li>
             ))}
@@ -268,6 +279,7 @@ function CollapsibleNavSection({
             active
             onNavigate={onNavigate}
             compact
+            badgeCount={badgeByPath?.[activeItem.path]}
           />
         </div>
       )}
@@ -324,6 +336,12 @@ export function Sidebar() {
   );
 
   const closeMobile = useCallback(() => setMobileOpen(false), [setMobileOpen]);
+  const { data: formCheckPending = 0 } = useFormCheckPendingCount();
+  const badgeByPath = useMemo(
+    () =>
+      formCheckPending > 0 ? { "/form-checks": formCheckPending } : undefined,
+    [formCheckPending],
+  );
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -385,6 +403,7 @@ export function Sidebar() {
                       item={item}
                       active={active}
                       onNavigate={closeMobile}
+                      badgeCount={badgeByPath?.[item.path]}
                     />
                   </div>
                 );
@@ -410,6 +429,7 @@ export function Sidebar() {
                   onToggle={() => toggleSection(section.key)}
                   onNavigate={closeMobile}
                   pathname={location.pathname}
+                  badgeByPath={badgeByPath}
                 />
               );
             })}
