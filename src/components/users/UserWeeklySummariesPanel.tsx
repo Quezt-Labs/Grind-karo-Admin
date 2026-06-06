@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import {
+  BarChart3,
+  ChevronDown,
+  Loader2,
+  MessageSquare,
+  RefreshCw,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import {
   workoutSummaryService,
+  type FormCheckFeedbackItem,
   type WorkoutWeeklySummary,
 } from "@/services/workoutSummaryService";
 import { Spinner } from "@/components/ui/Spinner";
@@ -34,7 +41,7 @@ function StatsGrid({ stats }: { stats: WorkoutWeeklySummary["stats"] }) {
     { label: "Sheet entries", value: stats.sheetsEntriesLogged },
     { label: "Active days", value: stats.sheetsDaysActive },
     { label: "Set videos", value: stats.setVideosUploaded },
-    { label: "Coach comments", value: stats.coachVideoComments },
+    { label: "Form checks", value: stats.coachVideoComments },
     { label: "Check-ins", value: stats.progressCheckIns },
     {
       label: "Volume (kg)",
@@ -62,28 +69,51 @@ function StatsGrid({ stats }: { stats: WorkoutWeeklySummary["stats"] }) {
   );
 }
 
-function SummaryCard({
-  summary,
-  userId,
+function FormCheckFeedbackPreview({
+  feedback,
 }: {
-  summary: WorkoutWeeklySummary;
-  userId: string;
+  feedback: FormCheckFeedbackItem[];
 }) {
+  if (feedback.length === 0) {
+    return (
+      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        No form-check comments this week. Add feedback on the athlete&apos;s set
+        videos — it will appear here after regenerate.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+        <MessageSquare className="h-3.5 w-3.5" />
+        Form check feedback ({feedback.length})
+      </div>
+      <ul className="space-y-2">
+        {feedback.map((item, index) => (
+          <li
+            key={`${item.source}-${item.exerciseName}-${item.setNumber}-${index}`}
+            className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/40"
+          >
+            <p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200">
+              {item.exerciseName}
+              {item.weekNumber != null ? ` · W${item.weekNumber}` : ""}
+              {` · Set ${item.setNumber}`}
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-xs text-gray-600 dark:text-gray-400">
+              {item.comment}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function SummaryCard({ summary }: { summary: WorkoutWeeklySummary }) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
-  const [note, setNote] = useState(summary.coachNote ?? "");
-
-  const saveNote = useMutation({
-    mutationFn: () =>
-      workoutSummaryService.updateCoachNote(summary.id, note.trim() || null),
-    onSuccess: () => {
-      toast.success("Coach note saved");
-      void queryClient.invalidateQueries({
-        queryKey: ["admin-user-weekly-summaries", userId],
-      });
-    },
-    onError: () => toast.error("Failed to save note"),
-  });
+  const formCheckFeedback = summary.stats.formCheckFeedback ?? [];
 
   const resendPush = useMutation({
     mutationFn: () => workoutSummaryService.resendPush(summary.id),
@@ -108,7 +138,9 @@ function SummaryCard({
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {summary.stats.sessionsCompleted} sessions ·{" "}
-            {summary.stats.sheetsEntriesLogged} sheet logs
+            {summary.stats.sheetsEntriesLogged} sheet logs ·{" "}
+            {formCheckFeedback.length} form-check comment
+            {formCheckFeedback.length !== 1 ? "s" : ""}
           </p>
         </div>
         <ChevronDown
@@ -136,40 +168,18 @@ function SummaryCard({
               </ul>
             </div>
           )}
-          <div className="mt-3">
-            <p className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
-              Coach note (optional)
-            </p>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-              placeholder="Add personalised feedback for this week…"
-              className="w-full resize-y rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900"
-            />
-            <button
-              type="button"
-              disabled={saveNote.isPending}
-              onClick={() => saveNote.mutate()}
-              className="mt-2 inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-            >
-              {saveNote.isPending && (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              )}
-              Save note
-            </button>
-            <button
-              type="button"
-              disabled={resendPush.isPending}
-              onClick={() => resendPush.mutate()}
-              className="mt-2 ml-2 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-            >
-              {resendPush.isPending && (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              )}
-              Resend push
-            </button>
-          </div>
+          <FormCheckFeedbackPreview feedback={formCheckFeedback} />
+          <button
+            type="button"
+            disabled={resendPush.isPending}
+            onClick={() => resendPush.mutate()}
+            className="mt-3 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+          >
+            {resendPush.isPending && (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            )}
+            Resend push
+          </button>
         </div>
       )}
     </div>
@@ -245,7 +255,7 @@ export function UserWeeklySummariesPanel({
       ) : (
         <div className="space-y-3">
           {summaries.map((s) => (
-            <SummaryCard key={s.id} summary={s} userId={userId} />
+            <SummaryCard key={s.id} summary={s} />
           ))}
         </div>
       )}

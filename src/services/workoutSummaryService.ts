@@ -1,5 +1,15 @@
 import api from "./api";
 
+export interface FormCheckFeedbackItem {
+  exerciseName: string;
+  setNumber: number;
+  comment: string;
+  videoUrl: string | null;
+  weekNumber: number | null;
+  source: "sheet" | "program";
+  createdAt: string;
+}
+
 export interface WeeklySummaryStats {
   sessionsCompleted: number;
   exercisesLogged: number;
@@ -11,6 +21,7 @@ export interface WeeklySummaryStats {
   sheetsEntriesLogged: number;
   sheetsDaysActive: number;
   progressCheckIns: number;
+  formCheckFeedback?: FormCheckFeedbackItem[];
 }
 
 export interface WorkoutWeeklySummary {
@@ -29,16 +40,6 @@ export interface WorkoutWeeklySummary {
 export const workoutSummaryService = {
   async listForUser(userId: string): Promise<WorkoutWeeklySummary[]> {
     const { data } = await api.get(`/admin/users/${userId}/workout-summaries`);
-    return data.data ?? data;
-  },
-
-  async updateCoachNote(
-    summaryId: string,
-    coachNote: string | null,
-  ): Promise<WorkoutWeeklySummary> {
-    const { data } = await api.patch(`/admin/workout-summaries/${summaryId}`, {
-      coachNote,
-    });
     return data.data ?? data;
   },
 

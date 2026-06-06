@@ -1,3 +1,4 @@
+import { useCallback, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -17,6 +18,7 @@ import {
   MessageCircle,
   FileText,
   Inbox,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -25,7 +27,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { authService } from "@/services/authService";
 import { APP_NAME } from "@/utils/constants";
 import toast from "react-hot-toast";
-import { useState } from "react";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 
 type NavItem = {
@@ -35,36 +36,28 @@ type NavItem = {
 };
 
 type NavSection = {
+  key: string;
   title: string;
   items: NavItem[];
 };
 
 const NAV_SECTIONS: NavSection[] = [
   {
+    key: "overview",
     title: "Overview",
     items: [{ path: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
   },
   {
-    title: "Marketing",
+    key: "people",
+    title: "People",
     items: [
-      {
-        path: "/landing-pages",
-        label: "Landing Pages",
-        icon: MonitorSmartphone,
-      },
-      { path: "/contact", label: "Contact Inbox", icon: Inbox },
+      { path: "/coupons", label: "Coupons", icon: Ticket },
+      { path: "/users", label: "Users", icon: Users },
+      { path: "/chat", label: "Chat", icon: MessageCircle },
     ],
   },
   {
-    title: "Coaching",
-    items: [
-      { path: "/plans", label: "Plans", icon: CreditCard },
-      { path: "/addons", label: "Coaching Add-ons", icon: Puzzle },
-      { path: "/subscriptions", label: "Subscriptions", icon: Award },
-      { path: "/reviews", label: "Coaching Reviews", icon: MessageSquare },
-    ],
-  },
-  {
+    key: "programs",
     title: "Programs",
     items: [
       { path: "/programs", label: "Programs", icon: BookOpen },
@@ -80,17 +73,204 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: "People",
+    key: "coaching",
+    title: "Coaching",
     items: [
-      { path: "/coupons", label: "Coupons", icon: Ticket },
-      { path: "/users", label: "Users", icon: Users },
-      { path: "/chat", label: "Chat", icon: MessageCircle },
+      { path: "/plans", label: "Plans", icon: CreditCard },
+      { path: "/addons", label: "Coaching Add-ons", icon: Puzzle },
+      { path: "/subscriptions", label: "Subscriptions", icon: Award },
+      { path: "/reviews", label: "Coaching Reviews", icon: MessageSquare },
+    ],
+  },
+  {
+    key: "marketing",
+    title: "Marketing",
+    items: [
+      {
+        path: "/landing-pages",
+        label: "Landing Pages",
+        icon: MonitorSmartphone,
+      },
+      { path: "/contact", label: "Contact Inbox", icon: Inbox },
     ],
   },
 ];
 
+const COLLAPSED_STORAGE_KEY = "grind-karo-sidebar-collapsed";
+const COLLAPSIBLE_SECTIONS = NAV_SECTIONS.filter((s) => s.items.length > 1);
+
 function isNavActive(pathname: string, path: string): boolean {
   return pathname === path || (path !== "/" && pathname.startsWith(path + "/"));
+}
+
+function sectionIsActive(pathname: string, section: NavSection): boolean {
+  return section.items.some((item) => isNavActive(pathname, item.path));
+}
+
+function activeItemInSection(
+  pathname: string,
+  section: NavSection,
+): NavItem | undefined {
+  return section.items.find((item) => isNavActive(pathname, item.path));
+}
+
+function readCollapsedSections(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(COLLAPSED_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== "object" || parsed === null) return {};
+    return parsed as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
+
+function NavItemLink({
+  item,
+  active,
+  onNavigate,
+  compact = false,
+}: {
+  item: NavItem;
+  active: boolean;
+  onNavigate: () => void;
+  compact?: boolean;
+}) {
+  const Icon = item.icon;
+
+  return (
+    <NavLink
+      to={item.path}
+      onClick={onNavigate}
+      className={cn(
+        "group relative flex items-center gap-3 rounded-lg font-medium transition-all duration-200",
+        compact ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-sm",
+        active
+          ? "bg-sidebar-active/90 text-white shadow-sm shadow-black/20"
+          : "text-gray-400 hover:bg-white/5 hover:text-white",
+      )}
+    >
+      {active && (
+        <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary-300" />
+      )}
+      <Icon
+        className={cn(
+          "shrink-0",
+          compact ? "h-3.5 w-3.5" : "h-4 w-4",
+          active ? "text-white" : "text-gray-500 group-hover:text-white",
+        )}
+      />
+      <span className="truncate">{item.label}</span>
+    </NavLink>
+  );
+}
+
+function CollapsibleNavSection({
+  section,
+  expanded,
+  activeInSection,
+  activeItem,
+  onToggle,
+  onNavigate,
+  pathname,
+}: {
+  section: NavSection;
+  expanded: boolean;
+  activeInSection: boolean;
+  activeItem: NavItem | undefined;
+  onToggle: () => void;
+  onNavigate: () => void;
+  pathname: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl transition-colors duration-200",
+        activeInSection && "bg-white/[0.03] ring-1 ring-white/5",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className={cn(
+          "flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors",
+          "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50",
+        )}
+      >
+        <span
+          className={cn(
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors",
+            expanded ? "bg-white/10" : "bg-transparent",
+          )}
+        >
+          <ChevronDown
+            className={cn(
+              "h-3.5 w-3.5 text-gray-400 transition-transform duration-300 ease-out",
+              expanded ? "rotate-0" : "-rotate-90",
+            )}
+          />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span
+            className={cn(
+              "block text-[11px] font-semibold uppercase tracking-wider",
+              activeInSection ? "text-gray-300" : "text-gray-500",
+            )}
+          >
+            {section.title}
+          </span>
+        </span>
+
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
+            activeInSection
+              ? "bg-primary-500/20 text-primary-200"
+              : "bg-white/5 text-gray-500",
+          )}
+        >
+          {section.items.length}
+        </span>
+      </button>
+
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+          expanded
+            ? "grid-rows-[1fr] opacity-100"
+            : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="overflow-hidden">
+          <ul className="space-y-0.5 px-1.5 pb-2 pt-0.5">
+            {section.items.map((item) => (
+              <li key={item.path}>
+                <NavItemLink
+                  item={item}
+                  active={isNavActive(pathname, item.path)}
+                  onNavigate={onNavigate}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {!expanded && activeItem && (
+        <div className="border-t border-white/5 px-1.5 pb-2 pt-1">
+          <NavItemLink
+            item={activeItem}
+            active
+            onNavigate={onNavigate}
+            compact
+          />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function Sidebar() {
@@ -100,6 +280,48 @@ export function Sidebar() {
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<
+    Record<string, boolean>
+  >(readCollapsedSections);
+
+  const persistCollapsed = useCallback((next: Record<string, boolean>) => {
+    setCollapsedSections(next);
+    localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify(next));
+  }, []);
+
+  const toggleSection = useCallback(
+    (key: string) => {
+      persistCollapsed({
+        ...collapsedSections,
+        [key]: !collapsedSections[key],
+      });
+    },
+    [collapsedSections, persistCollapsed],
+  );
+
+  const collapseAll = useCallback(() => {
+    const next: Record<string, boolean> = {};
+    for (const section of COLLAPSIBLE_SECTIONS) {
+      next[section.key] = true;
+    }
+    persistCollapsed(next);
+  }, [persistCollapsed]);
+
+  const expandAll = useCallback(() => {
+    persistCollapsed({});
+  }, [persistCollapsed]);
+
+  const allCollapsed = useMemo(
+    () => COLLAPSIBLE_SECTIONS.every((s) => collapsedSections[s.key] === true),
+    [collapsedSections],
+  );
+
+  const anyCollapsed = useMemo(
+    () => COLLAPSIBLE_SECTIONS.some((s) => collapsedSections[s.key] === true),
+    [collapsedSections],
+  );
+
+  const closeMobile = useCallback(() => setMobileOpen(false), [setMobileOpen]);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -115,7 +337,7 @@ export function Sidebar() {
     <>
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-hidden
         />
@@ -147,52 +369,75 @@ export function Sidebar() {
         </div>
 
         <nav className="scrollbar-none min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-3">
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.title} className="mb-4 last:mb-0">
-              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                {section.title}
-              </p>
-              <ul className="space-y-0.5">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = isNavActive(location.pathname, item.path);
-                  return (
-                    <li key={item.path}>
-                      <NavLink
-                        to={item.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={cn(
-                          "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                          active
-                            ? "bg-sidebar-active/80 text-white"
-                            : "text-gray-400 hover:bg-white/5 hover:text-white",
-                        )}
-                      >
-                        {active && (
-                          <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary-300" />
-                        )}
-                        <Icon
-                          className={cn(
-                            "h-4 w-4 shrink-0",
-                            active
-                              ? "text-white"
-                              : "text-gray-500 group-hover:text-white",
-                          )}
-                        />
-                        <span className="truncate">{item.label}</span>
-                      </NavLink>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+          <div className="space-y-2">
+            {NAV_SECTIONS.map((section) => {
+              if (section.items.length === 1) {
+                const item = section.items[0]!;
+                const active = isNavActive(location.pathname, item.path);
+                return (
+                  <div key={section.key}>
+                    <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
+                      {section.title}
+                    </p>
+                    <NavItemLink
+                      item={item}
+                      active={active}
+                      onNavigate={closeMobile}
+                    />
+                  </div>
+                );
+              }
+
+              const expanded = collapsedSections[section.key] !== true;
+              const activeInSection = sectionIsActive(
+                location.pathname,
+                section,
+              );
+              const activeItem = activeItemInSection(
+                location.pathname,
+                section,
+              );
+
+              return (
+                <CollapsibleNavSection
+                  key={section.key}
+                  section={section}
+                  expanded={expanded}
+                  activeInSection={activeInSection}
+                  activeItem={activeItem}
+                  onToggle={() => toggleSection(section.key)}
+                  onNavigate={closeMobile}
+                  pathname={location.pathname}
+                />
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex items-center justify-center gap-1 border-t border-white/5 pt-3">
+            <button
+              type="button"
+              onClick={expandAll}
+              disabled={!anyCollapsed}
+              className="rounded-md px-2 py-1 text-[10px] font-medium text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300 disabled:opacity-40"
+            >
+              Expand all
+            </button>
+            <span className="text-gray-700">·</span>
+            <button
+              type="button"
+              onClick={collapseAll}
+              disabled={allCollapsed}
+              className="rounded-md px-2 py-1 text-[10px] font-medium text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300 disabled:opacity-40"
+            >
+              Collapse all
+            </button>
+          </div>
         </nav>
 
         <div className="shrink-0 border-t border-gray-700/50 p-3">
           {user && (
             <div className="flex items-center gap-3 rounded-xl bg-white/5 p-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-sm font-semibold text-white ring-2 ring-white/10">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-primary-500 to-primary-700 text-sm font-semibold text-white ring-2 ring-white/10">
                 {(user.name || user.email || "?").charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
