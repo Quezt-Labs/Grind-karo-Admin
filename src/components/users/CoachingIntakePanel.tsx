@@ -1,5 +1,6 @@
 import { ClipboardList } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
+import { AthleteLocationEditor } from "@/components/users/AthleteLocationEditor";
 import type { UserInfo } from "@/types/user";
 
 function formatEnum(value: string): string {
@@ -51,12 +52,18 @@ function Section({
 }
 
 type Props = {
+  userId: string;
   intake: UserInfo | undefined;
   isLoading: boolean;
   isMissing: boolean;
 };
 
-export function CoachingIntakePanel({ intake, isLoading, isMissing }: Props) {
+export function CoachingIntakePanel({
+  userId,
+  intake,
+  isLoading,
+  isMissing,
+}: Props) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -89,6 +96,8 @@ export function CoachingIntakePanel({ intake, isLoading, isMissing }: Props) {
         </div>
       ) : (
         <div className="space-y-4">
+          <AthleteLocationEditor userId={userId} intake={intake} />
+
           <Section title="Personal info">
             <Field label="Full name" value={intake.name} />
             <Field label="Age" value={intake.age} />

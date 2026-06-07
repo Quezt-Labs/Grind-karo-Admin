@@ -95,7 +95,7 @@ export function CoachAthletesLocationPage() {
               iconBg="bg-amber-50 dark:bg-amber-900/30"
               hint={
                 summary.pendingState > 0
-                  ? "City saved — ask athlete to pick state in intake"
+                  ? "Open athlete profile → Setup tab to set state, or they’ll see a banner in the app"
                   : summary.missingLocation > 0
                     ? `${summary.missingLocation} with no city or state`
                     : "Everyone has state on file"

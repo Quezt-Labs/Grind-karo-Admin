@@ -332,6 +332,7 @@ export function UserDetailPage() {
         <div className="space-y-4">
           {hasActiveCoaching && (
             <CoachingIntakePanel
+              userId={user.id}
               intake={intakeData}
               isLoading={intakeLoading}
               isMissing={intakeMissing}

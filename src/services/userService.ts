@@ -64,6 +64,17 @@ export const userService = {
     return data.data ?? data;
   },
 
+  async patchUserLocation(
+    userId: string,
+    payload: { state: string; city?: string },
+  ): Promise<UserInfo> {
+    const { data } = await api.patch(
+      `/admin/users/${userId}/location`,
+      payload,
+    );
+    return data.data ?? data;
+  },
+
   async getById(id: string): Promise<AdminUser> {
     const { data } = await api.get(`/admin/users/${id}`);
     return data;
