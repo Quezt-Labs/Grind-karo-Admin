@@ -13,7 +13,6 @@ import {
   AssistantCoachesPage,
   CoachAthleteDetailPage,
   CoachAthletesPage,
-  CoachDashboardPage,
   FormCheckInboxPage,
   ChatPage,
   ContactSubmissionsPage,
@@ -42,7 +41,7 @@ import {
 function HomeRedirect() {
   const { user } = useAuth();
   if (user?.role === "ASSISTANT_COACH") {
-    return <Navigate to="/coach/dashboard" replace />;
+    return <Navigate to="/coach/athletes" replace />;
   }
   return <Navigate to="/dashboard" replace />;
 }
@@ -58,10 +57,6 @@ export default function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
-                <Route
-                  path="/coach/dashboard"
-                  element={<CoachDashboardPage />}
-                />
                 <Route path="/coach/athletes" element={<CoachAthletesPage />} />
                 <Route
                   path="/coach/athletes/:id"
