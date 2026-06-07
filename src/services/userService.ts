@@ -8,12 +8,14 @@ import type {
   UserProgressEntry,
   CoachingSetupListResponse,
   CoachingSetupStatusFilter,
+  CreateAdminUserPayload,
+  CreateAdminUserResponse,
 } from "@/types/user";
 import type { AdminWorkoutLogsResponse } from "@/types/workoutLogs";
 
 export interface UserFilters {
   q?: string;
-  role?: "USER" | "ADMIN";
+  role?: "USER" | "ADMIN" | "ASSISTANT_COACH";
   limit?: number;
   offset?: number;
 }
@@ -116,5 +118,12 @@ export const userService = {
       params,
     });
     return data;
+  },
+
+  async create(
+    payload: CreateAdminUserPayload,
+  ): Promise<CreateAdminUserResponse> {
+    const { data } = await api.post("/admin/users", payload);
+    return data.data ?? data;
   },
 };

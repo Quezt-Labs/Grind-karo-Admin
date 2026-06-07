@@ -4,13 +4,30 @@ export interface AdminUser {
   id: string;
   name: string | null;
   email: string;
-  role: "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "ASSISTANT_COACH";
   plan: string | null;
   spreadsheetId?: string | null;
   sheetContentRevision?: number;
   workoutSetVideosEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export type CreateAdminUserRole = "USER" | "ASSISTANT_COACH";
+
+export interface CreateAdminUserPayload {
+  email: string;
+  name?: string;
+  role: CreateAdminUserRole;
+  password?: string;
+}
+
+export interface CreateAdminUserResponse {
+  id: string;
+  email: string;
+  role: CreateAdminUserRole;
+  created: boolean;
+  name?: string | null;
 }
 
 export interface Purchaser extends AdminUser {

@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, ShoppingCart, ClipboardList } from "lucide-react";
+import { Users, ShoppingCart, ClipboardList, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
+import { AddUserSection } from "@/components/users/AddUserSection";
 import { userService } from "@/services/userService";
 import { cn } from "@/utils/cn";
 import {
@@ -22,7 +24,10 @@ import type { CoachingSetupStatusFilter } from "@/types/user";
 export function UsersPage() {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"" | "USER" | "ADMIN">("");
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<
+    "" | "USER" | "ADMIN" | "ASSISTANT_COACH"
+  >("");
   const [coachingSetupFilter, setCoachingSetupFilter] =
     useState<CoachingSetupStatusFilter>("awaiting_sheet");
 
@@ -116,7 +121,14 @@ export function UsersPage() {
       <PageHeader
         title="Users"
         description="All signed-up users and active customers"
-      />
+      >
+        <Button onClick={() => setShowAddUser((v) => !v)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add user
+        </Button>
+      </PageHeader>
+
+      {showAddUser && <AddUserSection onClose={() => setShowAddUser(false)} />}
 
       {/* Tabs + filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -177,17 +189,22 @@ export function UsersPage() {
               value={roleFilter || "__all__"}
               onValueChange={(v) =>
                 setRoleFilter(
-                  (v === "__all__" ? "" : v) as "" | "USER" | "ADMIN",
+                  (v === "__all__" ? "" : v) as
+                    | ""
+                    | "USER"
+                    | "ADMIN"
+                    | "ASSISTANT_COACH",
                 )
               }
             >
-              <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm h-9 w-32 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+              <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm h-9 w-36 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
                 <SelectValue placeholder="All roles" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All roles</SelectItem>
                 <SelectItem value="USER">User</SelectItem>
                 <SelectItem value="ADMIN">Admin</SelectItem>
+                <SelectItem value="ASSISTANT_COACH">Assistant coach</SelectItem>
               </SelectContent>
             </Select>
           )}

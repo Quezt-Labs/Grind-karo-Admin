@@ -52,7 +52,9 @@ export const userColumns: Column<UserRow>[] = [
           "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
           value === "ADMIN"
             ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+            : value === "ASSISTANT_COACH"
+              ? "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"
+              : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
         )}
       >
         {value as string}

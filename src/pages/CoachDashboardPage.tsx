@@ -67,7 +67,7 @@ export function CoachDashboardPage() {
         title: "Your Total Earnings",
         value: formatINR(overview.totalEarnings),
         icon: "DollarSign",
-        subtitle: `${sharePercent}% of assigned athletes' coaching revenue`,
+        subtitle: `${sharePercent}% of personal coaching athletes' revenue`,
       },
       {
         id: "earnings-month",
@@ -79,10 +79,10 @@ export function CoachDashboardPage() {
       },
       {
         id: "assigned-athletes",
-        title: "Assigned Athletes",
+        title: "Personal Coaching Athletes",
         value: String(overview.assignedAthletesCount),
         icon: "Users",
-        subtitle: "Active assignments",
+        subtitle: "Personal coaching assignments",
       },
       {
         id: "coaching-sales",
@@ -170,7 +170,7 @@ export function CoachDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description={`Your ${sharePercent}% share from coaching revenue of assigned athletes only`}
+        description={`Your ${sharePercent}% share from coaching revenue of athletes assigned for personal coaching`}
       />
 
       {isError ? (
@@ -199,7 +199,7 @@ export function CoachDashboardPage() {
             {monthlyChartData.length > 0 && (
               <RevenueChart
                 data={monthlyChartData}
-                caption={`Last 6 months · ${sharePercent}% of assigned athletes' paid coaching subscriptions`}
+                caption={`Last 6 months · ${sharePercent}% from personal coaching assigned athletes`}
               />
             )}
           </div>
@@ -211,7 +211,7 @@ export function CoachDashboardPage() {
               </h2>
               {athleteRows.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                  No coaching revenue from assigned athletes yet.
+                  No coaching revenue from personal coaching athletes yet.
                 </div>
               ) : (
                 <DataTable data={athleteRows} columns={athleteColumns} />
