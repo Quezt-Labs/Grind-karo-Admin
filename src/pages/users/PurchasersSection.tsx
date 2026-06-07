@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, Eye } from "lucide-react";
+import { ShoppingCart, Eye, MessageCircle } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { purchaserColumns } from "./usersConstants";
@@ -22,14 +22,23 @@ export const PurchasersSection = memo(function PurchasersSection({
   const actionsColumn = {
     key: "id" as keyof PurchaserRow & string,
     header: "Actions",
-    render: (value: PurchaserRow[keyof PurchaserRow]) => (
-      <button
-        onClick={() => navigate(`/users/${value}`)}
-        className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-        title="View purchases"
-      >
-        <Eye className="h-4 w-4" />
-      </button>
+    render: (_: PurchaserRow[keyof PurchaserRow], row: PurchaserRow) => (
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={() => navigate(`/users/${row.id}`)}
+          className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+          title="View purchases"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => navigate(`/chat?userId=${row.id}`)}
+          className="rounded p-1.5 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400"
+          title="Open chat"
+        >
+          <MessageCircle className="h-4 w-4" />
+        </button>
+      </div>
     ),
   };
 

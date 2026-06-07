@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Eye } from "lucide-react";
+import { Users, Eye, MessageCircle } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
@@ -32,6 +32,15 @@ export const AllUsersSection = memo(function AllUsersSection({
         >
           <Eye className="h-4 w-4" />
         </button>
+        {row.role === "USER" && (
+          <button
+            onClick={() => navigate(`/chat?userId=${row.id}`)}
+            className="rounded p-1.5 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400"
+            title="Open chat"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </button>
+        )}
         <DeleteUserButton
           userId={row.id}
           userName={row.name === "—" ? null : row.name}

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,12 +12,18 @@ import {
   ChevronLeft,
   Mic,
   Square,
+  Search,
+  X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { chatService } from "@/services/chatService";
 import { pushService } from "@/services/pushService";
 import { uploadService } from "@/services/uploadService";
+import { userService } from "@/services/userService";
+import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { useAuth } from "@/hooks/useAuth";
+import { useDebounce } from "@/hooks/useDebounce";
 import { ChatAudioPlayer } from "@/components/chat/ChatAudioPlayer";
 import { ChatVideoPlayer } from "@/components/chat/ChatVideoPlayer";
 import { cn } from "@/utils/cn";
@@ -53,9 +59,13 @@ function dateDivider(iso: string): string {
 // ---------- component ----------
 
 export function ChatPage() {
+  const { user: authUser } = useAuth();
+  const isAdmin = authUser?.role === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedUserId = searchParams.get("userId") ?? "";
   const [text, setText] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const debouncedUserSearch = useDebounce(userSearch.trim(), 300);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -75,6 +85,87 @@ export function ChatPage() {
   });
 
   const selectedInboxItem = inbox.find((i) => i.userId === selectedUserId);
+
+  const { data: selectedUser } = useQuery({
+    queryKey: ["admin-user", selectedUserId],
+    queryFn: () => userService.getById(selectedUserId),
+    enabled: !!selectedUserId && !selectedInboxItem && isAdmin,
+  });
+
+  const { data: selectedCoachAthlete } = useQuery({
+    queryKey: ["coach-athlete-summary", selectedUserId],
+    queryFn: () =>
+      athleteAssignmentService.getCoachAthleteSummary(selectedUserId),
+    enabled:
+      !!selectedUserId &&
+      !selectedInboxItem &&
+      authUser?.role === "ASSISTANT_COACH",
+  });
+
+  const selectedDisplayName =
+    selectedInboxItem?.userName ??
+    selectedInboxItem?.userEmail ??
+    selectedUser?.name ??
+    selectedUser?.email ??
+    selectedCoachAthlete?.athlete.name ??
+    selectedCoachAthlete?.athlete.email ??
+    selectedUserId;
+  const selectedDisplayEmail =
+    selectedInboxItem?.userEmail ??
+    selectedUser?.email ??
+    selectedCoachAthlete?.athlete.email ??
+    null;
+  const selectedInitial = (selectedInboxItem?.userName ??
+    selectedInboxItem?.userEmail ??
+    selectedUser?.name ??
+    selectedUser?.email ??
+    selectedCoachAthlete?.athlete.name ??
+    selectedCoachAthlete?.athlete.email ??
+    "?")[0].toUpperCase();
+
+  const { data: adminUserSearch } = useQuery({
+    queryKey: ["chat-user-search", debouncedUserSearch],
+    queryFn: () =>
+      userService.getAll({
+        q: debouncedUserSearch,
+        role: "USER",
+        limit: 8,
+      }),
+    enabled: isAdmin && debouncedUserSearch.length >= 2,
+  });
+
+  const { data: assignedAthletes } = useQuery({
+    queryKey: ["coach-assigned-athletes"],
+    queryFn: () => athleteAssignmentService.listAssignedAthletes(),
+    enabled: authUser?.role === "ASSISTANT_COACH",
+  });
+
+  const coachSearchResults = useMemo(() => {
+    if (
+      authUser?.role !== "ASSISTANT_COACH" ||
+      debouncedUserSearch.length < 2
+    ) {
+      return [];
+    }
+    const q = debouncedUserSearch.toLowerCase();
+    return (assignedAthletes?.items ?? [])
+      .filter(
+        (a) =>
+          a.athleteEmail.toLowerCase().includes(q) ||
+          (a.athleteName?.toLowerCase().includes(q) ?? false),
+      )
+      .slice(0, 8);
+  }, [assignedAthletes, authUser?.role, debouncedUserSearch]);
+
+  const userSearchResults = isAdmin
+    ? (adminUserSearch?.items ?? [])
+    : coachSearchResults.map((a) => ({
+        id: a.athleteId,
+        name: a.athleteName,
+        email: a.athleteEmail,
+      }));
+
+  const showUserSearchResults = debouncedUserSearch.length >= 2;
 
   const { data: pushStatus } = useQuery({
     queryKey: ["admin-push-status", selectedUserId],
@@ -210,6 +301,65 @@ export function ChatPage() {
             Clients with notifications enabled get a push when you reply (if
             they turned on coach messages in the app).
           </p>
+          <div className="relative mt-3">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              placeholder="Search user by name or email..."
+              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-8 pr-8 text-xs text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500"
+            />
+            {userSearch && (
+              <button
+                type="button"
+                onClick={() => setUserSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5 text-gray-400" />
+              </button>
+            )}
+          </div>
+          {showUserSearchResults && (
+            <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800">
+              {userSearchResults.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+                  No users found
+                </p>
+              ) : (
+                userSearchResults.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => {
+                      selectUser(u.id);
+                      setUserSearch("");
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-700",
+                      u.id === selectedUserId &&
+                        "bg-emerald-50 dark:bg-emerald-900/20",
+                    )}
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                      {(u.name ?? u.email)[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-gray-900 dark:text-white">
+                        {u.name ?? u.email}
+                      </p>
+                      {u.name && (
+                        <p className="truncate text-[10px] text-gray-500 dark:text-gray-400">
+                          {u.email}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -257,22 +407,18 @@ export function ChatPage() {
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                {selectedInboxItem
-                  ? (selectedInboxItem.userName ??
-                      selectedInboxItem.userEmail)[0].toUpperCase()
-                  : "?"}
+                {selectedInitial}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {selectedInboxItem?.userName ??
-                    selectedInboxItem?.userEmail ??
-                    selectedUserId}
+                  {selectedDisplayName}
                 </p>
-                {selectedInboxItem?.userName && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {selectedInboxItem.userEmail}
-                  </p>
-                )}
+                {selectedDisplayEmail &&
+                  selectedDisplayName !== selectedDisplayEmail && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {selectedDisplayEmail}
+                    </p>
+                  )}
               </div>
               {pushStatus && <PushStatusBadge status={pushStatus} />}
             </div>
