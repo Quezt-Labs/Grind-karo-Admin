@@ -1,5 +1,7 @@
 // ---- Admin Users --------------------------------------------------------
 
+import type { AthleteAssignment } from "@/types/athleteAssignment";
+
 export interface AdminUser {
   id: string;
   name: string | null;
@@ -15,19 +17,41 @@ export interface AdminUser {
 
 export type CreateAdminUserRole = "USER" | "ASSISTANT_COACH";
 
+export interface CreateAdminUserCoachingPayload {
+  planId: string;
+  totalAmount?: number;
+}
+
+export interface CreateAdminUserAssignmentPayload {
+  assistantCoachId: string;
+  personalCoachingEnabled?: boolean;
+  formCheckEnabled?: boolean;
+}
+
 export interface CreateAdminUserPayload {
   email: string;
   name?: string;
   role: CreateAdminUserRole;
   password?: string;
+  coaching?: CreateAdminUserCoachingPayload;
+  assignment?: CreateAdminUserAssignmentPayload;
 }
 
 export interface CreateAdminUserResponse {
-  id: string;
-  email: string;
-  role: CreateAdminUserRole;
-  created: boolean;
-  name?: string | null;
+  user: {
+    id: string;
+    email: string;
+    role: CreateAdminUserRole;
+    created: boolean;
+    name?: string | null;
+  };
+  coaching: {
+    subscriptionId: string;
+    planId: string;
+    planName: string;
+    totalAmount: number;
+  } | null;
+  assignment: AthleteAssignment | null;
 }
 
 export interface Purchaser extends AdminUser {

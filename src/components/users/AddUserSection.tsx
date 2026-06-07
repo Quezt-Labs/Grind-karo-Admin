@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -10,12 +10,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/ShadSelect";
+import { cn } from "@/utils/cn";
 import { userService } from "@/services/userService";
+import { planService } from "@/services/planService";
+import { assistantCoachService } from "@/services/athleteAssignmentService";
 import type { CreateAdminUserPayload } from "@/types/user";
 
 type Props = {
   onClose: () => void;
 };
+
+function formatINR(rupees: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(rupees);
+}
 
 export function AddUserSection({ onClose }: Props) {
   const queryClient = useQueryClient();
@@ -23,22 +34,75 @@ export function AddUserSection({ onClose }: Props) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [planId, setPlanId] = useState("");
+  const [customPrice, setCustomPrice] = useState("");
+  const [assistantCoachId, setAssistantCoachId] = useState("");
+  const [personalCoaching, setPersonalCoaching] = useState(true);
+  const [formCheckSupport, setFormCheckSupport] = useState(false);
+
+  const { data: plans = [] } = useQuery({
+    queryKey: ["coaching-plans"],
+    queryFn: () => planService.getAll(),
+    enabled: role === "USER",
+  });
+
+  const { data: coaches = [] } = useQuery({
+    queryKey: ["assistant-coaches"],
+    queryFn: () => assistantCoachService.list(),
+    enabled: role === "USER",
+  });
+
+  const selectedPlan = useMemo(
+    () => plans.find((p) => p.id === planId),
+    [plans, planId],
+  );
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      userService.create({
+    mutationFn: () => {
+      const payload: CreateAdminUserPayload = {
         email: email.trim(),
         name: name.trim() || undefined,
         role,
         password: role === "ASSISTANT_COACH" ? password : undefined,
-      }),
+      };
+
+      if (role === "USER") {
+        if (planId) {
+          payload.coaching = {
+            planId,
+            totalAmount: customPrice.trim()
+              ? Number(customPrice.trim())
+              : undefined,
+          };
+        }
+        if (assistantCoachId) {
+          payload.assignment = {
+            assistantCoachId,
+            personalCoachingEnabled: personalCoaching,
+            formCheckEnabled: formCheckSupport,
+          };
+        }
+      }
+
+      return userService.create(payload);
+    },
     onSuccess: (result) => {
-      toast.success(
-        result.created
+      const parts = [
+        result.user.created
           ? `${role === "ASSISTANT_COACH" ? "Assistant coach" : "User"} created`
-          : "Existing user updated",
-      );
+          : "User updated",
+      ];
+      if (result.coaching) {
+        parts.push(
+          `coaching ${result.coaching.planName} (${formatINR(result.coaching.totalAmount)})`,
+        );
+      }
+      if (result.assignment) {
+        parts.push("assistant coach assigned");
+      }
+      toast.success(parts.join(" · "));
       void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-purchasers"] });
       void queryClient.invalidateQueries({ queryKey: ["assistant-coaches"] });
       onClose();
     },
@@ -47,9 +111,14 @@ export function AddUserSection({ onClose }: Props) {
     },
   });
 
+  const customPriceInvalid =
+    customPrice.trim().length > 0 &&
+    (!Number.isFinite(Number(customPrice)) || Number(customPrice) <= 0);
+
   const canSubmit =
     email.trim().length > 0 &&
     (role === "USER" || password.length >= 8) &&
+    !customPriceInvalid &&
     !createMutation.isPending;
 
   return (
@@ -103,6 +172,156 @@ export function AddUserSection({ onClose }: Props) {
           />
         )}
       </div>
+
+      {role === "USER" && (
+        <div className="mt-5 space-y-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+          <div>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+              Coaching (optional)
+            </h3>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Grant a paid coaching plan with an optional custom price for this
+              athlete.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Coaching plan
+                </label>
+                <Select
+                  value={planId || "__none__"}
+                  onValueChange={(v) => {
+                    setPlanId(v === "__none__" ? "" : v);
+                    setCustomPrice("");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No plan yet" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.name} ({formatINR(plan.price)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input
+                label="Custom price (INR)"
+                type="number"
+                min={1}
+                value={customPrice}
+                onChange={(e) => setCustomPrice(e.target.value)}
+                placeholder={
+                  selectedPlan
+                    ? `Default ${formatINR(selectedPlan.price)}`
+                    : "Optional"
+                }
+                disabled={!planId}
+                error={
+                  customPriceInvalid
+                    ? "Enter a valid amount greater than zero"
+                    : undefined
+                }
+              />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+              Assistant coach (optional)
+            </h3>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Assign after coaching is granted, or if the user already has a
+              paid purchase.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Assistant coach
+                </label>
+                <Select
+                  value={assistantCoachId || "__none__"}
+                  onValueChange={(v) =>
+                    setAssistantCoachId(v === "__none__" ? "" : v)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {coaches.map((coach) => (
+                      <SelectItem key={coach.id} value={coach.id}>
+                        {coach.name?.trim() || coach.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {assistantCoachId && (
+                <>
+                  <label className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-600">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      Personal coaching
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={personalCoaching}
+                      onClick={() => setPersonalCoaching((v) => !v)}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 rounded-full transition-colors",
+                        personalCoaching
+                          ? "bg-indigo-600"
+                          : "bg-gray-300 dark:bg-gray-600",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow transition-transform",
+                          personalCoaching
+                            ? "translate-x-5"
+                            : "translate-x-0.5",
+                        )}
+                      />
+                    </button>
+                  </label>
+                  <label className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-600">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      Form check & chat
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={formCheckSupport}
+                      onClick={() => setFormCheckSupport((v) => !v)}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 rounded-full transition-colors",
+                        formCheckSupport
+                          ? "bg-indigo-600"
+                          : "bg-gray-300 dark:bg-gray-600",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow transition-transform",
+                          formCheckSupport
+                            ? "translate-x-5"
+                            : "translate-x-0.5",
+                        )}
+                      />
+                    </button>
+                  </label>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex gap-2">
         <Button onClick={() => createMutation.mutate()} disabled={!canSubmit}>
