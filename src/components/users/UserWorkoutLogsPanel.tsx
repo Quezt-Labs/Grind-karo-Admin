@@ -138,12 +138,14 @@ function SetVideosGrid({
 
 interface UserWorkoutLogsPanelProps {
   userId: string;
-  purchases: Purchase[];
+  purchases?: Purchase[];
+  coachMode?: boolean;
 }
 
 export function UserWorkoutLogsPanel({
   userId,
-  purchases,
+  purchases = [],
+  coachMode = false,
 }: UserWorkoutLogsPanelProps) {
   const [offset, setOffset] = useState(0);
   const [programId, setProgramId] = useState<string>("");
@@ -160,18 +162,31 @@ export function UserWorkoutLogsPanel({
   }, [purchases]);
 
   const queryKey = useMemo(
-    () => ["admin-user-workout-logs", userId, programId, offset] as const,
-    [userId, programId, offset],
+    () =>
+      coachMode
+        ? (["coach-workout-logs", userId, programId, offset] as const)
+        : (["admin-user-workout-logs", userId, programId, offset] as const),
+    [coachMode, userId, programId, offset],
   );
 
   const { data, isLoading } = useQuery({
     queryKey,
-    queryFn: () =>
-      userService.getWorkoutLogs(userId, {
+    queryFn: async () => {
+      const params = {
         programId: programId || undefined,
         limit: PAGE_SIZE,
         offset,
-      }),
+      };
+      if (coachMode) {
+        const { athleteAssignmentService } =
+          await import("@/services/athleteAssignmentService");
+        return athleteAssignmentService.getCoachAthleteWorkoutLogs(
+          userId,
+          params,
+        );
+      }
+      return userService.getWorkoutLogs(userId, params);
+    },
   });
 
   const total = data?.total ?? 0;

@@ -1,8 +1,10 @@
+export type StaffRole = "ADMIN" | "ASSISTANT_COACH";
+
 export interface User {
   id: string;
   name: string | null;
   email: string;
-  role: "ADMIN";
+  role: StaffRole;
 }
 
 export interface AdminLoginPayload {

@@ -48,6 +48,8 @@ import type {
   FormCheckQuota,
 } from "@/types/user";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
+import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
+import { useIsAdmin } from "@/hooks/useRole";
 
 type MainTab = "setup" | "activity" | "purchases";
 type ActivitySection = "videos" | "logs" | "notes" | "summaries" | "progress";
@@ -82,6 +84,7 @@ export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isAdmin = useIsAdmin();
   const [mainTab, setMainTab] = useState<MainTab>("activity");
   const [activitySection, setActivitySection] =
     useState<ActivitySection>("videos");
@@ -180,6 +183,14 @@ export function UserDetailPage() {
 
   const { user, purchases } = data;
   const chatEnabled = data.chatEnabled ?? false;
+
+  const isPurchaser =
+    purchases.some(
+      (p) => p.kind === "program_purchase" && p.status === "PAID",
+    ) ||
+    purchases.some(
+      (p) => p.kind === "coaching_subscription" && p.totalAmount > 0,
+    );
 
   return (
     <div className="space-y-5">
@@ -323,6 +334,9 @@ export function UserDetailPage() {
             formCheckQuota={data.formCheckQuota}
             purchases={purchases}
           />
+          {isAdmin && isPurchaser && (
+            <AthleteAssignmentSection athleteId={user.id} />
+          )}
           <UserPushPanel userId={user.id} />
         </div>
       )}

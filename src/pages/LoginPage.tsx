@@ -16,7 +16,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   async function onLogin(data: LoginFormData) {
@@ -28,7 +28,11 @@ export function LoginPage() {
       });
       login(response.user, response.accessToken, response.refreshToken);
       toast.success(`Welcome, ${response.user.name || response.user.email}!`);
-      navigate("/dashboard");
+      navigate(
+        response.user.role === "ASSISTANT_COACH"
+          ? "/coach/athletes"
+          : "/dashboard",
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Invalid credentials";

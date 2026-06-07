@@ -20,6 +20,7 @@ import {
   FileText,
   Inbox,
   ChevronDown,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -95,6 +96,18 @@ const NAV_SECTIONS: NavSection[] = [
         icon: MonitorSmartphone,
       },
       { path: "/contact", label: "Contact Inbox", icon: Inbox },
+    ],
+  },
+];
+
+const COACH_NAV_SECTIONS: NavSection[] = [
+  {
+    key: "coach",
+    title: "Coaching",
+    items: [
+      { path: "/coach/athletes", label: "My Athletes", icon: Users },
+      { path: "/form-checks", label: "Form checks", icon: Video },
+      { path: "/chat", label: "Chat", icon: MessageCircle },
     ],
   },
 ];
@@ -343,6 +356,28 @@ export function Sidebar() {
     [formCheckPending],
   );
 
+  const navSections = useMemo(() => {
+    if (user?.role === "ASSISTANT_COACH") {
+      return COACH_NAV_SECTIONS;
+    }
+    return NAV_SECTIONS.map((section) => {
+      if (section.key !== "people") return section;
+      return {
+        ...section,
+        items: [
+          section.items[0]!,
+          section.items[1]!,
+          {
+            path: "/assistant-coaches",
+            label: "Assistant coaches",
+            icon: UserCog,
+          },
+          ...section.items.slice(2),
+        ],
+      };
+    });
+  }, [user?.role]);
+
   async function handleLogout() {
     setIsLoggingOut(true);
     await authService.logout();
@@ -390,7 +425,7 @@ export function Sidebar() {
 
         <nav className="scrollbar-none min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-3">
           <div className="space-y-2">
-            {NAV_SECTIONS.map((section) => {
+            {navSections.map((section) => {
               if (section.items.length === 1) {
                 const item = section.items[0]!;
                 const active = isNavActive(location.pathname, item.path);

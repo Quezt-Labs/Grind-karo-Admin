@@ -94,6 +94,18 @@ export const FormCheckInboxPage = lazyPage(
   "FormCheckInboxPage",
 );
 export const ChatPage = lazyPage(() => import("@/pages/ChatPage"), "ChatPage");
+export const AssistantCoachesPage = lazyPage(
+  () => import("@/pages/AssistantCoachesPage"),
+  "AssistantCoachesPage",
+);
+export const CoachAthletesPage = lazyPage(
+  () => import("@/pages/CoachAthletesPage"),
+  "CoachAthletesPage",
+);
+export const CoachAthleteDetailPage = lazyPage(
+  () => import("@/pages/CoachAthleteDetailPage"),
+  "CoachAthleteDetailPage",
+);
 export const TestingPage = lazyPage(
   () => import("@/pages/TestingPage"),
   "TestingPage",
