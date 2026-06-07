@@ -49,6 +49,7 @@ import type {
 } from "@/types/user";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
+import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { useIsAdmin } from "@/hooks/useRole";
 
 type MainTab = "setup" | "activity" | "purchases";
@@ -233,6 +234,12 @@ export function UserDetailPage() {
             Open chat
           </Link>
         )}
+        <DeleteUserButton
+          userId={user.id}
+          userName={user.name}
+          userEmail={user.email}
+          role={user.role}
+        />
       </div>
 
       {/* Stats — compact strip */}

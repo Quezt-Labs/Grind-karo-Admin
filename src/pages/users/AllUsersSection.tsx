@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Users, Eye } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { userColumns } from "./usersConstants";
 import type { UserRow } from "./usersConstants";
 
@@ -22,14 +23,23 @@ export const AllUsersSection = memo(function AllUsersSection({
   const actionsColumn = {
     key: "id" as keyof UserRow & string,
     header: "Actions",
-    render: (value: UserRow[keyof UserRow]) => (
-      <button
-        onClick={() => navigate(`/users/${value}`)}
-        className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-        title="View purchases"
-      >
-        <Eye className="h-4 w-4" />
-      </button>
+    render: (_: UserRow[keyof UserRow], row: UserRow) => (
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={() => navigate(`/users/${row.id}`)}
+          className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+          title="View user"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+        <DeleteUserButton
+          userId={row.id}
+          userName={row.name === "—" ? null : row.name}
+          userEmail={row.email}
+          role={row.role}
+          variant="icon"
+        />
+      </div>
     ),
   };
 

@@ -126,4 +126,15 @@ export const userService = {
     const { data } = await api.post("/admin/users", payload);
     return data.data ?? data;
   },
+
+  async delete(userId: string): Promise<{
+    success: true;
+    deletedUserId: string;
+    email: string;
+    name: string | null;
+    role: string;
+  }> {
+    const { data } = await api.delete(`/admin/users/${userId}`);
+    return data.data ?? data;
+  },
 };
