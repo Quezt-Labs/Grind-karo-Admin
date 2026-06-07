@@ -223,7 +223,7 @@ export function AthleteAssignmentSection({
         <AssignmentForm
           key={formKey}
           athleteId={athleteId}
-          assignment={assignment}
+          assignment={assignment ?? null}
           coaches={coaches}
         />
       )}

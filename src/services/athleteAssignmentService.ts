@@ -7,6 +7,7 @@ import type {
   UpsertAthleteAssignmentPayload,
 } from "@/types/athleteAssignment";
 import type { CoachRevenueOverviewResponse } from "@/types/coachDashboard";
+import type { AdminWorkoutLogsResponse } from "@/types/workoutLogs";
 
 export const athleteAssignmentService = {
   async getByAthleteId(athleteId: string): Promise<AthleteAssignment | null> {
@@ -38,7 +39,7 @@ export const athleteAssignmentService = {
   async getCoachAthleteWorkoutLogs(
     athleteId: string,
     params?: { programId?: string; limit?: number; offset?: number },
-  ) {
+  ): Promise<AdminWorkoutLogsResponse> {
     const { data } = await api.get(
       `/coach/athletes/${athleteId}/workout-logs`,
       {

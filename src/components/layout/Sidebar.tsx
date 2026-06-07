@@ -351,11 +351,11 @@ export function Sidebar() {
 
   const closeMobile = useCallback(() => setMobileOpen(false), [setMobileOpen]);
   const { data: formCheckPending = 0 } = useFormCheckPendingCount();
-  const badgeByPath = useMemo(
-    () =>
-      formCheckPending > 0 ? { "/form-checks": formCheckPending } : undefined,
-    [formCheckPending],
-  );
+  const badgeByPath = useMemo((): Record<string, number> | undefined => {
+    return formCheckPending > 0
+      ? { "/form-checks": formCheckPending }
+      : undefined;
+  }, [formCheckPending]);
 
   const navSections = useMemo(() => {
     if (user?.role === "ASSISTANT_COACH") {

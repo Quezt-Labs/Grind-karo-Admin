@@ -16,7 +16,11 @@ import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/utils/cn";
 import type { Purchase } from "@/types/user";
-import type { AdminWorkoutLog, SetVideoEntryDto } from "@/types/workoutLogs";
+import type {
+  AdminWorkoutLog,
+  AdminWorkoutLogsResponse,
+  SetVideoEntryDto,
+} from "@/types/workoutLogs";
 
 const PAGE_SIZE = 10;
 
@@ -169,7 +173,7 @@ export function UserWorkoutLogsPanel({
     [coachMode, userId, programId, offset],
   );
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<AdminWorkoutLogsResponse>({
     queryKey,
     queryFn: async () => {
       const params = {
@@ -190,7 +194,7 @@ export function UserWorkoutLogsPanel({
   });
 
   const total = data?.total ?? 0;
-  const items = data?.items ?? [];
+  const items: AdminWorkoutLog[] = data?.items ?? [];
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
 
