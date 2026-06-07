@@ -12,6 +12,7 @@ import {
   groupAthletesByState,
   UNKNOWN_LOCATION_KEY,
 } from "@/lib/athleteLocationGroups";
+import { PENDING_STATE_KEY } from "@/lib/indianStates";
 import { formatAthleteLocation } from "@/lib/indianStates";
 import { cn } from "@/utils/cn";
 import { useAuth } from "@/hooks/useAuth";
@@ -86,16 +87,18 @@ export function CoachAthletesLocationPage() {
               iconBg="bg-emerald-50 dark:bg-emerald-900/30"
             />
             <SummaryCard
-              label="Missing state"
-              value={String(summary.missingCount)}
+              label="State not selected"
+              value={String(summary.pendingState)}
               icon={
                 <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               }
               iconBg="bg-amber-50 dark:bg-amber-900/30"
               hint={
-                summary.missingCount > 0
-                  ? "Ask athlete to complete intake with state"
-                  : "All athletes have state on file"
+                summary.pendingState > 0
+                  ? "City saved — ask athlete to pick state in intake"
+                  : summary.missingLocation > 0
+                    ? `${summary.missingLocation} with no city or state`
+                    : "Everyone has state on file"
               }
             />
           </div>
@@ -118,7 +121,10 @@ export function CoachAthletesLocationPage() {
                     label={group.state}
                     count={group.athletes.length}
                     active={selectedState === group.stateKey}
-                    muted={group.stateKey === UNKNOWN_LOCATION_KEY}
+                    muted={
+                      group.stateKey === UNKNOWN_LOCATION_KEY ||
+                      group.stateKey === PENDING_STATE_KEY
+                    }
                     onClick={() =>
                       setSelectedState(
                         selectedState === group.stateKey
@@ -158,7 +164,8 @@ export function CoachAthletesLocationPage() {
                       <MapPin
                         className={cn(
                           "h-4 w-4",
-                          group.stateKey === UNKNOWN_LOCATION_KEY
+                          group.stateKey === UNKNOWN_LOCATION_KEY ||
+                            group.stateKey === PENDING_STATE_KEY
                             ? "text-amber-500"
                             : "text-indigo-500",
                         )}
@@ -166,6 +173,11 @@ export function CoachAthletesLocationPage() {
                       <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
                         {group.state}
                       </h2>
+                      {group.source === "pending" && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                          city only
+                        </span>
+                      )}
                       <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
                         {group.athletes.length}
                       </span>
