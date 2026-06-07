@@ -105,6 +105,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     key: "coach",
     title: "Coaching",
     items: [
+      { path: "/coach/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { path: "/coach/athletes", label: "My Athletes", icon: Users },
       { path: "/form-checks", label: "Form checks", icon: Video },
       { path: "/chat", label: "Chat", icon: MessageCircle },

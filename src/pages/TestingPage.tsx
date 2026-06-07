@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   FileSpreadsheet,
   RefreshCw,
@@ -140,63 +141,64 @@ function countFormulas(rows: string[][]): {
   return { total: allFormulas.length, unique, byFunction };
 }
 
+async function loadSheetData(sheetId: string, gid: string): Promise<SheetData> {
+  const url = sheetExportUrl(sheetId, gid, "xlsx");
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    throw new Error(
+      `Failed to fetch sheet (${res.status}). Make sure the sheet is shared as "Anyone with the link".`,
+    );
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("text/html")) {
+    const text = await res.text();
+    if (text.includes("ServiceLogin") || text.includes("accounts.google.com")) {
+      throw new Error(
+        'Sheet is not publicly accessible. Go to Google Sheets → Share → "Anyone with the link" → Viewer.',
+      );
+    }
+    throw new Error("Unexpected HTML response. Sheet may not be shared.");
+  }
+
+  const buffer = await res.arrayBuffer();
+  return parseXLSX(buffer, gid);
+}
+
 /* ─── Page ────────────────────────────────────────────────────────────── */
 
 export function TestingPage() {
   const [sheetId, setSheetId] = useState(SPREADSHEET_ID);
   const [gid, setGid] = useState(DEFAULT_GID);
-  const [data, setData] = useState<SheetData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [showFormulas, setShowFormulas] = useState(false);
   const [showFormulaStats, setShowFormulaStats] = useState(false);
 
-  const fetchSheet = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Fetch as XLSX to get both values AND formulas
-      const url = sheetExportUrl(sheetId, gid, "xlsx");
-      const res = await fetch(url);
+  const {
+    data = null,
+    isLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+    dataUpdatedAt,
+  } = useQuery({
+    queryKey: ["testing-sheet", sheetId, gid],
+    queryFn: () => loadSheetData(sheetId, gid),
+  });
 
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch sheet (${res.status}). Make sure the sheet is shared as "Anyone with the link".`,
-        );
-      }
-
-      const contentType = res.headers.get("content-type") || "";
-
-      // If we got HTML back, it's a login redirect
-      if (contentType.includes("text/html")) {
-        const text = await res.text();
-        if (
-          text.includes("ServiceLogin") ||
-          text.includes("accounts.google.com")
-        ) {
-          throw new Error(
-            'Sheet is not publicly accessible. Go to Google Sheets → Share → "Anyone with the link" → Viewer.',
-          );
-        }
-        throw new Error("Unexpected HTML response. Sheet may not be shared.");
-      }
-
-      const buffer = await res.arrayBuffer();
-      const parsed = parseXLSX(buffer, gid);
-      setData(parsed);
-      setLastFetched(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }, [sheetId, gid]);
-
-  useEffect(() => {
-    fetchSheet();
-  }, [fetchSheet]);
+  const loading = isLoading || isFetching;
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : queryError
+        ? "Unknown error"
+        : null;
+  const lastFetched = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
+  const fetchSheet = () => {
+    void refetch();
+  };
 
   const headers = data?.headers ?? [];
   const rows = showFormulas

@@ -102,6 +102,10 @@ export const CoachAthletesPage = lazyPage(
   () => import("@/pages/CoachAthletesPage"),
   "CoachAthletesPage",
 );
+export const CoachDashboardPage = lazyPage(
+  () => import("@/pages/CoachDashboardPage"),
+  "CoachDashboardPage",
+);
 export const CoachAthleteDetailPage = lazyPage(
   () => import("@/pages/CoachAthleteDetailPage"),
   "CoachAthleteDetailPage",

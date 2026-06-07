@@ -12,9 +12,14 @@ function formatINRShort(rupees: number): string {
 interface RevenueChartProps {
   data: MonthlyRevenuePoint[];
   className?: string;
+  caption?: string;
 }
 
-export function RevenueChart({ data, className }: RevenueChartProps) {
+export function RevenueChart({
+  data,
+  className,
+  caption = "Last 6 months · paid coaching, programs & books",
+}: RevenueChartProps) {
   const maxRevenue = Math.max(...data.map((d) => d.revenue), 1);
 
   return (
@@ -62,9 +67,7 @@ export function RevenueChart({ data, className }: RevenueChartProps) {
           );
         })}
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400">
-        Last 6 months · paid coaching, programs & books
-      </p>
+      <p className="text-xs text-gray-500 dark:text-gray-400">{caption}</p>
     </div>
   );
 }

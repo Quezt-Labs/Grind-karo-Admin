@@ -6,6 +6,7 @@ import type {
   CoachAthleteSummaryResponse,
   UpsertAthleteAssignmentPayload,
 } from "@/types/athleteAssignment";
+import type { CoachRevenueOverviewResponse } from "@/types/coachDashboard";
 
 export const athleteAssignmentService = {
   async getByAthleteId(athleteId: string): Promise<AthleteAssignment | null> {
@@ -52,6 +53,11 @@ export const athleteAssignmentService = {
   ): Promise<CoachAthleteSummaryResponse> {
     const { data } = await api.get(`/coach/athletes/${athleteId}`);
     return data;
+  },
+
+  async getRevenueOverview(): Promise<CoachRevenueOverviewResponse> {
+    const { data } = await api.get("/coach/revenue-overview");
+    return data.data ?? data;
   },
 };
 

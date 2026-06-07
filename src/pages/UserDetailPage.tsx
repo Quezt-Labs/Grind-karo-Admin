@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -313,6 +313,7 @@ export function UserDetailPage() {
       {resolvedMainTab === "setup" && (
         <div className="space-y-4">
           <ProvisionSheetSection
+            key={`${user.spreadsheetId ?? "none"}-${user.sheetContentRevision ?? 0}`}
             userId={user.id}
             userEmail={user.email}
             currentSpreadsheetId={user.spreadsheetId}
@@ -745,14 +746,6 @@ function ProvisionSheetSection({
   const [revision, setRevision] = useState(sheetContentRevision);
   const [showGuide, setShowGuide] = useState(false);
   const [linking, setLinking] = useState(false);
-
-  useEffect(() => {
-    setLinkedId(currentSpreadsheetId ?? null);
-  }, [currentSpreadsheetId]);
-
-  useEffect(() => {
-    setRevision(sheetContentRevision);
-  }, [sheetContentRevision]);
 
   const sheetUrl = linkedId
     ? `https://docs.google.com/spreadsheets/d/${linkedId}/edit`

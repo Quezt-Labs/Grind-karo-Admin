@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -54,9 +54,7 @@ function dateDivider(iso: string): string {
 
 export function ChatPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialUserId = searchParams.get("userId") ?? "";
-
-  const [selectedUserId, setSelectedUserId] = useState(initialUserId);
+  const selectedUserId = searchParams.get("userId") ?? "";
   const [text, setText] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,15 +62,7 @@ export function ChatPage() {
   const queryClient = useQueryClient();
   const voice = useVoiceRecorder();
 
-  // Sync URL param → selection
-  useEffect(() => {
-    const uid = searchParams.get("userId") ?? "";
-    if (uid) setSelectedUserId(uid);
-  }, [searchParams]);
-
-  // Update URL when user selects from inbox
   function selectUser(userId: string) {
-    setSelectedUserId(userId);
     setSearchParams(userId ? { userId } : {});
   }
 

@@ -30,7 +30,7 @@ export function LoginPage() {
       toast.success(`Welcome, ${response.user.name || response.user.email}!`);
       navigate(
         response.user.role === "ASSISTANT_COACH"
-          ? "/coach/athletes"
+          ? "/coach/dashboard"
           : "/dashboard",
       );
     } catch (error) {
