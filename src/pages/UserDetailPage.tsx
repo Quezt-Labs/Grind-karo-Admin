@@ -51,6 +51,7 @@ import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
 import { CoachingIntakePanel } from "@/components/users/CoachingIntakePanel";
 import { CoachingPaymentCalendar } from "@/components/users/CoachingPaymentCalendar";
+import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { useIsAdmin } from "@/hooks/useRole";
 
@@ -328,7 +329,16 @@ export function UserDetailPage() {
               isMissing={intakeMissing}
             />
           )}
-          <CoachingPaymentCalendar purchases={purchases} />
+          <CoachingPaymentCalendar purchases={purchases} userId={user.id} />
+          <CoachingFeeAdjustmentsPanel
+            userId={user.id}
+            purchases={purchases}
+            onUpdated={() =>
+              void queryClient.invalidateQueries({
+                queryKey: ["admin-user-purchases", user.id],
+              })
+            }
+          />
           <ProvisionSheetSection
             key={`${user.spreadsheetId ?? "none"}-${user.sheetContentRevision ?? 0}`}
             userId={user.id}

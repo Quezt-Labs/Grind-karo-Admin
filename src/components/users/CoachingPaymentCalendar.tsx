@@ -1,4 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, CreditCard } from "lucide-react";
+import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
+import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
 import type { Purchase } from "@/types/user";
 
 function formatINR(rupees: number): string {
@@ -23,21 +26,41 @@ function addMonths(date: Date, months: number): Date {
   return next;
 }
 
+type MilestoneStatus =
+  | "paid"
+  | "upcoming"
+  | "expired"
+  | "waived"
+  | "extended"
+  | "manual";
+
 type Milestone = {
   label: string;
   date: string;
   amount?: number;
-  status: "paid" | "upcoming" | "expired";
+  status: MilestoneStatus;
+  note?: string;
+};
+
+const ADJUSTMENT_LABEL: Record<CoachingBillingAdjustment["type"], string> = {
+  EXTEND: "Access extended (admin)",
+  WAIVE: "Fee waived / hold",
+  MANUAL_PAYMENT: "Manual payment recorded",
 };
 
 function coachingMilestones(
   sub: Extract<Purchase, { kind: "coaching_subscription" }>,
+  adjustments: CoachingBillingAdjustment[],
 ): Milestone[] {
   const start = new Date(sub.startDate);
   const end = new Date(sub.expiresAt);
   const now = new Date();
   const slug = sub.planSlug.toLowerCase();
   const isMonthly = slug.includes("ultra");
+  const subAdjustments = adjustments.filter(
+    (row) => row.subscriptionId === sub.id,
+  );
+
   const milestones: Milestone[] = [
     {
       label: "Plan started",
@@ -51,11 +74,22 @@ function coachingMilestones(
     let cursor = addMonths(start, 1);
     let installment = 2;
     while (cursor < end) {
+      const waived = subAdjustments.some((row) => {
+        if (row.type !== "WAIVE" || !row.periodStart || !row.periodEnd)
+          return false;
+        const periodStart = new Date(row.periodStart).getTime();
+        const periodEnd = new Date(row.periodEnd).getTime();
+        const due = cursor.getTime();
+        return due >= periodStart && due <= periodEnd;
+      });
+
       milestones.push({
-        label: `Renewal ${installment}`,
+        label: waived
+          ? `Renewal ${installment} (waived)`
+          : `Renewal ${installment}`,
         date: cursor.toISOString(),
-        amount: sub.totalAmount,
-        status: cursor <= now ? "paid" : "upcoming",
+        amount: waived ? undefined : sub.totalAmount,
+        status: waived ? "waived" : cursor <= now ? "paid" : "upcoming",
       });
       cursor = addMonths(cursor, 1);
       installment += 1;
@@ -68,14 +102,56 @@ function coachingMilestones(
     status: end < now || sub.status !== "ACTIVE" ? "expired" : "upcoming",
   });
 
-  return milestones;
+  for (const row of subAdjustments) {
+    milestones.push({
+      label: ADJUSTMENT_LABEL[row.type],
+      date: row.createdAt,
+      amount: row.amount ?? undefined,
+      status:
+        row.type === "WAIVE"
+          ? "waived"
+          : row.type === "EXTEND"
+            ? "extended"
+            : "manual",
+      note: row.reason,
+    });
+  }
+
+  return milestones.sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+}
+
+function dotClass(status: MilestoneStatus): string {
+  switch (status) {
+    case "paid":
+      return "bg-green-500";
+    case "waived":
+      return "bg-sky-500";
+    case "extended":
+      return "bg-violet-500";
+    case "manual":
+      return "bg-emerald-500";
+    case "expired":
+      return "bg-gray-400";
+    default:
+      return "bg-amber-400";
+  }
 }
 
 type Props = {
   purchases: Purchase[];
+  userId?: string;
 };
 
-export function CoachingPaymentCalendar({ purchases }: Props) {
+export function CoachingPaymentCalendar({ purchases, userId }: Props) {
+  const { data: adjustments = [] } = useQuery({
+    queryKey: ["coaching-billing-adjustments", userId],
+    queryFn: () =>
+      coachingSubscriptionService.listAdjustments({ userId: userId! }),
+    enabled: !!userId,
+  });
+
   const coachingSubs = purchases.filter(
     (p): p is Extract<Purchase, { kind: "coaching_subscription" }> =>
       p.kind === "coaching_subscription",
@@ -100,7 +176,7 @@ export function CoachingPaymentCalendar({ purchases }: Props) {
 
       <div className="space-y-5">
         {coachingSubs.map((sub) => {
-          const milestones = coachingMilestones(sub);
+          const milestones = coachingMilestones(sub, adjustments);
           return (
             <section
               key={sub.id}
@@ -124,13 +200,7 @@ export function CoachingPaymentCalendar({ purchases }: Props) {
                 {milestones.map((m, index) => (
                   <li key={`${sub.id}-${index}`} className="relative">
                     <span
-                      className={`absolute -left-[1.34rem] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-gray-50 dark:ring-gray-900/30 ${
-                        m.status === "paid"
-                          ? "bg-green-500"
-                          : m.status === "expired"
-                            ? "bg-gray-400"
-                            : "bg-amber-400"
-                      }`}
+                      className={`absolute -left-[1.34rem] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-gray-50 dark:ring-gray-900/30 ${dotClass(m.status)}`}
                     />
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {m.label}
@@ -139,6 +209,11 @@ export function CoachingPaymentCalendar({ purchases }: Props) {
                       {formatDate(m.date)}
                       {m.amount != null && ` · ${formatINR(m.amount)}`}
                     </p>
+                    {m.note && (
+                      <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                        {m.note}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ol>
