@@ -50,6 +50,7 @@ import type {
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
 import { CoachingIntakePanel } from "@/components/users/CoachingIntakePanel";
+import { CoachingPaymentCalendar } from "@/components/users/CoachingPaymentCalendar";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { useIsAdmin } from "@/hooks/useRole";
 
@@ -327,6 +328,7 @@ export function UserDetailPage() {
               isMissing={intakeMissing}
             />
           )}
+          <CoachingPaymentCalendar purchases={purchases} />
           <ProvisionSheetSection
             key={`${user.spreadsheetId ?? "none"}-${user.sheetContentRevision ?? 0}`}
             userId={user.id}
