@@ -1,13 +1,20 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ClipboardList, MessageCircle, Video } from "lucide-react";
+import {
+  ArrowLeft,
+  ClipboardList,
+  MapPin,
+  MessageCircle,
+  Video,
+} from "lucide-react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
 import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { cn } from "@/utils/cn";
+import { formatAthleteLocation } from "@/lib/indianStates";
 
 type CoachActivityTab = "videos" | "logs" | "chat";
 
@@ -90,6 +97,12 @@ export function CoachAthleteDetailPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {athlete.email}
           </p>
+          {(athlete.city || athlete.state) && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+              {formatAthleteLocation(athlete.city, athlete.state)}
+            </p>
+          )}
           {assignment && (
             <div className="mt-2 flex flex-wrap gap-2">
               {assignment.personalCoachingEnabled && (

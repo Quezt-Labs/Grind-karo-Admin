@@ -51,6 +51,8 @@ export interface CoachAthleteSummaryResponse {
     name: string | null;
     email: string;
     role: string;
+    city?: string | null;
+    state?: string | null;
     spreadsheetId?: string | null;
     createdAt: string;
     updatedAt: string;

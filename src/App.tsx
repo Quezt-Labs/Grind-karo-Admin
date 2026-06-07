@@ -13,6 +13,7 @@ import {
   AssistantCoachesPage,
   CoachAthleteDetailPage,
   CoachAthletesPage,
+  CoachAthletesLocationPage,
   FormCheckInboxPage,
   ChatPage,
   ContactSubmissionsPage,
@@ -58,6 +59,10 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/coach/athletes" element={<CoachAthletesPage />} />
+                <Route
+                  path="/coach/locations"
+                  element={<CoachAthletesLocationPage />}
+                />
                 <Route
                   path="/coach/athletes/:id"
                   element={<CoachAthleteDetailPage />}

@@ -21,6 +21,7 @@ import {
   Inbox,
   ChevronDown,
   UserCog,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -80,6 +81,7 @@ const NAV_SECTIONS: NavSection[] = [
     key: "coaching",
     title: "Coaching",
     items: [
+      { path: "/coach/locations", label: "Athlete locations", icon: MapPin },
       { path: "/plans", label: "Plans", icon: CreditCard },
       { path: "/addons", label: "Coaching Add-ons", icon: Puzzle },
       { path: "/subscriptions", label: "Subscriptions", icon: Award },
@@ -106,6 +108,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     title: "Coaching",
     items: [
       { path: "/coach/athletes", label: "My Athletes", icon: Users },
+      { path: "/coach/locations", label: "Locations", icon: MapPin },
       { path: "/form-checks", label: "Form checks", icon: Video },
       { path: "/chat", label: "Chat", icon: MessageCircle },
     ],

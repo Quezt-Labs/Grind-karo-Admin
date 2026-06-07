@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Users } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -28,7 +28,15 @@ export function CoachAthletesPage() {
       <PageHeader
         title="My athletes"
         description="Athletes assigned to you for coaching and support."
-      />
+      >
+        <Link
+          to="/coach/locations"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+        >
+          <MapPin className="h-4 w-4" />
+          View by location
+        </Link>
+      </PageHeader>
 
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center gap-3">
