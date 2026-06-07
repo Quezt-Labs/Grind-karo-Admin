@@ -98,6 +98,7 @@ export function CoachingIntakePanel({ intake, isLoading, isMissing }: Props) {
               value={intake.currentBodyweightAndGoal}
             />
             <Field label="City" value={intake.city} />
+            <Field label="State" value={intake.state ?? "—"} />
             <Field label="WhatsApp" value={intake.whatsappNumber} />
             <Field label="Instagram" value={intake.instagramId} />
           </Section>

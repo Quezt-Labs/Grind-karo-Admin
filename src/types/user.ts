@@ -200,6 +200,7 @@ export interface UserInfo {
   height: string;
   currentBodyweightAndGoal: string;
   city: string;
+  state: string | null;
   whatsappNumber: string;
   instagramId: string;
   resistanceTrainingExperience: string;
@@ -253,6 +254,8 @@ export interface CoachingSetupMember {
   email: string;
   setupStatus: CoachingSetupStatus;
   planName: string;
+  city?: string | null;
+  state?: string | null;
   expiresAt: string;
   subscribedAt: string;
   spreadsheetId?: string | null;

@@ -6,6 +6,8 @@ export const coachingSetupColumns: Column<CoachingSetupRow>[] = [
   { key: "name", header: "Name", sortable: true },
   { key: "email", header: "Email", sortable: true },
   { key: "planName", header: "Plan", sortable: true },
+  { key: "city", header: "City", sortable: true },
+  { key: "state", header: "State", sortable: true },
   {
     key: "setupStatus",
     header: "Status",

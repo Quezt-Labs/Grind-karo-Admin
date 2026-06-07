@@ -32,6 +32,8 @@ export interface AssignedAthleteListItem {
   athleteId: string;
   athleteName: string | null;
   athleteEmail: string;
+  city: string | null;
+  state: string | null;
   programsPurchased: string[];
   personalCoachingEnabled: boolean;
   formCheckEnabled: boolean;

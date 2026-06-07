@@ -20,7 +20,6 @@ import { CoachingSetupSection } from "./users/CoachingSetupSection";
 import { formatINR } from "./users/usersConstants";
 import type { Tab } from "./users/usersConstants";
 import type { CoachingSetupStatusFilter } from "@/types/user";
-
 export function UsersPage() {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
@@ -30,6 +29,8 @@ export function UsersPage() {
   >("");
   const [coachingSetupFilter, setCoachingSetupFilter] =
     useState<CoachingSetupStatusFilter>("awaiting_sheet");
+  const [coachingSetupStateFilter, setCoachingSetupStateFilter] =
+    useState<string>("");
 
   const handleSearch = useCallback((value: string) => {
     setSearch(value);
@@ -69,11 +70,17 @@ export function UsersPage() {
     isLoading: coachingSetupLoading,
     isError: coachingSetupError,
   } = useQuery({
-    queryKey: ["admin-coaching-setup", search, coachingSetupFilter],
+    queryKey: [
+      "admin-coaching-setup",
+      search,
+      coachingSetupFilter,
+      coachingSetupStateFilter,
+    ],
     queryFn: () =>
       userService.getCoachingSetup({
         q: search || undefined,
         status: coachingSetupFilter,
+        state: coachingSetupStateFilter || undefined,
         limit: 500,
       }),
     enabled: tab === "coaching-setup",
@@ -110,6 +117,8 @@ export function UsersPage() {
       name: m.name || "—",
       email: m.email,
       planName: m.planName,
+      city: m.city?.trim() || "—",
+      state: m.state?.trim() || "—",
       setupStatus: m.setupStatus,
       subscribedAt: new Date(m.subscribedAt).toLocaleDateString(),
       expiresAt: new Date(m.expiresAt).toLocaleDateString(),
@@ -210,7 +219,11 @@ export function UsersPage() {
           )}
           <DebouncedSearch
             onSearch={handleSearch}
-            placeholder="Search by name or email..."
+            placeholder={
+              tab === "coaching-setup"
+                ? "Search name, email, city, state..."
+                : "Search by name or email..."
+            }
             className="w-full sm:w-72"
           />
         </div>
@@ -239,6 +252,8 @@ export function UsersPage() {
           isError={coachingSetupError}
           statusFilter={coachingSetupFilter}
           onStatusFilterChange={setCoachingSetupFilter}
+          stateFilter={coachingSetupStateFilter}
+          onStateFilterChange={setCoachingSetupStateFilter}
           counts={coachingSetupData?.counts}
         />
       )}

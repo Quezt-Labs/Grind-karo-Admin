@@ -6,6 +6,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import { cn } from "@/utils/cn";
+import { formatAthleteLocation } from "@/lib/indianStates";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -61,6 +62,9 @@ export function CoachAthletesPage() {
                   Athlete
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Location
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Program purchased
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -78,7 +82,7 @@ export function CoachAthletesPage() {
               {(data?.items ?? []).length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-sm text-gray-500"
                   >
                     No athletes assigned yet.
@@ -98,6 +102,9 @@ export function CoachAthletesPage() {
                       <p className="text-xs text-gray-500">
                         {row.athleteEmail}
                       </p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      {formatAthleteLocation(row.city, row.state)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {row.programsPurchased.length > 0

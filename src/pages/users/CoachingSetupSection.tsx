@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/ShadSelect";
 import type { CoachingSetupStatusFilter } from "@/types/user";
+import { INDIAN_STATES_AND_UTS } from "@/lib/indianStates";
 
 type Props = {
   rows: CoachingSetupRow[];
@@ -20,6 +21,8 @@ type Props = {
   isError: boolean;
   statusFilter: CoachingSetupStatusFilter;
   onStatusFilterChange: (value: CoachingSetupStatusFilter) => void;
+  stateFilter: string;
+  onStateFilterChange: (value: string) => void;
   counts?: {
     needsIntake: number;
     awaitingSheet: number;
@@ -33,6 +36,8 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
   isError,
   statusFilter,
   onStatusFilterChange,
+  stateFilter,
+  onStateFilterChange,
   counts,
 }: Props) {
   const navigate = useNavigate();
@@ -69,7 +74,8 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
   if (!isLoading && rows.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          <StateFilter value={stateFilter} onChange={onStateFilterChange} />
           <StatusFilter value={statusFilter} onChange={onStatusFilterChange} />
         </div>
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
@@ -104,7 +110,8 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
           </span>
         </div>
       )}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <StateFilter value={stateFilter} onChange={onStateFilterChange} />
         <StatusFilter value={statusFilter} onChange={onStatusFilterChange} />
       </div>
       <DataTable
@@ -115,6 +122,33 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
     </div>
   );
 });
+
+function StateFilter({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Select
+      value={value || "__all__"}
+      onValueChange={(v) => onChange(v === "__all__" ? "" : v)}
+    >
+      <SelectTrigger className="h-9 w-48 rounded-lg border border-gray-300 bg-white text-sm dark:border-gray-600 dark:bg-gray-800">
+        <SelectValue placeholder="All states" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__all__">All states</SelectItem>
+        {INDIAN_STATES_AND_UTS.map((state) => (
+          <SelectItem key={state} value={state}>
+            {state}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 function StatusFilter({
   value,

@@ -24,6 +24,7 @@ export interface UserFilters {
 export interface CoachingSetupFilters {
   q?: string;
   status?: CoachingSetupStatusFilter;
+  state?: string;
   limit?: number;
   offset?: number;
 }

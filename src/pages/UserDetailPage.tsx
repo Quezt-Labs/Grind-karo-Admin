@@ -23,7 +23,9 @@ import {
   StickyNote,
   BarChart3,
   ImageIcon,
+  MapPin,
 } from "lucide-react";
+import { formatAthleteLocation } from "@/lib/indianStates";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -226,6 +228,12 @@ export function UserDetailPage() {
               <Calendar className="h-3.5 w-3.5" /> Joined{" "}
               {formatDate(user.createdAt)}
             </span>
+            {intakeData && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" />
+                {formatAthleteLocation(intakeData.city, intakeData.state)}
+              </span>
+            )}
           </div>
         </div>
         {chatEnabled && (
