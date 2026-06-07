@@ -16,6 +16,7 @@ export interface FormCheckInboxItem {
   coachComment: string | null;
   coachCommentId: string | null;
   reviewed: boolean;
+  athleteNotes?: string | null;
   exerciseLogId?: string;
   programId?: string;
   workoutLogId?: string;

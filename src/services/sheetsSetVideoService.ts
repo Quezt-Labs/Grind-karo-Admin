@@ -13,6 +13,7 @@ export interface AdminSheetsSetVideo {
   coachComment?: string | null;
   coachCommentId?: string | null;
   coachCommentUpdatedAt?: string | null;
+  athleteNotes?: string | null;
 }
 
 export interface AdminSheetsExerciseNote {
