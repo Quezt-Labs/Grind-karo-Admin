@@ -10,6 +10,7 @@ import type {
   CoachingSetupStatusFilter,
   CreateAdminUserPayload,
   CreateAdminUserResponse,
+  UserInfo,
 } from "@/types/user";
 import type { AdminWorkoutLogsResponse } from "@/types/workoutLogs";
 
@@ -57,9 +58,9 @@ export const userService = {
     return data;
   },
 
-  async getUserInfo(userId: string) {
+  async getUserInfo(userId: string): Promise<UserInfo> {
     const { data } = await api.get(`/admin/users/${userId}/info`);
-    return data;
+    return data.data ?? data;
   },
 
   async getById(id: string): Promise<AdminUser> {

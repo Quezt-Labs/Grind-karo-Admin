@@ -190,6 +190,57 @@ export interface ListPlanUsersResponse {
   items: PlanUserItem[];
 }
 
+// ---- Coaching intake (user_info) ----------------------------------------
+
+export interface UserInfo {
+  id: string;
+  userId: string;
+  name: string;
+  age: number;
+  height: string;
+  currentBodyweightAndGoal: string;
+  city: string;
+  whatsappNumber: string;
+  instagramId: string;
+  resistanceTrainingExperience: string;
+  timePerSession: string;
+  competitionLevel: string;
+  squatMax: string;
+  squatStyle: string;
+  benchMax: string;
+  benchGripWidth: string;
+  deadliftMax: string;
+  deadliftStyle: string;
+  pullUpsDips: string;
+  trainingSplit: string;
+  liftTrainingStyle: string;
+  has125kgPlate: boolean;
+  trainingDislikes: string;
+  coachingGoal: string[];
+  rpeExperience: string;
+  pastPrograms: string;
+  recoveryAbility: string;
+  perceivedWeaknesses: string;
+  injuries: string;
+  hasWorkedWithCoach: boolean;
+  commitmentLevel: string;
+  trainingApproach: string;
+  smokeDrink: string;
+  hasUsedPEDs: boolean;
+  caloriesMacrosDescription: string;
+  dietQuality: string;
+  physicallyDemandingJob: boolean;
+  sleepHours: string;
+  trainingDaysPerWeek: string;
+  communicationFrequency: string;
+  idealCoach: string;
+  shortAndLongTermGoals: string;
+  anythingElse: string | null;
+  referralSources: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ---- Coaching setup queue -----------------------------------------------
 
 export type CoachingSetupStatus = "needs_intake" | "awaiting_sheet" | "ready";

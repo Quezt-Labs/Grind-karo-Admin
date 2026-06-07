@@ -49,6 +49,7 @@ import type {
 } from "@/types/user";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
+import { CoachingIntakePanel } from "@/components/users/CoachingIntakePanel";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { useIsAdmin } from "@/hooks/useRole";
 
@@ -319,6 +320,13 @@ export function UserDetailPage() {
       {/* Tab panels */}
       {resolvedMainTab === "setup" && (
         <div className="space-y-4">
+          {hasActiveCoaching && (
+            <CoachingIntakePanel
+              intake={intakeData}
+              isLoading={intakeLoading}
+              isMissing={intakeMissing}
+            />
+          )}
           <ProvisionSheetSection
             key={`${user.spreadsheetId ?? "none"}-${user.sheetContentRevision ?? 0}`}
             userId={user.id}
