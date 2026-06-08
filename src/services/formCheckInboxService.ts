@@ -31,6 +31,20 @@ export interface FormCheckInboxResponse {
   items: FormCheckInboxItem[];
 }
 
+export interface FormCheckInboxAthlete {
+  userId: string;
+  userName: string | null;
+  userEmail: string;
+  totalCount: number;
+  pendingCount: number;
+  latestVideoAt: string | null;
+}
+
+export interface FormCheckInboxAthletesByPlan {
+  mega: FormCheckInboxAthlete[];
+  ultra: FormCheckInboxAthlete[];
+}
+
 export const formCheckInboxService = {
   async list(params?: {
     uncommentedOnly?: boolean;
@@ -45,6 +59,15 @@ export const formCheckInboxService = {
 
   async pendingCount(): Promise<{ pendingCount: number }> {
     const { data } = await api.get("/admin/form-check-videos/pending-count");
+    return data.data ?? data;
+  },
+
+  async listAthletes(params?: {
+    uncommentedOnly?: boolean;
+  }): Promise<FormCheckInboxAthletesByPlan> {
+    const { data } = await api.get("/admin/form-check-videos/athletes", {
+      params,
+    });
     return data.data ?? data;
   },
 };
