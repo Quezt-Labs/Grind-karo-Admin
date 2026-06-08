@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
@@ -17,10 +17,15 @@ export function AthleteLocationEditor({ userId, intake }: Props) {
   const [city, setCity] = useState(intake.city ?? "");
   const stateMissing = !intake.state?.trim();
 
-  useEffect(() => {
+  const [prevIntake, setPrevIntake] = useState({
+    state: intake.state,
+    city: intake.city,
+  });
+  if (intake.state !== prevIntake.state || intake.city !== prevIntake.city) {
+    setPrevIntake({ state: intake.state, city: intake.city });
     setState(intake.state ?? "");
     setCity(intake.city ?? "");
-  }, [intake.state, intake.city]);
+  }
 
   const saveMutation = useMutation({
     mutationFn: () =>

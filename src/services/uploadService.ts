@@ -36,7 +36,7 @@ export const uploadService = {
     return data.data ?? data;
   },
 
-  /** Large files (videos) — presigned direct-to-S3. */
+  /** Direct-to-S3 — bypasses reverse-proxy body limits (no 413). */
   async presignUpload(
     file: File,
     onProgress?: (percent: number) => void,
@@ -91,6 +91,36 @@ export const uploadService = {
 
     // 4. cloudfrontUrl is live immediately
     return presign.cloudfrontUrl;
+  },
+
+  /** Auto-picks presign vs buffered; falls back to presign on 413. */
+  async smartUpload(
+    file: File,
+    onProgress?: (percent: number) => void,
+  ): Promise<string> {
+    const usePresign =
+      file.type.startsWith("video/") ||
+      file.type.startsWith("audio/") ||
+      file.size > 4 * 1024 * 1024;
+
+    if (usePresign) {
+      return this.presignUpload(file, onProgress);
+    }
+
+    try {
+      const result = await this.upload(file);
+      return result.url;
+    } catch (err: unknown) {
+      const status =
+        err &&
+        typeof err === "object" &&
+        "response" in err &&
+        (err as { response?: { status?: number } }).response?.status;
+      if (status === 413) {
+        return this.presignUpload(file, onProgress);
+      }
+      throw err;
+    }
   },
 
   async remove(key: string): Promise<void> {
