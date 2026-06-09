@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MessageSquare } from "lucide-react";
 import toast from "react-hot-toast";
+import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { Spinner } from "@/components/ui/Spinner";
 import {
@@ -14,6 +15,10 @@ import {
   type AdminSheetsSetVideo,
 } from "@/services/sheetsSetVideoService";
 import type { FormCheckQuota } from "@/types/user";
+import {
+  bulkUpsertFormCheckComments,
+  type FormCheckCommentTarget,
+} from "@/utils/bulkFormCheckComments";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-IN", {
@@ -133,6 +138,7 @@ export function UserSheetsWorkoutVideosPanel({
   userId,
   formCheckQuota,
 }: UserSheetsWorkoutVideosPanelProps) {
+  const queryClient = useQueryClient();
   const [weekFilter, setWeekFilter] = useState<number | "all">("all");
   const [reviewFilter, setReviewFilter] = useState<"all" | "unreviewed">("all");
 
@@ -183,6 +189,31 @@ export function UserSheetsWorkoutVideosPanel({
   const unreviewedCount = rawVideos.filter(
     (v) => !v.coachComment?.trim(),
   ).length;
+
+  const pendingTargets = useMemo((): FormCheckCommentTarget[] => {
+    return videos
+      .filter((v) => !v.coachComment?.trim())
+      .map((v) => ({
+        source: "sheet" as const,
+        sheetsSetVideoId: v.id,
+        label: `${v.exerciseName} · W${v.weekNumber} · Set ${v.setNumber}`,
+      }));
+  }, [videos]);
+
+  const handleBulkApply = async (comment: string) => {
+    const result = await bulkUpsertFormCheckComments(pendingTargets, comment);
+    if (result.succeeded > 0) {
+      void queryClient.invalidateQueries({ queryKey });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-user-purchases", userId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["form-check-pending-count"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
+    }
+    return result;
+  };
 
   return (
     <div>
@@ -255,52 +286,60 @@ export function UserSheetsWorkoutVideosPanel({
             : "No sheet workout videos uploaded yet."}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {videos.map((video) => (
-            <div
-              key={video.id}
-              className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
-            >
-              <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {video.exerciseName}
-                  </p>
-                  {video.coachComment?.trim() ? (
-                    <span className="shrink-0 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
-                      Reviewed
-                    </span>
-                  ) : (
-                    <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                      Pending
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {video.tabName} · W{video.weekNumber} · Day {video.dayNumber}{" "}
-                  · Set {video.setNumber} · {formatDateTime(video.createdAt)}
-                </p>
-                {video.athleteNotes?.trim() ? (
-                  <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-800/60 dark:bg-amber-900/20">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
-                      Athlete notes
+        <div className="space-y-3">
+          <BulkFormCheckCommentBar
+            pendingCount={pendingTargets.length}
+            onApply={handleBulkApply}
+          />
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {videos.map((video) => (
+              <div
+                key={video.id}
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              >
+                <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {video.exerciseName}
                     </p>
-                    <p className="mt-0.5 whitespace-pre-wrap text-xs text-amber-950 dark:text-amber-100">
-                      {video.athleteNotes.trim()}
-                    </p>
+                    {video.coachComment?.trim() ? (
+                      <span className="shrink-0 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
+                        Reviewed
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                        Pending
+                      </span>
+                    )}
                   </div>
-                ) : null}
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {video.tabName} · W{video.weekNumber} · Day{" "}
+                    {video.dayNumber} · Set {video.setNumber} ·{" "}
+                    {formatDateTime(video.createdAt)}
+                  </p>
+                  {video.athleteNotes?.trim() ? (
+                    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-800/60 dark:bg-amber-900/20">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                        Athlete notes
+                      </p>
+                      <p className="mt-0.5 whitespace-pre-wrap text-xs text-amber-950 dark:text-amber-100">
+                        {video.athleteNotes.trim()}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+                <FormCheckVideoPlayer src={video.videoUrl} />
+                <SheetVideoCommentEditor
+                  key={`${video.id}-${video.coachComment ?? ""}`}
+                  userId={userId}
+                  video={video}
+                  queryKey={[...queryKey]}
+                  quota={formCheckQuota}
+                  weekAlreadyReviewed={formCheckWeeks.has(video.weekNumber)}
+                />
               </div>
-              <FormCheckVideoPlayer src={video.videoUrl} />
-              <SheetVideoCommentEditor
-                userId={userId}
-                video={video}
-                queryKey={[...queryKey]}
-                quota={formCheckQuota}
-                weekAlreadyReviewed={formCheckWeeks.has(video.weekNumber)}
-              />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ import {
 import toast from "react-hot-toast";
 import { userService } from "@/services/userService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
+import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/utils/cn";
@@ -21,6 +22,10 @@ import type {
   AdminWorkoutLogsResponse,
   SetVideoEntryDto,
 } from "@/types/workoutLogs";
+import {
+  bulkUpsertFormCheckComments,
+  type FormCheckCommentTarget,
+} from "@/utils/bulkFormCheckComments";
 
 const PAGE_SIZE = 10;
 
@@ -40,6 +45,61 @@ function rowHasSetVideos(
   setVideos: SetVideoEntryDto[];
 } {
   return (row.setVideos?.length ?? 0) > 0;
+}
+
+function collectPendingProgramVideoTargets(
+  log: AdminWorkoutLog,
+): FormCheckCommentTarget[] {
+  return log.rows.flatMap((row) => {
+    if (!rowHasSetVideos(row)) return [];
+    return row.setVideos
+      .filter((v) => !v.coachComment?.trim())
+      .map((v) => ({
+        source: "program" as const,
+        exerciseLogId: row.id,
+        setNumber: v.setNumber,
+        label: `${row.exerciseName ?? "Exercise"} · Set ${v.setNumber}`,
+      }));
+  });
+}
+
+function ExpandedWorkoutBulkComment({
+  log,
+  userId,
+  queryKey,
+}: {
+  log: AdminWorkoutLog;
+  userId: string;
+  queryKey: unknown[];
+}) {
+  const queryClient = useQueryClient();
+  const pendingTargets = useMemo(
+    () => collectPendingProgramVideoTargets(log),
+    [log],
+  );
+
+  const handleBulkApply = async (comment: string) => {
+    const result = await bulkUpsertFormCheckComments(pendingTargets, comment);
+    if (result.succeeded > 0) {
+      void queryClient.invalidateQueries({ queryKey });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-user-purchases", userId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["form-check-pending-count"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
+    }
+    return result;
+  };
+
+  return (
+    <BulkFormCheckCommentBar
+      pendingCount={pendingTargets.length}
+      onApply={handleBulkApply}
+      className="mb-3"
+    />
+  );
 }
 
 function SetVideoCommentEditor({
@@ -129,6 +189,7 @@ function SetVideosGrid({
           </div>
           <FormCheckVideoPlayer src={v.videoUrl} compact />
           <SetVideoCommentEditor
+            key={`${exerciseLogId}-${v.setNumber}-${v.coachComment ?? ""}`}
             userId={userId}
             exerciseLogId={exerciseLogId}
             video={v}
@@ -296,6 +357,11 @@ export function UserWorkoutLogsPanel({
 
                   {expanded && (
                     <div className="space-y-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+                      <ExpandedWorkoutBulkComment
+                        log={log}
+                        userId={userId}
+                        queryKey={[...queryKey]}
+                      />
                       {log.rows.map((row) => (
                         <div
                           key={row.id}

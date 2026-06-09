@@ -12,6 +12,7 @@ import {
 import toast from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import {
   formCheckInboxService,
@@ -20,6 +21,10 @@ import {
 } from "@/services/formCheckInboxService";
 import { sheetsSetVideoCommentService } from "@/services/sheetsSetVideoService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
+import {
+  bulkUpsertFormCheckComments,
+  type FormCheckCommentTarget,
+} from "@/utils/bulkFormCheckComments";
 import { cn } from "@/utils/cn";
 
 type PlanTier = "mega" | "ultra";
@@ -172,7 +177,10 @@ function InboxVideoCard({
         ) : null}
       </div>
       <FormCheckVideoPlayer src={video.videoUrl} />
-      <InboxCommentEditor video={video} />
+      <InboxCommentEditor
+        key={`${video.id}-${video.coachComment ?? ""}`}
+        video={video}
+      />
     </div>
   );
 }
@@ -261,7 +269,29 @@ function AthleteRow({
   );
 }
 
+function inboxVideoToTarget(
+  video: FormCheckInboxItem,
+): FormCheckCommentTarget | null {
+  if (video.reviewed || video.coachComment?.trim()) return null;
+  const label = `${video.exerciseName} · Set ${video.setNumber}`;
+  if (video.source === "program") {
+    if (!video.exerciseLogId) return null;
+    return {
+      source: "program",
+      exerciseLogId: video.exerciseLogId,
+      setNumber: video.setNumber,
+      label,
+    };
+  }
+  return {
+    source: "sheet",
+    sheetsSetVideoId: video.id,
+    label,
+  };
+}
+
 export function FormCheckInboxPage() {
+  const queryClient = useQueryClient();
   const [planTier, setPlanTier] = useState<PlanTier>("mega");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("pending");
@@ -325,6 +355,27 @@ export function FormCheckInboxPage() {
   };
 
   const videos = videosData?.items ?? [];
+  const pendingTargets = useMemo(
+    () =>
+      videos
+        .map(inboxVideoToTarget)
+        .filter((target): target is FormCheckCommentTarget => target != null),
+    [videos],
+  );
+
+  const handleBulkApply = async (comment: string) => {
+    const result = await bulkUpsertFormCheckComments(pendingTargets, comment);
+    if (result.succeeded > 0) {
+      void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["form-check-inbox-athletes"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["form-check-pending-count"],
+      });
+    }
+    return result;
+  };
 
   return (
     <div>
@@ -399,14 +450,20 @@ export function FormCheckInboxPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {videos.map((video) => (
-                <InboxVideoCard
-                  key={video.id}
-                  video={video}
-                  showAthleteLink={false}
-                />
-              ))}
+            <div className="space-y-4">
+              <BulkFormCheckCommentBar
+                pendingCount={pendingTargets.length}
+                onApply={handleBulkApply}
+              />
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                {videos.map((video) => (
+                  <InboxVideoCard
+                    key={video.id}
+                    video={video}
+                    showAthleteLink={false}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
