@@ -2,9 +2,11 @@
 
 Coach comments on set videos from **User detail → Workout logs**.
 
+For applying one comment to all pending videos at once, see **[BULK_FORM_CHECK_COMMENTS.md](./BULK_FORM_CHECK_COMMENTS.md)**.
+
 ## UI
 
-Expand a logged session → each set video has a **Coach comment** textarea and **Save comment** button.
+Expand a logged session → each set video has a **Coach comment** textarea and **Save comment** button. Expanded sessions also show a **Bulk comment** bar when pending set videos exist.
 
 ## API
 

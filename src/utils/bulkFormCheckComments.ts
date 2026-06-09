@@ -1,3 +1,7 @@
+/**
+ * Bulk form-check comments — frontend-only MVP (parallel existing upsert APIs).
+ * Backend not required; see docs/BULK_FORM_CHECK_COMMENTS.md for trade-offs.
+ */
 import { isAxiosError } from "axios";
 import { sheetsSetVideoCommentService } from "@/services/sheetsSetVideoService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
