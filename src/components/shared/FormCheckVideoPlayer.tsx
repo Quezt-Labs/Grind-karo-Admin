@@ -1,4 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import {
+  MediaPlayer,
+  MediaProvider,
+  Poster,
+  TimeSlider,
+  useMediaRemote,
+  useMediaState,
+  type MediaPlayerInstance,
+} from "@vidstack/react";
 import {
   Loader2,
   Maximize2,
@@ -13,6 +28,7 @@ import {
 import { cn } from "@/utils/cn";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5] as const;
+const TIME_UPDATE_MS = 250;
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -44,230 +60,124 @@ export function FormCheckVideoPlayer(props: FormCheckVideoPlayerProps) {
   );
 }
 
-function FormCheckVideoPlayerInner({
-  src,
-  className,
-  videoClassName,
-  poster,
-  compact = false,
-  variant = "default",
-  isFromUser = false,
-  eager = false,
-}: FormCheckVideoPlayerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [activeSrc, setActiveSrc] = useState(() => (eager ? src : ""));
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
+function useThrottledCurrentTime(
+  playerRef: React.RefObject<MediaPlayerInstance | null>,
+  enabled: boolean,
+) {
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(false);
-  const [loading, setLoading] = useState(() => eager && Boolean(src));
-  const [error, setError] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const [pipSupported] = useState(
-    () =>
-      typeof document !== "undefined" &&
-      "pictureInPictureEnabled" in document &&
-      document.pictureInPictureEnabled,
-  );
-
-  const isInline = variant === "inline";
+  const scrubbing = useMediaState("seeking", playerRef);
 
   useEffect(() => {
-    if (eager) return;
+    if (!enabled || scrubbing) return;
 
-    const el = containerRef.current;
-    if (!el) return;
+    const tick = () => {
+      const time = playerRef.current?.state.currentTime ?? 0;
+      setCurrentTime(time);
+    };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          setActiveSrc(src);
-          setLoading(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "200px 0px" },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [src, eager]);
+    tick();
+    const id = window.setInterval(tick, TIME_UPDATE_MS);
+    return () => window.clearInterval(id);
+  }, [enabled, playerRef, scrubbing]);
 
-  useEffect(() => {
-    const el = videoRef.current;
-    if (el) el.playbackRate = speed;
-  }, [speed]);
+  return { currentTime, scrubbing };
+}
 
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.volume = volume;
-    el.muted = muted;
-  }, [volume, muted]);
+function PlayerControls({
+  playerRef,
+  compact,
+  isInline,
+  srcReady,
+  onActivate,
+  onToggleExpanded,
+}: {
+  playerRef: React.RefObject<MediaPlayerInstance | null>;
+  compact: boolean;
+  isInline: boolean;
+  srcReady: boolean;
+  onActivate: () => void;
+  onToggleExpanded: () => void;
+}) {
+  const remote = useMediaRemote(playerRef);
+  const paused = useMediaState("paused", playerRef);
+  const duration = useMediaState("duration", playerRef);
+  const volume = useMediaState("volume", playerRef);
+  const muted = useMediaState("muted", playerRef);
+  const waiting = useMediaState("waiting", playerRef);
+  const ended = useMediaState("ended", playerRef);
+  const error = useMediaState("error", playerRef);
+  const speed = useMediaState("playbackRate", playerRef);
+  const pipSupported =
+    typeof document !== "undefined" &&
+    "pictureInPictureEnabled" in document &&
+    document.pictureInPictureEnabled;
+
+  const { currentTime } = useThrottledCurrentTime(playerRef, srcReady);
+  const loading = srcReady && waiting && !error;
+  const controlsDisabled = !srcReady || Boolean(error);
 
   const togglePlay = useCallback(() => {
-    const el = videoRef.current;
-    if (!el || !activeSrc) return;
-    if (el.paused) {
-      void el.play();
-      setPlaying(true);
-    } else {
-      el.pause();
-      setPlaying(false);
+    if (!srcReady) {
+      onActivate();
+      return;
     }
-  }, [activeSrc]);
-
-  const seekBy = useCallback((delta: number) => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.currentTime = Math.max(
-      0,
-      Math.min(el.duration || 0, el.currentTime + delta),
-    );
-  }, []);
-
-  const handleScrub = useCallback((value: number) => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.currentTime = value;
-    setCurrentTime(value);
-  }, []);
+    if (paused || ended) {
+      if (ended) remote.seek(0);
+      remote.play();
+    } else {
+      remote.pause();
+    }
+  }, [ended, onActivate, paused, remote, srcReady]);
 
   const toggleMute = useCallback(() => {
-    setMuted((m) => !m);
-  }, []);
+    if (!srcReady) return;
+    if (muted || volume === 0) remote.unmute();
+    else remote.mute();
+  }, [muted, remote, srcReady, volume]);
 
-  const handleVolumeChange = useCallback((value: number) => {
-    setVolume(value);
-    if (value > 0) setMuted(false);
-  }, []);
-
-  const retryLoad = useCallback(() => {
-    setError(false);
-    setLoading(true);
-    const el = videoRef.current;
-    if (el) {
-      el.load();
-    }
-  }, []);
-
-  const enterPiP = useCallback(async () => {
-    const el = videoRef.current;
-    if (!el?.requestPictureInPicture) return;
-    try {
-      if (document.pictureInPictureElement) {
-        await document.exitPictureInPicture();
-      } else {
-        await el.requestPictureInPicture();
-      }
-    } catch {
-      /* user cancelled or browser blocked */
-    }
-  }, []);
-
-  const enterFullscreen = useCallback(async () => {
-    const video = videoRef.current;
-    const container = containerRef.current;
-    if (!video) return;
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-        return;
-      }
-      if (isInline) {
-        setExpanded(true);
-        return;
-      }
-      if (video.requestFullscreen) {
-        await video.requestFullscreen();
-        return;
-      }
-      const webkit = video as HTMLVideoElement & {
-        webkitEnterFullscreen?: () => void;
-      };
-      if (webkit.webkitEnterFullscreen) {
-        webkit.webkitEnterFullscreen();
-        return;
-      }
-      if (container?.requestFullscreen) {
-        await container.requestFullscreen();
-      }
-    } catch {
-      if (isInline) setExpanded(true);
-    }
-  }, [isInline]);
-
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return;
-      switch (e.key) {
-        case " ":
-        case "k":
-          e.preventDefault();
-          togglePlay();
-          break;
-        case "ArrowLeft":
-          e.preventDefault();
-          seekBy(-5);
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-          seekBy(5);
-          break;
-        case "j":
-          e.preventDefault();
-          seekBy(-10);
-          break;
-        case "l":
-          e.preventDefault();
-          seekBy(10);
-          break;
-        case "m":
-          e.preventDefault();
-          toggleMute();
-          break;
-        default:
-          break;
-      }
+  const handleVolumeChange = useCallback(
+    (value: number) => {
+      if (!srcReady) return;
+      remote.changeVolume(value);
+      if (value > 0 && muted) remote.unmute();
     },
-    [seekBy, toggleMute, togglePlay],
+    [muted, remote, srcReady],
   );
 
-  const videoElement = (
-    <div className="relative">
-      <video
-        ref={videoRef}
-        src={activeSrc || undefined}
-        poster={poster}
-        playsInline
-        preload={activeSrc ? "metadata" : "none"}
-        className={cn(
-          isInline
-            ? "block max-h-64 w-full bg-black object-contain"
-            : "aspect-video w-full bg-black object-contain",
-          videoClassName,
-        )}
-        onClick={togglePlay}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => {
-          setDuration(videoRef.current?.duration ?? 0);
-          setLoading(false);
-        }}
-        onCanPlay={() => setLoading(false)}
-        onWaiting={() => setLoading(true)}
-        onPlaying={() => setLoading(false)}
-        onEnded={() => setPlaying(false)}
-        onError={() => {
-          setError(true);
-          setLoading(false);
-        }}
-      />
+  const enterPiP = useCallback(() => {
+    if (!srcReady) return;
+    remote.togglePictureInPicture();
+  }, [remote, srcReady]);
 
-      {loading && activeSrc && !error && (
+  const enterFullscreen = useCallback(() => {
+    if (!srcReady) return;
+    if (isInline) {
+      onToggleExpanded();
+      return;
+    }
+    void remote.enterFullscreen();
+  }, [isInline, onToggleExpanded, remote, srcReady]);
+
+  const retryLoad = useCallback(() => {
+    remote.startLoading();
+  }, [remote]);
+
+  return (
+    <>
+      {!srcReady && (
+        <button
+          type="button"
+          onClick={onActivate}
+          className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 transition-colors hover:bg-black/40"
+          aria-label="Load and play video"
+        >
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
+            <Play className="h-6 w-6 translate-x-0.5 text-white" />
+          </span>
+        </button>
+      )}
+
+      {loading && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40">
           <Loader2 className="h-8 w-8 animate-spin text-white/80" />
         </div>
@@ -285,193 +195,323 @@ function FormCheckVideoPlayerInner({
           </button>
         </div>
       )}
-    </div>
-  );
 
-  const controls = (
-    <div
-      className={cn(
-        "border-t border-white/10 bg-gray-950/95 text-white",
-        compact || isInline ? "px-2 py-1.5" : "px-3 py-2",
-      )}
-    >
-      <div className="mb-1.5 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={togglePlay}
-          disabled={!activeSrc || error}
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40"
-          aria-label={playing ? "Pause" : "Play"}
-        >
-          {playing ? (
-            <Pause className="h-3.5 w-3.5" />
-          ) : (
-            <Play className="h-3.5 w-3.5 translate-x-0.5" />
-          )}
-        </button>
-
-        <input
-          type="range"
-          min={0}
-          max={duration || 0}
-          step={0.1}
-          value={currentTime}
-          onChange={(e) => handleScrub(Number(e.target.value))}
-          disabled={!activeSrc || error}
-          className="h-1 min-w-0 flex-1 cursor-pointer accent-indigo-500 disabled:opacity-40"
-          aria-label="Seek"
-        />
-
-        <span className="shrink-0 font-mono text-[10px] tabular-nums text-gray-400">
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </span>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          type="button"
-          onClick={toggleMute}
-          disabled={!activeSrc || error}
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40"
-          aria-label={muted ? "Unmute" : "Mute"}
-        >
-          {muted || volume === 0 ? (
-            <VolumeX className="h-3.5 w-3.5" />
-          ) : (
-            <Volume2 className="h-3.5 w-3.5" />
-          )}
-        </button>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={muted ? 0 : volume}
-          onChange={(e) => handleVolumeChange(Number(e.target.value))}
-          disabled={!activeSrc || error}
-          className="h-1 w-16 cursor-pointer accent-indigo-500 disabled:opacity-40"
-          aria-label="Volume"
-        />
-
-        {!isInline && (
-          <>
-            <span className="mr-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">
-              Speed
-            </span>
-            {SPEEDS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSpeed(s)}
-                className={cn(
-                  "rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors",
-                  speed === s
-                    ? "bg-indigo-600 text-white"
-                    : "bg-white/10 text-gray-300 hover:bg-white/15",
-                )}
-              >
-                {s}x
-              </button>
-            ))}
-          </>
+      <div
+        className={cn(
+          "border-t border-white/10 bg-gray-950/95 text-white",
+          compact || isInline ? "px-2 py-1.5" : "px-3 py-2",
         )}
-
-        <div className="ml-auto flex items-center gap-1">
-          {!isInline && (
-            <button
-              type="button"
-              onClick={() => {
-                const el = videoRef.current;
-                if (el) {
-                  el.currentTime = 0;
-                  el.pause();
-                  setPlaying(false);
-                }
-              }}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/10 hover:bg-white/20"
-              title="Restart"
-              aria-label="Restart"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {!isInline && pipSupported && (
-            <button
-              type="button"
-              onClick={() => void enterPiP()}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/10 hover:bg-white/20"
-              title="Picture in picture"
-              aria-label="Picture in picture"
-            >
-              <PictureInPicture2 className="h-3.5 w-3.5" />
-            </button>
-          )}
+      >
+        <div className="mb-1.5 flex items-center gap-2">
           <button
             type="button"
-            onClick={() => void enterFullscreen()}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/10 hover:bg-white/20"
-            title="Fullscreen"
-            aria-label="Fullscreen"
+            onClick={togglePlay}
+            disabled={controlsDisabled}
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40"
+            aria-label={paused || ended ? "Play" : "Pause"}
           >
-            <Maximize2 className="h-3.5 w-3.5" />
+            {paused || ended ? (
+              <Play className="h-3.5 w-3.5 translate-x-0.5" />
+            ) : (
+              <Pause className="h-3.5 w-3.5" />
+            )}
           </button>
-        </div>
-      </div>
 
-      {!compact && !isInline && (
-        <p className="mt-1.5 hidden text-[10px] text-gray-600 sm:block">
-          Space play/pause · ←/→ ±5s · J/L ±10s · M mute
-        </p>
-      )}
-    </div>
+          {srcReady && !error ? (
+            <TimeSlider.Root className="group relative flex h-4 min-w-0 flex-1 items-center">
+              <TimeSlider.Track className="relative h-1 w-full rounded-full bg-white/20">
+                <TimeSlider.TrackFill className="absolute inset-y-0 left-0 rounded-full bg-indigo-500" />
+                <TimeSlider.Progress className="absolute inset-y-0 left-0 rounded-full bg-white/30" />
+              </TimeSlider.Track>
+              <TimeSlider.Thumb className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-indigo-400 opacity-0 transition-opacity group-hover:opacity-100 data-[focus]:opacity-100" />
+            </TimeSlider.Root>
+          ) : (
+            <div className="h-1 min-w-0 flex-1 rounded-full bg-white/10" />
+          )}
+
+          <span className="shrink-0 font-mono text-[10px] tabular-nums text-gray-400">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={toggleMute}
+            disabled={controlsDisabled}
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40"
+            aria-label={muted ? "Unmute" : "Mute"}
+          >
+            {muted || volume === 0 ? (
+              <VolumeX className="h-3.5 w-3.5" />
+            ) : (
+              <Volume2 className="h-3.5 w-3.5" />
+            )}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={muted ? 0 : volume}
+            onChange={(e) => handleVolumeChange(Number(e.target.value))}
+            disabled={controlsDisabled}
+            className="h-1 w-16 cursor-pointer accent-indigo-500 disabled:opacity-40"
+            aria-label="Volume"
+          />
+
+          {!isInline && (
+            <>
+              <span className="mr-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                Speed
+              </span>
+              {SPEEDS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => srcReady && remote.changePlaybackRate(s)}
+                  className={cn(
+                    "rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors",
+                    speed === s
+                      ? "bg-indigo-600 text-white"
+                      : "bg-white/10 text-gray-300 hover:bg-white/15",
+                  )}
+                >
+                  {s}x
+                </button>
+              ))}
+            </>
+          )}
+
+          <div className="ml-auto flex items-center gap-1">
+            {!isInline && (
+              <button
+                type="button"
+                onClick={() => {
+                  remote.seek(0);
+                  remote.pause();
+                }}
+                disabled={controlsDisabled}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40"
+                title="Restart"
+                aria-label="Restart"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {!isInline && pipSupported && (
+              <button
+                type="button"
+                onClick={() => void enterPiP()}
+                disabled={controlsDisabled}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40"
+                title="Picture in picture"
+                aria-label="Picture in picture"
+              >
+                <PictureInPicture2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={enterFullscreen}
+              disabled={controlsDisabled && !isInline}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40"
+              title="Fullscreen"
+              aria-label="Fullscreen"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {!compact && !isInline && (
+          <p className="mt-1.5 hidden text-[10px] text-gray-600 sm:block">
+            Space play/pause · ←/→ ±5s · J/L ±10s · M mute
+          </p>
+        )}
+      </div>
+    </>
+  );
+}
+
+function FormCheckVideoPlayerInner({
+  src,
+  className,
+  videoClassName,
+  poster,
+  compact = false,
+  variant = "default",
+  isFromUser = false,
+  eager = false,
+}: FormCheckVideoPlayerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<MediaPlayerInstance>(null);
+  const pendingPlayRef = useRef(false);
+  const remote = useMediaRemote(playerRef);
+
+  const [srcReady, setSrcReady] = useState(eager);
+  const [expanded, setExpanded] = useState(false);
+
+  const isInline = variant === "inline";
+  const activeSrc = srcReady ? src : undefined;
+
+  const activate = useCallback(() => {
+    pendingPlayRef.current = true;
+    setSrcReady(true);
+  }, []);
+
+  const paused = useMediaState("paused", playerRef);
+  const canPlay = useMediaState("canPlay", playerRef);
+
+  useEffect(() => {
+    if (!pendingPlayRef.current || !canPlay) return;
+    pendingPlayRef.current = false;
+    remote.play();
+  }, [canPlay, remote]);
+
+  useEffect(() => {
+    if (eager) return;
+
+    const el = containerRef.current;
+    if (!el || !srcReady) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting && !paused) {
+          remote.pause();
+        }
+      },
+      { threshold: 0.15 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [eager, paused, remote, srcReady]);
+
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+      switch (e.key) {
+        case " ":
+        case "k":
+          e.preventDefault();
+          if (!srcReady) activate();
+          else if (paused) remote.play();
+          else remote.pause();
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          remote.seek(
+            Math.max(0, (playerRef.current?.state.currentTime ?? 0) - 5),
+          );
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          remote.seek((playerRef.current?.state.currentTime ?? 0) + 5);
+          break;
+        case "j":
+          e.preventDefault();
+          remote.seek(
+            Math.max(0, (playerRef.current?.state.currentTime ?? 0) - 10),
+          );
+          break;
+        case "l":
+          e.preventDefault();
+          remote.seek((playerRef.current?.state.currentTime ?? 0) + 10);
+          break;
+        case "m":
+          e.preventDefault();
+          if (playerRef.current?.state.muted) remote.unmute();
+          else remote.mute();
+          break;
+        default:
+          break;
+      }
+    },
+    [activate, paused, remote, srcReady],
+  );
+
+  const shellClassName = cn(
+    expanded && isInline
+      ? "fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+      : "outline-none ring-indigo-500 focus-visible:ring-2",
+    !expanded &&
+      (isInline
+        ? cn(
+            "relative w-full max-w-xs rounded-none",
+            isFromUser ? "bg-black/5 dark:bg-black/20" : "bg-black/30",
+          )
+        : "rounded-none bg-black"),
+    className,
   );
 
   return (
-    <>
-      <div
-        ref={containerRef}
-        tabIndex={0}
-        onKeyDown={onKeyDown}
-        className={cn(
-          "overflow-hidden outline-none ring-indigo-500 focus-visible:ring-2",
-          isInline
-            ? cn(
-                "relative w-full max-w-xs rounded-none",
-                isFromUser ? "bg-black/5 dark:bg-black/20" : "bg-black/30",
-              )
-            : "rounded-none bg-black",
-          className,
-        )}
-      >
-        {videoElement}
-        {controls}
-      </div>
-
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      className={shellClassName}
+      onClick={expanded && isInline ? () => setExpanded(false) : undefined}
+    >
       {expanded && isInline && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+        <button
+          type="button"
           onClick={() => setExpanded(false)}
+          className="absolute right-4 top-4 z-[60] rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+          aria-label="Close"
         >
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <div
-            className="max-h-[90vh] max-w-[95vw] overflow-hidden rounded-lg bg-black"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <FormCheckVideoPlayer
-              src={src}
-              eager
-              className="max-h-[85vh] max-w-[95vw]"
-            />
-          </div>
-        </div>
+          <X className="h-5 w-5" />
+        </button>
       )}
-    </>
+
+      <div
+        className={cn(
+          "overflow-hidden",
+          expanded && isInline
+            ? "max-h-[85vh] max-w-[95vw] rounded-lg bg-black"
+            : "w-full",
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <MediaPlayer
+          ref={playerRef}
+          src={activeSrc}
+          playsInline
+          preload="none"
+          load={eager ? "visible" : "play"}
+          className={cn(
+            "group relative w-full",
+            isInline && !expanded && "max-w-xs",
+          )}
+        >
+          <MediaProvider
+            mediaProps={{
+              className: cn(
+                isInline
+                  ? "block max-h-64 w-full bg-black object-contain"
+                  : "aspect-video w-full bg-black object-contain",
+                expanded && isInline && "max-h-[70vh]",
+                videoClassName,
+              ),
+            }}
+          />
+          {poster ? (
+            <Poster
+              src={poster}
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+          ) : null}
+
+          <PlayerControls
+            playerRef={playerRef}
+            compact={compact}
+            isInline={isInline}
+            srcReady={srcReady}
+            onActivate={activate}
+            onToggleExpanded={() => setExpanded((v) => !v)}
+          />
+        </MediaPlayer>
+      </div>
+    </div>
   );
 }
