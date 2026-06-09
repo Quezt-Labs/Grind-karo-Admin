@@ -15,12 +15,12 @@ import {
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
 import { planService } from "@/services/planService";
 import { formatINR } from "@/pages/users/usersConstants";
+import { CoachingBillingFields } from "@/components/users/CoachingBillingFields";
 import {
-  CoachingBillingFields,
   coachingBillingPayload,
   initialCoachingBillingState,
   type FeeCoversMonths,
-} from "@/components/users/CoachingBillingFields";
+} from "@/utils/coachingBilling";
 import type { Purchase } from "@/types/user";
 import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
 

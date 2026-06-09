@@ -15,12 +15,12 @@ import { userService } from "@/services/userService";
 import { planService } from "@/services/planService";
 import { programService } from "@/services/programService";
 import { assistantCoachService } from "@/services/athleteAssignmentService";
+import { CoachingBillingFields } from "@/components/users/CoachingBillingFields";
 import {
-  CoachingBillingFields,
   coachingBillingPayload,
   initialCoachingBillingState,
   type FeeCoversMonths,
-} from "@/components/users/CoachingBillingFields";
+} from "@/utils/coachingBilling";
 import type { CreateAdminUserPayload } from "@/types/user";
 
 type Props = {

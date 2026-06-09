@@ -354,7 +354,7 @@ export function FormCheckInboxPage() {
     if (next === "pending") setSelectedUserId(null);
   };
 
-  const videos = videosData?.items ?? [];
+  const videos = useMemo(() => videosData?.items ?? [], [videosData?.items]);
   const pendingTargets = useMemo(
     () =>
       videos
