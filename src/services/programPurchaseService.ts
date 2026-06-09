@@ -35,4 +35,17 @@ export const programPurchaseService = {
     );
     return data.data ?? data;
   },
+
+  async recordManualGrant(body: {
+    userId: string;
+    programId: string;
+    amount?: number;
+    reason: string;
+  }): Promise<ProgramPurchase> {
+    const { data } = await api.post(
+      "/admin/program-purchases/manual-grant",
+      body,
+    );
+    return data.data ?? data;
+  },
 };

@@ -62,6 +62,9 @@ export const coachingSubscriptionService = {
     planId: string;
     totalAmount?: number;
     reason: string;
+    feeCoversMonths?: 1 | 3;
+    startDate?: string;
+    expiresAt?: string;
   }) {
     const { data } = await api.post(
       "/admin/coaching/subscriptions/manual-payment",

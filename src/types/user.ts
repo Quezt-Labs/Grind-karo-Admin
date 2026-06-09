@@ -20,6 +20,14 @@ export type CreateAdminUserRole = "USER" | "ASSISTANT_COACH";
 export interface CreateAdminUserCoachingPayload {
   planId: string;
   totalAmount?: number;
+  feeCoversMonths?: 1 | 3;
+  startDate?: string;
+  expiresAt?: string;
+}
+
+export interface CreateAdminUserProgramPayload {
+  programId: string;
+  amount?: number;
 }
 
 export interface CreateAdminUserAssignmentPayload {
@@ -34,6 +42,7 @@ export interface CreateAdminUserPayload {
   role: CreateAdminUserRole;
   password?: string;
   coaching?: CreateAdminUserCoachingPayload;
+  program?: CreateAdminUserProgramPayload;
   assignment?: CreateAdminUserAssignmentPayload;
 }
 
@@ -50,6 +59,12 @@ export interface CreateAdminUserResponse {
     planId: string;
     planName: string;
     totalAmount: number;
+  } | null;
+  program: {
+    purchaseId: string;
+    programId: string;
+    programName: string;
+    amount: number;
   } | null;
   assignment: AthleteAssignment | null;
 }

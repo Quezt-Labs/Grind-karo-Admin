@@ -54,6 +54,7 @@ import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSe
 import { CoachingIntakePanel } from "@/components/users/CoachingIntakePanel";
 import { CoachingPaymentCalendar } from "@/components/users/CoachingPaymentCalendar";
 import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
+import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { useIsAdmin } from "@/hooks/useRole";
 
@@ -340,6 +341,15 @@ export function UserDetailPage() {
           )}
           <CoachingPaymentCalendar purchases={purchases} userId={user.id} />
           <CoachingFeeAdjustmentsPanel
+            userId={user.id}
+            purchases={purchases}
+            onUpdated={() =>
+              void queryClient.invalidateQueries({
+                queryKey: ["admin-user-purchases", user.id],
+              })
+            }
+          />
+          <ProgramGrantPanel
             userId={user.id}
             purchases={purchases}
             onUpdated={() =>

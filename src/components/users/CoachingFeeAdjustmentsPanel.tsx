@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HandCoins, Loader2, PauseCircle, PlusCircle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -15,6 +15,12 @@ import {
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
 import { planService } from "@/services/planService";
 import { formatINR } from "@/pages/users/usersConstants";
+import {
+  CoachingBillingFields,
+  coachingBillingPayload,
+  initialCoachingBillingState,
+  type FeeCoversMonths,
+} from "@/components/users/CoachingBillingFields";
 import type { Purchase } from "@/types/user";
 import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
 
@@ -47,6 +53,7 @@ export function CoachingFeeAdjustmentsPanel({
   const [reason, setReason] = useState("");
   const [manualPlanId, setManualPlanId] = useState("");
   const [manualAmount, setManualAmount] = useState("");
+  const [billing, setBilling] = useState(() => initialCoachingBillingState());
 
   const paidCoachingSubs = useMemo(
     () =>
@@ -67,6 +74,11 @@ export function CoachingFeeAdjustmentsPanel({
     queryKey: ["admin-coaching-plans"],
     queryFn: () => planService.getAll(),
   });
+
+  const manualPlan = useMemo(
+    () => plans.find((p) => p.id === manualPlanId),
+    [plans, manualPlanId],
+  );
 
   const { data: adjustments = [], isLoading: adjustmentsLoading } = useQuery({
     queryKey: ["coaching-billing-adjustments", userId],
@@ -121,8 +133,7 @@ export function CoachingFeeAdjustmentsPanel({
     mutationFn: () =>
       coachingSubscriptionService.recordManualPayment({
         userId,
-        planId: manualPlanId,
-        totalAmount: manualAmount.trim() ? Number(manualAmount) : undefined,
+        ...coachingBillingPayload(manualPlanId, manualAmount, billing),
         reason: reason.trim(),
       }),
     onSuccess: () => {
@@ -156,9 +167,17 @@ export function CoachingFeeAdjustmentsPanel({
         <ManualPaymentForm
           plans={plans}
           manualPlanId={manualPlanId}
-          setManualPlanId={setManualPlanId}
+          setManualPlanId={(id) => {
+            setManualPlanId(id);
+            setManualAmount("");
+            const plan = plans.find((p) => p.id === id);
+            setBilling(initialCoachingBillingState(plan));
+          }}
           manualAmount={manualAmount}
           setManualAmount={setManualAmount}
+          billing={billing}
+          setBilling={setBilling}
+          manualPlan={manualPlan}
           reason={reason}
           onSubmit={() => manualMutation.mutate()}
           busy={manualMutation.isPending}
@@ -244,9 +263,17 @@ export function CoachingFeeAdjustmentsPanel({
         <ManualPaymentForm
           plans={plans}
           manualPlanId={manualPlanId}
-          setManualPlanId={setManualPlanId}
+          setManualPlanId={(id) => {
+            setManualPlanId(id);
+            setManualAmount("");
+            const plan = plans.find((p) => p.id === id);
+            setBilling(initialCoachingBillingState(plan));
+          }}
           manualAmount={manualAmount}
           setManualAmount={setManualAmount}
+          billing={billing}
+          setBilling={setBilling}
+          manualPlan={manualPlan}
           reason={reason}
           onSubmit={() => manualMutation.mutate()}
           busy={manualMutation.isPending}
@@ -303,6 +330,9 @@ function ManualPaymentForm({
   setManualPlanId,
   manualAmount,
   setManualAmount,
+  billing,
+  setBilling,
+  manualPlan,
   reason,
   onSubmit,
   busy,
@@ -313,6 +343,11 @@ function ManualPaymentForm({
   setManualPlanId: (value: string) => void;
   manualAmount: string;
   setManualAmount: (value: string) => void;
+  billing: ReturnType<typeof initialCoachingBillingState>;
+  setBilling: Dispatch<
+    SetStateAction<ReturnType<typeof initialCoachingBillingState>>
+  >;
+  manualPlan: (typeof plans)[number] | undefined;
   reason: string;
   onSubmit: () => void;
   busy: boolean;
@@ -347,6 +382,23 @@ function ManualPaymentForm({
           className="h-9 text-sm"
         />
       </div>
+      <CoachingBillingFields
+        plan={manualPlan}
+        feeCoversMonths={billing.feeCoversMonths}
+        startDate={billing.startDate}
+        endDate={billing.endDate}
+        endDateTouched={billing.endDateTouched}
+        onFeeCoversMonthsChange={(feeCoversMonths: FeeCoversMonths) =>
+          setBilling((b) => ({ ...b, feeCoversMonths }))
+        }
+        onStartDateChange={(startDate) =>
+          setBilling((b) => ({ ...b, startDate }))
+        }
+        onEndDateChange={(endDate) => setBilling((b) => ({ ...b, endDate }))}
+        onEndDateTouchedChange={(endDateTouched) =>
+          setBilling((b) => ({ ...b, endDateTouched }))
+        }
+      />
       <Button
         type="button"
         size="sm"
