@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, X, Video } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
+import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import toast from "react-hot-toast";
 import { uploadService } from "@/services/uploadService";
 
@@ -53,18 +54,17 @@ export function VideoUploadField({
     <div className="space-y-3">
       {videoUrl ? (
         <div className="space-y-2">
-          <div className="relative inline-block">
-            <video
+          <div className="relative max-w-md">
+            <FormCheckVideoPlayer
               src={videoUrl}
-              className="h-40 w-auto rounded-lg border object-cover dark:border-gray-700"
-              muted
-              playsInline
-              preload="metadata"
+              compact
+              eager
+              className="rounded-lg border dark:border-gray-700"
             />
             <button
               type="button"
               onClick={() => onVideoChange(null)}
-              className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white shadow-sm hover:bg-red-600"
+              className="absolute -right-2 -top-2 z-10 rounded-full bg-red-500 p-1 text-white shadow-sm hover:bg-red-600"
             >
               <X className="h-3.5 w-3.5" />
             </button>

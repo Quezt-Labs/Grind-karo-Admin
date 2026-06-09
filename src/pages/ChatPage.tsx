@@ -27,7 +27,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { ChatAudioPlayer } from "@/components/chat/ChatAudioPlayer";
 import { ChatVideoPlayer } from "@/components/chat/ChatVideoPlayer";
 import { cn } from "@/utils/cn";
-import { isVideoMediaUrl } from "@/utils/mediaUrl";
+import { isChatVideoMessage } from "@/utils/mediaUrl";
 import { Spinner } from "@/components/ui/Spinner";
 import type { ChatInboxItem, ChatMessage } from "@/types/chat";
 import type { AdminUserPushStatus } from "@/types/push";
@@ -554,8 +554,7 @@ function InboxRow({
     item.latestMessage.type === "TEXT"
       ? item.latestMessage.content
       : item.latestMessage.type === "IMAGE"
-        ? item.latestMessage.mediaUrl &&
-          isVideoMediaUrl(item.latestMessage.mediaUrl)
+        ? isChatVideoMessage(item.latestMessage)
           ? "🎬 Video"
           : "📷 Image"
         : "🎵 Audio";
@@ -689,7 +688,7 @@ function MessageBubble({
 
         {msg.type === "IMAGE" && msg.mediaUrl && (
           <>
-            {isVideoMediaUrl(msg.mediaUrl) ? (
+            {isChatVideoMessage(msg) ? (
               <ChatVideoPlayer src={msg.mediaUrl} isFromUser={isFromUser} />
             ) : (
               <button
@@ -713,7 +712,7 @@ function MessageBubble({
             </div>
 
             {/* Lightbox */}
-            {lightbox && !isVideoMediaUrl(msg.mediaUrl) && (
+            {lightbox && !isChatVideoMessage(msg) && (
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
                 onClick={() => setLightbox(false)}
