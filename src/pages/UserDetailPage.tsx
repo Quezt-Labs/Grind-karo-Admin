@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -48,6 +48,7 @@ import type {
   Purchase,
   CoachingSetupStatus,
   FormCheckQuota,
+  UserPurchasesResponse,
 } from "@/types/user";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
@@ -125,6 +126,26 @@ export function UserDetailPage() {
     sheetIdOverride !== undefined
       ? sheetIdOverride
       : (data?.user.spreadsheetId ?? null);
+
+  const handleSheetIdChange = useCallback(
+    (spreadsheetId: string | null) => {
+      setSheetIdOverride(spreadsheetId);
+      if (!id) return;
+      queryClient.setQueryData<UserPurchasesResponse>(
+        ["admin-user-purchases", id],
+        (old) => (old ? { ...old, user: { ...old.user, spreadsheetId } } : old),
+      );
+    },
+    [id, queryClient],
+  );
+
+  const invalidateUserSheetQueries = useCallback(() => {
+    if (!id) return;
+    void queryClient.invalidateQueries({
+      queryKey: ["admin-user-purchases", id],
+    });
+    void queryClient.invalidateQueries({ queryKey: ["admin-coaching-setup"] });
+  }, [id, queryClient]);
 
   const coachingSetupStatus = useMemo((): CoachingSetupStatus | null => {
     if (!hasActiveCoaching || !data) return null;
@@ -359,18 +380,13 @@ export function UserDetailPage() {
             }
           />
           <ProvisionSheetSection
-            key={`${user.spreadsheetId ?? "none"}-${user.sheetContentRevision ?? 0}`}
             userId={user.id}
             userEmail={user.email}
-            currentSpreadsheetId={user.spreadsheetId}
+            currentSpreadsheetId={effectiveSpreadsheetId}
             sheetContentRevision={user.sheetContentRevision ?? 0}
             coachingSetupStatus={coachingSetupStatus}
-            onSheetIdChange={setSheetIdOverride}
-            onInvalidateUser={() =>
-              void queryClient.invalidateQueries({
-                queryKey: ["admin-user-purchases", user.id],
-              })
-            }
+            onSheetIdChange={handleSheetIdChange}
+            onInvalidateUser={invalidateUserSheetQueries}
           />
           <CoachingEntitlementsSection
             userId={user.id}
@@ -786,12 +802,14 @@ function ProvisionSheetSection({
   onSheetIdChange,
   onInvalidateUser,
 }: ProvisionSheetSectionProps) {
-  const [linkedId, setLinkedId] = useState<string | null>(
-    currentSpreadsheetId ?? null,
-  );
+  const linkedId = currentSpreadsheetId?.trim() || null;
   const [revision, setRevision] = useState(sheetContentRevision);
   const [showGuide, setShowGuide] = useState(false);
   const [linking, setLinking] = useState(false);
+
+  useEffect(() => {
+    setRevision(sheetContentRevision);
+  }, [sheetContentRevision]);
 
   const sheetUrl = linkedId
     ? `https://docs.google.com/spreadsheets/d/${linkedId}/edit`
@@ -815,7 +833,6 @@ function ProvisionSheetSection({
     },
     onSuccess: (res) => {
       toast.success("Sheet linked!");
-      setLinkedId(res.spreadsheetId);
       onSheetIdChange?.(res.spreadsheetId);
       onInvalidateUser?.();
       setLinking(false);
@@ -828,8 +845,8 @@ function ProvisionSheetSection({
     mutationFn: () => userService.patchSpreadsheetId(userId, null),
     onSuccess: () => {
       toast.success("Sheet unlinked.");
-      setLinkedId(null);
       onSheetIdChange?.(null);
+      setLinking(false);
       onInvalidateUser?.();
     },
     onError: () => toast.error("Failed to unlink sheet."),

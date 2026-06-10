@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users,
@@ -22,21 +22,37 @@ interface Props {
 interface UserSheetRowProps {
   purchase: ProgramPurchase;
   onSaved: () => void;
+  onPatchSuccess: (updated: ProgramPurchase) => void;
 }
 
-function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
+function UserSheetRow({
+  purchase,
+  onSaved,
+  onPatchSuccess,
+}: UserSheetRowProps) {
   const user = purchase.user;
-  const currentSheetId = purchase.spreadsheetId ?? user?.spreadsheetId ?? null;
+  const purchaseSheetId = purchase.spreadsheetId?.trim() || null;
+  const legacyUserSheetId =
+    !purchaseSheetId && user?.spreadsheetId?.trim()
+      ? user.spreadsheetId.trim()
+      : null;
 
   const [editing, setEditing] = useState(false);
-  const [inputVal, setInputVal] = useState(currentSheetId ?? "");
+  const [inputVal, setInputVal] = useState(purchaseSheetId ?? "");
+
+  useEffect(() => {
+    if (!editing) {
+      setInputVal(purchaseSheetId ?? "");
+    }
+  }, [purchaseSheetId, editing]);
 
   const mutation = useMutation({
     mutationFn: (sheetId: string | null) =>
       programPurchaseService.patchSpreadsheetId(purchase.id, sheetId),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       toast.success(`Sheet updated for ${user?.name ?? user?.email ?? "user"}`);
       setEditing(false);
+      onPatchSuccess(updated);
       onSaved();
     },
     onError: () => {
@@ -46,7 +62,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
 
   if (!user) return null;
 
-  const hasSheet = !!currentSheetId;
+  const hasSheet = !!purchaseSheetId;
 
   function handleSave() {
     const trimmed = inputVal.trim();
@@ -108,7 +124,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
             <button
               onClick={() => {
                 setEditing(false);
-                setInputVal(currentSheetId ?? "");
+                setInputVal(purchaseSheetId ?? "");
               }}
               className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
             >
@@ -124,7 +140,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
                   Sheet linked
                 </span>
                 <a
-                  href={`https://docs.google.com/spreadsheets/d/${currentSheetId}/edit`}
+                  href={`https://docs.google.com/spreadsheets/d/${purchaseSheetId}/edit`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded p-1 text-gray-400 hover:text-green-600"
@@ -134,7 +150,7 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
                 </a>
                 <button
                   onClick={() => {
-                    setInputVal(currentSheetId ?? "");
+                    setInputVal(purchaseSheetId ?? "");
                     setEditing(true);
                   }}
                   className="rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -157,6 +173,14 @@ function UserSheetRow({ purchase, onSaved }: UserSheetRowProps) {
                   <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
                   No sheet
                 </span>
+                {legacyUserSheetId && (
+                  <span
+                    className="text-xs text-amber-600 dark:text-amber-400"
+                    title={`Legacy user-level sheet: ${legacyUserSheetId}`}
+                  >
+                    User sheet linked
+                  </span>
+                )}
                 <button
                   onClick={() => {
                     setInputVal("");
@@ -201,6 +225,21 @@ export function ProgramPurchasersPanel({ programId }: Props) {
     queryClient.invalidateQueries({ queryKey });
   }
 
+  function patchPurchaseInCache(updated: ProgramPurchase) {
+    queryClient.setQueryData<ProgramPurchase[]>(queryKey, (old) =>
+      old?.map((p) =>
+        p.id === updated.id
+          ? {
+              ...p,
+              ...updated,
+              user: p.user ? { ...p.user, ...updated.user } : updated.user,
+              program: p.program ?? updated.program,
+            }
+          : p,
+      ),
+    );
+  }
+
   return (
     <div className="space-y-3">
       {/* Section header */}
@@ -242,7 +281,12 @@ export function ProgramPurchasersPanel({ programId }: Props) {
       {!isLoading && paidCount > 0 && (
         <div className="space-y-2">
           {purchases.map((p) => (
-            <UserSheetRow key={p.id} purchase={p} onSaved={refetch} />
+            <UserSheetRow
+              key={p.id}
+              purchase={p}
+              onSaved={refetch}
+              onPatchSuccess={patchPurchaseInCache}
+            />
           ))}
         </div>
       )}
