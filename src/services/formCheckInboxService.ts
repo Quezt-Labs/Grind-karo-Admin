@@ -56,7 +56,10 @@ export const formCheckInboxService = {
     limit?: number;
     offset?: number;
   }): Promise<FormCheckInboxResponse> {
-    const { data } = await api.get("/admin/form-check-videos", { params });
+    const { data } = await api.get("/admin/form-check-videos", {
+      params,
+      timeout: 60_000,
+    });
     return data.data ?? data;
   },
 

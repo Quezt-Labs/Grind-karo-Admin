@@ -62,6 +62,7 @@ export const sheetsSetVideoService = {
       weekNumber != null ? { weekNumber: String(weekNumber) } : undefined;
     const { data } = await api.get(`/sheets/admin/users/${userId}/set-videos`, {
       params,
+      timeout: 60_000,
     });
     return data.data ?? data;
   },
@@ -74,7 +75,10 @@ export const sheetsSetVideoService = {
   async getUserProgram(
     userId: string,
   ): Promise<Record<string, AdminSheetTabData>> {
-    const { data } = await api.get(`/sheets/admin/users/${userId}/program`);
+    // Google Sheets reads can exceed the default 15s axios timeout.
+    const { data } = await api.get(`/sheets/admin/users/${userId}/program`, {
+      timeout: 120_000,
+    });
     return data.data ?? data;
   },
 };
