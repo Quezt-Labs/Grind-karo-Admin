@@ -1,4 +1,5 @@
 import api from "./api";
+import type { SheetExerciseContext } from "@/components/shared/FormCheckSheetContext";
 
 export interface AdminSheetsSetVideo {
   id: string;
@@ -14,6 +15,25 @@ export interface AdminSheetsSetVideo {
   coachCommentId?: string | null;
   coachCommentUpdatedAt?: string | null;
   athleteNotes?: string | null;
+  sheetContext?: SheetExerciseContext | null;
+}
+
+export interface AdminSheetTabData {
+  exercises: Array<{
+    weekNumber: number;
+    dayNumber: number;
+    dayFocus?: string;
+    category: string;
+    exerciseName: string;
+    goalRpe: string;
+    sets: number | null;
+    repScheme: string;
+    loadKg: string;
+    sortOrder: number;
+    actualLoad?: string;
+    actualRpe?: string;
+  }>;
+  rawRows?: string[][];
 }
 
 export interface AdminSheetsExerciseNote {
@@ -48,6 +68,13 @@ export const sheetsSetVideoService = {
 
   async listSheetWeeks(userId: string): Promise<number[]> {
     const { data } = await api.get(`/sheets/admin/users/${userId}/sheet-weeks`);
+    return data.data ?? data;
+  },
+
+  async getUserProgram(
+    userId: string,
+  ): Promise<Record<string, AdminSheetTabData>> {
+    const { data } = await api.get(`/sheets/admin/users/${userId}/program`);
     return data.data ?? data;
   },
 };

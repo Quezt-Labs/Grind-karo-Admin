@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users,
@@ -38,13 +38,7 @@ function UserSheetRow({
       : null;
 
   const [editing, setEditing] = useState(false);
-  const [inputVal, setInputVal] = useState(purchaseSheetId ?? "");
-
-  useEffect(() => {
-    if (!editing) {
-      setInputVal(purchaseSheetId ?? "");
-    }
-  }, [purchaseSheetId, editing]);
+  const [inputVal, setInputVal] = useState("");
 
   const mutation = useMutation({
     mutationFn: (sheetId: string | null) =>

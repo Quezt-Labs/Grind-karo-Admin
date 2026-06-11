@@ -1,4 +1,5 @@
 import api from "./api";
+import type { SheetExerciseContext } from "@/components/shared/FormCheckSheetContext";
 
 export interface FormCheckInboxItem {
   id: string;
@@ -9,8 +10,10 @@ export interface FormCheckInboxItem {
   tabName: string | null;
   weekNumber: number | null;
   dayNumber: number | null;
+  sortOrder?: number | null;
   setNumber: number;
   exerciseName: string;
+  sheetContext?: SheetExerciseContext | null;
   videoUrl: string;
   createdAt: string;
   coachComment: string | null;

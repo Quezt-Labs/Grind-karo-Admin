@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MessageSquare } from "lucide-react";
 import toast from "react-hot-toast";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
+import { FormCheckSheetContextBadges } from "@/components/shared/FormCheckSheetContext";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { Spinner } from "@/components/ui/Spinner";
 import {
@@ -317,6 +318,7 @@ export function UserSheetsWorkoutVideosPanel({
                     {video.dayNumber} · Set {video.setNumber} ·{" "}
                     {formatDateTime(video.createdAt)}
                   </p>
+                  <FormCheckSheetContextBadges ctx={video.sheetContext} />
                   {video.athleteNotes?.trim() ? (
                     <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-800/60 dark:bg-amber-900/20">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">

@@ -40,6 +40,7 @@ import { sheetsService } from "@/services/sheetsService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
+import { UserSheetProgramPanel } from "@/components/users/UserSheetProgramPanel";
 import { UserSheetsExerciseNotesPanel } from "@/components/users/UserSheetsExerciseNotesPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
 import { UserProgressPanel } from "@/components/users/UserProgressPanel";
@@ -60,7 +61,13 @@ import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { useIsAdmin } from "@/hooks/useRole";
 
 type MainTab = "setup" | "activity" | "purchases";
-type ActivitySection = "videos" | "logs" | "notes" | "summaries" | "progress";
+type ActivitySection =
+  | "sheet"
+  | "videos"
+  | "logs"
+  | "notes"
+  | "summaries"
+  | "progress";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -95,7 +102,7 @@ export function UserDetailPage() {
   const isAdmin = useIsAdmin();
   const [mainTab, setMainTab] = useState<MainTab>("activity");
   const [activitySection, setActivitySection] =
-    useState<ActivitySection>("videos");
+    useState<ActivitySection>("sheet");
   const [sheetIdOverride, setSheetIdOverride] = useState<
     string | null | undefined
   >(undefined);
@@ -410,6 +417,11 @@ export function UserDetailPage() {
             {(
               [
                 {
+                  key: "sheet" as const,
+                  label: "Sheet program",
+                  icon: <Sheet className="h-3.5 w-3.5" />,
+                },
+                {
                   key: "videos" as const,
                   label: "Form-check videos",
                   icon: <Video className="h-3.5 w-3.5" />,
@@ -454,6 +466,9 @@ export function UserDetailPage() {
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
+            {activitySection === "sheet" && (
+              <UserSheetProgramPanel userId={user.id} />
+            )}
             {activitySection === "videos" && (
               <UserSheetsWorkoutVideosPanel
                 userId={user.id}
