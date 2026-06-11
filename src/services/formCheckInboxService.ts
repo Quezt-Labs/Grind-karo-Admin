@@ -1,5 +1,5 @@
 import api from "./api";
-import type { SheetExerciseContext } from "@/components/shared/FormCheckSheetContext";
+import type { SheetExerciseContext } from "@/components/shared/formCheckSheetContext.utils";
 
 export interface FormCheckInboxItem {
   id: string;

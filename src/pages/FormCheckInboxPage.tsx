@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
-import { FormCheckSheetContextBadges } from "@/components/shared/FormCheckSheetContext";
+import { FormCheckAthleteLoggedMetrics } from "@/components/shared/FormCheckSheetContext";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import {
   formCheckInboxService,
@@ -167,7 +167,7 @@ function InboxVideoCard({
           {formatVideoContext(video)}
         </p>
         {video.source === "sheet" ? (
-          <FormCheckSheetContextBadges ctx={video.sheetContext} />
+          <FormCheckAthleteLoggedMetrics ctx={video.sheetContext} />
         ) : null}
         {video.athleteNotes?.trim() ? (
           <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-800/60 dark:bg-amber-900/20">
