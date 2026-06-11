@@ -19,6 +19,7 @@ import { CoachingBillingFields } from "@/components/users/CoachingBillingFields"
 import {
   coachingBillingPayload,
   initialCoachingBillingState,
+  todayDateInput,
   type FeeCoversMonths,
 } from "@/utils/coachingBilling";
 import type { CreateAdminUserPayload } from "@/types/user";
@@ -52,6 +53,7 @@ export function AddUserSection({ onClose }: Props) {
   const [customPrice, setCustomPrice] = useState("");
   const [programId, setProgramId] = useState("");
   const [programAmount, setProgramAmount] = useState("");
+  const [programStartDate, setProgramStartDate] = useState(todayDateInput);
   const [billing, setBilling] = useState(() => initialCoachingBillingState());
   const [assistantCoachId, setAssistantCoachId] = useState("");
   const [personalCoaching, setPersonalCoaching] = useState(true);
@@ -107,6 +109,9 @@ export function AddUserSection({ onClose }: Props) {
             programId,
             amount: programAmount.trim()
               ? Number(programAmount.trim())
+              : undefined,
+            startDate: programStartDate
+              ? new Date(`${programStartDate}T00:00:00`).toISOString()
               : undefined,
           };
         }
@@ -301,7 +306,8 @@ export function AddUserSection({ onClose }: Props) {
               Program (optional)
             </h3>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Lifetime program access — no fee period or end date.
+              Lifetime program access. Set when week 1 should start for the
+              athlete.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
@@ -313,6 +319,7 @@ export function AddUserSection({ onClose }: Props) {
                   onValueChange={(v) => {
                     setProgramId(v === "__none__" ? "" : v);
                     setProgramAmount("");
+                    setProgramStartDate(todayDateInput());
                   }}
                 >
                   <SelectTrigger>
@@ -347,6 +354,13 @@ export function AddUserSection({ onClose }: Props) {
                     ? "Enter a valid amount greater than zero"
                     : undefined
                 }
+              />
+              <Input
+                label="Program start date"
+                type="date"
+                value={programStartDate}
+                onChange={(e) => setProgramStartDate(e.target.value)}
+                disabled={!programId}
               />
             </div>
           </div>

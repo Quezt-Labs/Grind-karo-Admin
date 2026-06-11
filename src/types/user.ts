@@ -28,6 +28,8 @@ export interface CreateAdminUserCoachingPayload {
 export interface CreateAdminUserProgramPayload {
   programId: string;
   amount?: number;
+  /** ISO date string (YYYY-MM-DD) */
+  startDate?: string;
 }
 
 export interface CreateAdminUserAssignmentPayload {

@@ -40,6 +40,7 @@ export const programPurchaseService = {
     userId: string;
     programId: string;
     amount?: number;
+    startDate: string;
     reason: string;
   }): Promise<ProgramPurchase> {
     const { data } = await api.post(

@@ -15,6 +15,7 @@ import {
 import { programService } from "@/services/programService";
 import { programPurchaseService } from "@/services/programPurchaseService";
 import { formatINR } from "@/pages/users/usersConstants";
+import { todayDateInput } from "@/utils/coachingBilling";
 import type { Purchase } from "@/types/user";
 
 type Props = {
@@ -34,6 +35,7 @@ export function ProgramGrantPanel({ userId, purchases, onUpdated }: Props) {
   const queryClient = useQueryClient();
   const [programId, setProgramId] = useState("");
   const [amount, setAmount] = useState("");
+  const [startDate, setStartDate] = useState(todayDateInput);
   const [reason, setReason] = useState("");
 
   const ownedProgramIds = useMemo(
@@ -67,12 +69,14 @@ export function ProgramGrantPanel({ userId, purchases, onUpdated }: Props) {
         userId,
         programId,
         amount: amount.trim() ? Number(amount.trim()) : undefined,
+        startDate: new Date(`${startDate}T00:00:00`).toISOString(),
         reason: reason.trim(),
       }),
     onSuccess: () => {
       toast.success("Program access granted");
       setProgramId("");
       setAmount("");
+      setStartDate(todayDateInput());
       setReason("");
       void queryClient.invalidateQueries({
         queryKey: ["admin-user-purchases", userId],
@@ -88,10 +92,16 @@ export function ProgramGrantPanel({ userId, purchases, onUpdated }: Props) {
     amount.trim().length > 0 &&
     (!Number.isFinite(Number(amount)) || Number(amount) <= 0);
 
+  const startDateInvalid =
+    programId.length > 0 &&
+    (!startDate || Number.isNaN(new Date(`${startDate}T12:00:00`).getTime()));
+
   const canSubmit =
     programId.length > 0 &&
+    startDate.length > 0 &&
     reason.trim().length >= 3 &&
     !amountInvalid &&
+    !startDateInvalid &&
     !grantMutation.isPending;
 
   return (
@@ -103,8 +113,8 @@ export function ProgramGrantPanel({ userId, purchases, onUpdated }: Props) {
         </h2>
       </div>
       <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        Give lifetime program access for offline payments or legacy athletes. No
-        fee period or end date.
+        Give lifetime program access for offline payments or legacy athletes.
+        Set the start date for when their program week 1 should begin.
       </p>
 
       {availablePrograms.length === 0 ? (
@@ -149,6 +159,14 @@ export function ProgramGrantPanel({ userId, purchases, onUpdated }: Props) {
                   ? "Enter a valid amount greater than zero"
                   : undefined
               }
+            />
+            <Input
+              label="Program start date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              disabled={!programId}
+              error={startDateInvalid ? "Enter a valid start date" : undefined}
             />
           </div>
           <Textarea
