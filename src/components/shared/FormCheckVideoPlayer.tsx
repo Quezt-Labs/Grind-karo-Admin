@@ -16,6 +16,7 @@ import {
 } from "@vidstack/react";
 import {
   Loader2,
+  Download,
   Maximize2,
   Pause,
   PictureInPicture2,
@@ -26,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { downloadFormCheckVideo } from "@/utils/downloadFormCheckVideo";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5] as const;
 const TIME_UPDATE_MS = 250;
@@ -49,6 +51,8 @@ interface FormCheckVideoPlayerProps {
   isFromUser?: boolean;
   /** Load immediately (upload preview). */
   eager?: boolean;
+  /** Suggested filename for download button. */
+  downloadFileName?: string;
 }
 
 export function FormCheckVideoPlayer(props: FormCheckVideoPlayerProps) {
@@ -88,6 +92,8 @@ function PlayerControls({
   compact,
   isInline,
   srcMounted,
+  src,
+  downloadFileName,
   onRequestPlay,
   onToggleExpanded,
 }: {
@@ -95,6 +101,8 @@ function PlayerControls({
   compact: boolean;
   isInline: boolean;
   srcMounted: boolean;
+  src: string;
+  downloadFileName?: string;
   onRequestPlay: () => void;
   onToggleExpanded: () => void;
 }) {
@@ -159,6 +167,17 @@ function PlayerControls({
     remote.startLoading();
     onRequestPlay();
   }, [onRequestPlay, remote]);
+
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = useCallback(async () => {
+    setDownloading(true);
+    try {
+      await downloadFormCheckVideo(src, downloadFileName);
+    } finally {
+      setDownloading(false);
+    }
+  }, [downloadFileName, src]);
 
   return (
     <div
@@ -249,6 +268,22 @@ function PlayerControls({
         )}
 
         <div className="ml-auto flex items-center gap-1">
+          {!isInline && (
+            <button
+              type="button"
+              onClick={() => void handleDownload()}
+              disabled={downloading}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40"
+              title="Download video"
+              aria-label="Download video"
+            >
+              {downloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+            </button>
+          )}
           {!isInline && (
             <button
               type="button"
@@ -401,6 +436,7 @@ function FormCheckVideoPlayerInner({
   variant = "default",
   isFromUser = false,
   eager = false,
+  downloadFileName,
 }: FormCheckVideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<MediaPlayerInstance>(null);
@@ -580,6 +616,8 @@ function FormCheckVideoPlayerInner({
             compact={compact}
             isInline={isInline}
             srcMounted={srcMounted}
+            src={src}
+            downloadFileName={downloadFileName}
             onRequestPlay={requestPlay}
             onToggleExpanded={() => setExpanded((v) => !v)}
           />
