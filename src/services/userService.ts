@@ -10,6 +10,7 @@ import type {
   CoachingSetupStatusFilter,
   CreateAdminUserPayload,
   CreateAdminUserResponse,
+  BulkCreateUsersResponse,
   UserInfo,
 } from "@/types/user";
 import type { AdminWorkoutLogsResponse } from "@/types/workoutLogs";
@@ -137,6 +138,13 @@ export const userService = {
     payload: CreateAdminUserPayload,
   ): Promise<CreateAdminUserResponse> {
     const { data } = await api.post("/admin/users", payload);
+    return data.data ?? data;
+  },
+
+  async createBulk(
+    users: CreateAdminUserPayload[],
+  ): Promise<BulkCreateUsersResponse> {
+    const { data } = await api.post("/admin/users/bulk", { users });
     return data.data ?? data;
   },
 

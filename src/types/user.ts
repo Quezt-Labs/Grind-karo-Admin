@@ -71,6 +71,22 @@ export interface CreateAdminUserResponse {
   assignment: AthleteAssignment | null;
 }
 
+export interface BulkCreateUserRowResult {
+  index: number;
+  email: string;
+  success: boolean;
+  error?: string;
+  userId?: string;
+  created?: boolean;
+}
+
+export interface BulkCreateUsersResponse {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: BulkCreateUserRowResult[];
+}
+
 export interface Purchaser extends AdminUser {
   coachingSubscriptionsCount: number;
   programPurchasesCount: number;

@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, ShoppingCart, ClipboardList, Plus } from "lucide-react";
+import { Users, ShoppingCart, ClipboardList, Plus, Upload } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { AddUserSection } from "@/components/users/AddUserSection";
+import { BulkAddUsersSection } from "@/components/users/BulkAddUsersSection";
 import { userService } from "@/services/userService";
 import { cn } from "@/utils/cn";
 import {
@@ -24,6 +25,7 @@ export function UsersPage() {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [showAddUser, setShowAddUser] = useState(false);
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [roleFilter, setRoleFilter] = useState<
     "" | "USER" | "ADMIN" | "ASSISTANT_COACH"
   >("");
@@ -131,13 +133,33 @@ export function UsersPage() {
         title="Users"
         description="All signed-up users and active customers"
       >
-        <Button onClick={() => setShowAddUser((v) => !v)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add user
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => {
+              setShowBulkAdd(false);
+              setShowAddUser((v) => !v);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add user
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowAddUser(false);
+              setShowBulkAdd((v) => !v);
+            }}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Bulk add
+          </Button>
+        </div>
       </PageHeader>
 
       {showAddUser && <AddUserSection onClose={() => setShowAddUser(false)} />}
+      {showBulkAdd && (
+        <BulkAddUsersSection onClose={() => setShowBulkAdd(false)} />
+      )}
 
       {/* Tabs + filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

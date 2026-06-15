@@ -299,6 +299,12 @@ export function AddUserSection({ onClose }: Props) {
                 setBilling((b) => ({ ...b, endDateTouched }))
               }
             />
+            {!planId && (
+              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                Coaching plan select karo — Start date &amp; End date fields
+                yahan dikhenge.
+              </p>
+            )}
           </div>
 
           <div>
