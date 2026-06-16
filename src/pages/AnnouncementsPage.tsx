@@ -20,12 +20,15 @@ import { Spinner } from "@/components/ui/Spinner";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { MediaUploadField } from "@/components/shared/MediaUploadField";
+import { Select } from "@/components/ui/Select";
 import { athleteEngagementService } from "@/services/athleteEngagementService";
+import { programService } from "@/services/programService";
 import type { Column } from "@/types/dashboard";
 import type {
   Announcement,
   AnnouncementKind,
   AnnouncementAudience,
+  CoachingAnnouncementTier,
 } from "@/types/athleteEngagement";
 
 type Row = {
@@ -38,7 +41,7 @@ type Row = {
   isActive: string;
 };
 
-const AUDIENCE_OPTIONS: Array<{
+const AUDIENCE_TYPE_OPTIONS: Array<{
   value: AnnouncementAudience;
   label: string;
   description: string;
@@ -46,13 +49,22 @@ const AUDIENCE_OPTIONS: Array<{
   {
     value: "coaching",
     label: "Coaching",
-    description: "MEGA / ULTRA / MINI coaching hub & video library",
+    description: "Target MINI, MEGA, or ULTRA members",
   },
   {
     value: "program",
     label: "Program",
-    description: "Program buyers on the My Programs tab",
+    description: "Target buyers of a specific program",
   },
+];
+
+const COACHING_TIER_OPTIONS: Array<{
+  value: CoachingAnnouncementTier;
+  label: string;
+}> = [
+  { value: "mini", label: "MINI" },
+  { value: "mega", label: "MEGA" },
+  { value: "ultra", label: "ULTRA" },
 ];
 
 const KIND_OPTIONS: Array<{
@@ -65,11 +77,14 @@ const KIND_OPTIONS: Array<{
   { value: "video", label: "Video", icon: Video },
 ];
 
-function audienceLabel(audience: AnnouncementAudience): string {
-  return (
-    AUDIENCE_OPTIONS.find((option) => option.value === audience)?.label ??
-    audience
-  );
+function audienceLabel(item: Announcement): string {
+  if (item.audience === "program") {
+    return `Program · ${item.audienceKey}`;
+  }
+  const tier =
+    COACHING_TIER_OPTIONS.find((option) => option.value === item.audienceKey)
+      ?.label ?? item.audienceKey.toUpperCase();
+  return `Coaching · ${tier}`;
 }
 
 function kindLabel(kind: AnnouncementKind): string {
@@ -92,7 +107,9 @@ function canSave(
   text: string,
   mediaUrl: string,
   youtubeUrl: string,
+  audienceKey: string,
 ): boolean {
+  if (!audienceKey.trim()) return false;
   if (kind === "text") return text.trim().length > 0;
   if (kind === "audio") {
     return title.trim().length > 0 && mediaUrl.trim().length > 0;
@@ -121,6 +138,7 @@ export function AnnouncementsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [kind, setKind] = useState<AnnouncementKind>("text");
   const [audience, setAudience] = useState<AnnouncementAudience>("coaching");
+  const [audienceKey, setAudienceKey] = useState("mega");
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [author, setAuthor] = useState("");
@@ -133,6 +151,20 @@ export function AnnouncementsPage() {
     queryKey: ["admin-announcements"],
     queryFn: () => athleteEngagementService.listAnnouncements(),
   });
+
+  const { data: programs = [] } = useQuery({
+    queryKey: ["admin-programs"],
+    queryFn: () => programService.getAll(),
+  });
+
+  const programOptions = useMemo(
+    () =>
+      programs.map((program) => ({
+        value: program.slug,
+        label: program.name,
+      })),
+    [programs],
+  );
 
   const announcementMap = useMemo(() => {
     const map = new Map<string, Announcement>();
@@ -150,6 +182,7 @@ export function AnnouncementsPage() {
       const payload = {
         kind,
         audience,
+        audienceKey: audienceKey.trim(),
         title: title.trim() || undefined,
         text: text.trim() || undefined,
         author: author.trim() || undefined,
@@ -185,6 +218,7 @@ export function AnnouncementsPage() {
     setEditing(null);
     setKind("text");
     setAudience("coaching");
+    setAudienceKey("mega");
     setTitle("");
     setText("");
     setAuthor("");
@@ -199,6 +233,7 @@ export function AnnouncementsPage() {
     setEditing(item);
     setKind(item.kind);
     setAudience(item.audience ?? "coaching");
+    setAudienceKey(item.audienceKey ?? "mega");
     setTitle(item.title ?? "");
     setText(item.text ?? "");
     setAuthor(item.author ?? "");
@@ -224,7 +259,7 @@ export function AnnouncementsPage() {
   const rows: Row[] = (data ?? []).map((item) => ({
     id: item.id,
     kind: kindLabel(item.kind),
-    audience: audienceLabel(item.audience ?? "coaching"),
+    audience: audienceLabel(item),
     title: item.title ?? (item.kind === "text" ? "Text" : "—"),
     preview: previewText(item),
     sortOrder: String(item.sortOrder),
@@ -341,13 +376,20 @@ export function AnnouncementsPage() {
                   Audience
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {AUDIENCE_OPTIONS.map((option) => {
+                  {AUDIENCE_TYPE_OPTIONS.map((option) => {
                     const selected = audience === option.value;
                     return (
                       <button
                         key={option.value}
                         type="button"
-                        onClick={() => setAudience(option.value)}
+                        onClick={() => {
+                          setAudience(option.value);
+                          if (option.value === "coaching") {
+                            setAudienceKey("mega");
+                          } else {
+                            setAudienceKey(programOptions[0]?.value ?? "");
+                          }
+                        }}
                         className={`rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
                           selected
                             ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
@@ -363,6 +405,41 @@ export function AnnouncementsPage() {
                   })}
                 </div>
               </div>
+
+              {audience === "coaching" ? (
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Coaching tier
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {COACHING_TIER_OPTIONS.map((option) => {
+                      const selected = audienceKey === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setAudienceKey(option.value)}
+                          className={`rounded-lg border px-3 py-2 text-center text-xs font-semibold transition-colors ${
+                            selected
+                              ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
+                              : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/40"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <Select
+                  label="Program"
+                  value={audienceKey}
+                  onChange={(e) => setAudienceKey(e.target.value)}
+                  options={programOptions}
+                  placeholder="Select program"
+                />
+              )}
 
               {kind !== "text" && (
                 <Input
@@ -463,8 +540,14 @@ export function AnnouncementsPage() {
               <Button
                 onClick={() => saveMutation.mutate()}
                 disabled={
-                  !canSave(kind, title, text, mediaUrl, youtubeUrl) ||
-                  saveMutation.isPending
+                  !canSave(
+                    kind,
+                    title,
+                    text,
+                    mediaUrl,
+                    youtubeUrl,
+                    audienceKey,
+                  ) || saveMutation.isPending
                 }
               >
                 Save
