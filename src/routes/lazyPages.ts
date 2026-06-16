@@ -122,3 +122,15 @@ export const NotFoundPage = lazyPage(
   () => import("@/pages/NotFoundPage"),
   "NotFoundPage",
 );
+export const BigLiftPrPage = lazyPage(
+  () => import("@/pages/BigLiftPrPage"),
+  "BigLiftPrPage",
+);
+export const MotivationQuotesPage = lazyPage(
+  () => import("@/pages/MotivationQuotesPage"),
+  "MotivationQuotesPage",
+);
+export const VideoLibraryPage = lazyPage(
+  () => import("@/pages/VideoLibraryPage"),
+  "VideoLibraryPage",
+);

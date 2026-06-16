@@ -37,6 +37,9 @@ import {
   TestingPage,
   UserDetailPage,
   UsersPage,
+  BigLiftPrPage,
+  MotivationQuotesPage,
+  VideoLibraryPage,
 } from "@/routes/lazyPages";
 
 function HomeRedirect() {
@@ -110,6 +113,12 @@ export default function App() {
                   <Route path="/contact" element={<ContactSubmissionsPage />} />
                   <Route path="/coupons" element={<CouponsPage />} />
                   <Route path="/coupons/:id" element={<CouponDetailPage />} />
+                  <Route path="/big-lift-pr" element={<BigLiftPrPage />} />
+                  <Route
+                    path="/motivation-quotes"
+                    element={<MotivationQuotesPage />}
+                  />
+                  <Route path="/video-library" element={<VideoLibraryPage />} />
                 </Route>
               </Route>
             </Route>

@@ -24,6 +24,7 @@ import {
   BarChart3,
   ImageIcon,
   MapPin,
+  Dumbbell,
 } from "lucide-react";
 import { formatAthleteLocation } from "@/lib/indianStates";
 import { useForm } from "react-hook-form";
@@ -44,6 +45,7 @@ import { UserSheetProgramPanel } from "@/components/users/UserSheetProgramPanel"
 import { UserSheetsExerciseNotesPanel } from "@/components/users/UserSheetsExerciseNotesPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
 import { UserProgressPanel } from "@/components/users/UserProgressPanel";
+import { UserBigLiftPrPanel } from "@/components/users/UserBigLiftPrPanel";
 import { cn } from "@/utils/cn";
 import type {
   Purchase,
@@ -67,7 +69,8 @@ type ActivitySection =
   | "logs"
   | "notes"
   | "summaries"
-  | "progress";
+  | "progress"
+  | "bigLiftPr";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -446,6 +449,11 @@ export function UserDetailPage() {
                   label: "Progress photos",
                   icon: <ImageIcon className="h-3.5 w-3.5" />,
                 },
+                {
+                  key: "bigLiftPr" as const,
+                  label: "Big 3 PRs",
+                  icon: <Dumbbell className="h-3.5 w-3.5" />,
+                },
               ] as const
             ).map((s) => (
               <button
@@ -486,6 +494,9 @@ export function UserDetailPage() {
             )}
             {activitySection === "progress" && (
               <UserProgressPanel userId={user.id} />
+            )}
+            {activitySection === "bigLiftPr" && (
+              <UserBigLiftPrPanel userId={user.id} />
             )}
           </div>
         </div>

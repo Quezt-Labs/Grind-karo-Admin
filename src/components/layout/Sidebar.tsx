@@ -22,6 +22,8 @@ import {
   ChevronDown,
   UserCog,
   MapPin,
+  Quote,
+  PlayCircle,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -86,6 +88,9 @@ const NAV_SECTIONS: NavSection[] = [
       { path: "/addons", label: "Coaching Add-ons", icon: Puzzle },
       { path: "/subscriptions", label: "Subscriptions", icon: Award },
       { path: "/reviews", label: "Coaching Reviews", icon: MessageSquare },
+      { path: "/big-lift-pr", label: "Big 3 PRs", icon: Dumbbell },
+      { path: "/motivation-quotes", label: "Motivation Quotes", icon: Quote },
+      { path: "/video-library", label: "Video Library", icon: PlayCircle },
     ],
   },
   {
