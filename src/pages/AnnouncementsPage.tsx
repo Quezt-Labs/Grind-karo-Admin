@@ -19,6 +19,7 @@ import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { MediaUploadField } from "@/components/shared/MediaUploadField";
 import { athleteEngagementService } from "@/services/athleteEngagementService";
 import type { Column } from "@/types/dashboard";
 import type { Announcement, AnnouncementKind } from "@/types/athleteEngagement";
@@ -61,11 +62,27 @@ function canSave(
   title: string,
   text: string,
   mediaUrl: string,
+  youtubeUrl: string,
 ): boolean {
   if (kind === "text") return text.trim().length > 0;
-  if (kind === "audio")
+  if (kind === "audio") {
     return title.trim().length > 0 && mediaUrl.trim().length > 0;
-  return title.trim().length > 0 && mediaUrl.trim().length > 0;
+  }
+  return (
+    title.trim().length > 0 &&
+    (mediaUrl.trim().length > 0 || youtubeUrl.trim().length > 0)
+  );
+}
+
+function resolveVideoMediaUrl(
+  uploadedUrl: string,
+  youtubeUrl: string,
+): string | undefined {
+  const uploaded = uploadedUrl.trim();
+  const youtube = youtubeUrl.trim();
+  if (uploaded) return uploaded;
+  if (youtube) return youtube;
+  return undefined;
 }
 
 export function AnnouncementsPage() {
@@ -78,6 +95,7 @@ export function AnnouncementsPage() {
   const [text, setText] = useState("");
   const [author, setAuthor] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [sortOrder, setSortOrder] = useState("0");
   const [isActive, setIsActive] = useState(true);
 
@@ -94,12 +112,17 @@ export function AnnouncementsPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const resolvedMediaUrl =
+        kind === "video"
+          ? resolveVideoMediaUrl(mediaUrl, youtubeUrl)
+          : mediaUrl.trim() || undefined;
+
       const payload = {
         kind,
         title: title.trim() || undefined,
         text: text.trim() || undefined,
         author: author.trim() || undefined,
-        mediaUrl: mediaUrl.trim() || undefined,
+        mediaUrl: resolvedMediaUrl,
         sortOrder: parseInt(sortOrder, 10) || 0,
         isActive,
       };
@@ -134,6 +157,7 @@ export function AnnouncementsPage() {
     setText("");
     setAuthor("");
     setMediaUrl("");
+    setYoutubeUrl("");
     setSortOrder("0");
     setIsActive(true);
     setModalOpen(true);
@@ -145,7 +169,15 @@ export function AnnouncementsPage() {
     setTitle(item.title ?? "");
     setText(item.text ?? "");
     setAuthor(item.author ?? "");
-    setMediaUrl(item.mediaUrl ?? "");
+    const url = item.mediaUrl ?? "";
+    const isYoutube = Boolean(item.youtubeVideoId);
+    if (item.kind === "video" && isYoutube) {
+      setMediaUrl("");
+      setYoutubeUrl(url);
+    } else {
+      setMediaUrl(url);
+      setYoutubeUrl("");
+    }
     setSortOrder(String(item.sortOrder));
     setIsActive(item.isActive);
     setModalOpen(true);
@@ -248,7 +280,13 @@ export function AnnouncementsPage() {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setKind(option.value)}
+                    onClick={() => {
+                      setKind(option.value);
+                      if (option.value === "text") {
+                        setMediaUrl("");
+                        setYoutubeUrl("");
+                      }
+                    }}
                     className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-3 text-xs font-medium transition-colors ${
                       selected
                         ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
@@ -293,11 +331,13 @@ export function AnnouncementsPage() {
 
               {kind === "audio" && (
                 <>
-                  <Input
-                    label="Audio URL"
-                    value={mediaUrl}
-                    onChange={(e) => setMediaUrl(e.target.value)}
-                    placeholder="https://…/coach-note.mp3"
+                  <MediaUploadField
+                    label="Audio file"
+                    accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm"
+                    mediaType="audio"
+                    currentUrl={mediaUrl || null}
+                    onUrlChange={(url) => setMediaUrl(url ?? "")}
+                    hint="MP3, M4A, WAV — uploaded to GrindKaro storage."
                   />
                   <Textarea
                     label="Caption (optional)"
@@ -310,12 +350,24 @@ export function AnnouncementsPage() {
 
               {kind === "video" && (
                 <>
+                  <MediaUploadField
+                    label="Video file"
+                    accept="video/*,.mp4,.webm,.mov"
+                    mediaType="video"
+                    currentUrl={mediaUrl || null}
+                    onUrlChange={(url) => setMediaUrl(url ?? "")}
+                    hint="MP4 or WebM — uploaded to GrindKaro storage."
+                  />
                   <Input
-                    label="YouTube URL"
-                    value={mediaUrl}
-                    onChange={(e) => setMediaUrl(e.target.value)}
+                    label="YouTube URL (optional)"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
                     placeholder="https://www.youtube.com/watch?v=…"
                   />
+                  <p className="-mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Use an uploaded file or a YouTube link — uploaded file takes
+                    priority if both are set.
+                  </p>
                   <Textarea
                     label="Caption (optional)"
                     rows={2}
@@ -348,7 +400,7 @@ export function AnnouncementsPage() {
               <Button
                 onClick={() => saveMutation.mutate()}
                 disabled={
-                  !canSave(kind, title, text, mediaUrl) ||
+                  !canSave(kind, title, text, mediaUrl, youtubeUrl) ||
                   saveMutation.isPending
                 }
               >
