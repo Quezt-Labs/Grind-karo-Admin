@@ -22,16 +22,38 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { MediaUploadField } from "@/components/shared/MediaUploadField";
 import { athleteEngagementService } from "@/services/athleteEngagementService";
 import type { Column } from "@/types/dashboard";
-import type { Announcement, AnnouncementKind } from "@/types/athleteEngagement";
+import type {
+  Announcement,
+  AnnouncementKind,
+  AnnouncementAudience,
+} from "@/types/athleteEngagement";
 
 type Row = {
   id: string;
   kind: string;
+  audience: string;
   title: string;
   preview: string;
   sortOrder: string;
   isActive: string;
 };
+
+const AUDIENCE_OPTIONS: Array<{
+  value: AnnouncementAudience;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "coaching",
+    label: "Coaching",
+    description: "MEGA / ULTRA / MINI coaching hub & video library",
+  },
+  {
+    value: "program",
+    label: "Program",
+    description: "Program buyers on the My Programs tab",
+  },
+];
 
 const KIND_OPTIONS: Array<{
   value: AnnouncementKind;
@@ -42,6 +64,13 @@ const KIND_OPTIONS: Array<{
   { value: "audio", label: "Audio", icon: Headphones },
   { value: "video", label: "Video", icon: Video },
 ];
+
+function audienceLabel(audience: AnnouncementAudience): string {
+  return (
+    AUDIENCE_OPTIONS.find((option) => option.value === audience)?.label ??
+    audience
+  );
+}
 
 function kindLabel(kind: AnnouncementKind): string {
   return KIND_OPTIONS.find((option) => option.value === kind)?.label ?? kind;
@@ -91,6 +120,7 @@ export function AnnouncementsPage() {
   const [editing, setEditing] = useState<Announcement | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [kind, setKind] = useState<AnnouncementKind>("text");
+  const [audience, setAudience] = useState<AnnouncementAudience>("coaching");
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [author, setAuthor] = useState("");
@@ -119,6 +149,7 @@ export function AnnouncementsPage() {
 
       const payload = {
         kind,
+        audience,
         title: title.trim() || undefined,
         text: text.trim() || undefined,
         author: author.trim() || undefined,
@@ -153,6 +184,7 @@ export function AnnouncementsPage() {
   function openCreate() {
     setEditing(null);
     setKind("text");
+    setAudience("coaching");
     setTitle("");
     setText("");
     setAuthor("");
@@ -166,6 +198,7 @@ export function AnnouncementsPage() {
   function openEdit(item: Announcement) {
     setEditing(item);
     setKind(item.kind);
+    setAudience(item.audience ?? "coaching");
     setTitle(item.title ?? "");
     setText(item.text ?? "");
     setAuthor(item.author ?? "");
@@ -191,6 +224,7 @@ export function AnnouncementsPage() {
   const rows: Row[] = (data ?? []).map((item) => ({
     id: item.id,
     kind: kindLabel(item.kind),
+    audience: audienceLabel(item.audience ?? "coaching"),
     title: item.title ?? (item.kind === "text" ? "Text" : "—"),
     preview: previewText(item),
     sortOrder: String(item.sortOrder),
@@ -199,6 +233,7 @@ export function AnnouncementsPage() {
 
   const columns: Column<Row>[] = [
     { key: "kind", header: "Type", sortable: true },
+    { key: "audience", header: "Audience", sortable: true },
     { key: "title", header: "Title", sortable: true },
     { key: "preview", header: "Preview", sortable: false },
     { key: "sortOrder", header: "Order", sortable: true },
@@ -301,6 +336,34 @@ export function AnnouncementsPage() {
             </div>
 
             <div className="mt-4 space-y-3">
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Audience
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {AUDIENCE_OPTIONS.map((option) => {
+                    const selected = audience === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setAudience(option.value)}
+                        className={`rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+                          selected
+                            ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
+                            : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/40"
+                        }`}
+                      >
+                        <span className="font-semibold">{option.label}</span>
+                        <span className="mt-0.5 block text-[11px] opacity-80">
+                          {option.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {kind !== "text" && (
                 <Input
                   label="Title"

@@ -1,8 +1,10 @@
 export type AnnouncementKind = "text" | "audio" | "video";
+export type AnnouncementAudience = "program" | "coaching";
 
 export interface Announcement {
   id: string;
   kind: AnnouncementKind;
+  audience: AnnouncementAudience;
   title: string | null;
   text: string | null;
   author: string | null;
@@ -42,6 +44,7 @@ export interface BigLiftPrCheckin {
 
 export interface CreateAnnouncementInput {
   kind: AnnouncementKind;
+  audience?: AnnouncementAudience;
   title?: string;
   text?: string;
   author?: string;
@@ -52,6 +55,7 @@ export interface CreateAnnouncementInput {
 
 export interface UpdateAnnouncementInput {
   kind?: AnnouncementKind;
+  audience?: AnnouncementAudience;
   title?: string;
   text?: string;
   author?: string;
