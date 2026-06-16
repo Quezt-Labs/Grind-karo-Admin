@@ -38,7 +38,7 @@ import {
   UserDetailPage,
   UsersPage,
   BigLiftPrPage,
-  MotivationQuotesPage,
+  AnnouncementsPage,
   VideoLibraryPage,
 } from "@/routes/lazyPages";
 
@@ -115,8 +115,8 @@ export default function App() {
                   <Route path="/coupons/:id" element={<CouponDetailPage />} />
                   <Route path="/big-lift-pr" element={<BigLiftPrPage />} />
                   <Route
-                    path="/motivation-quotes"
-                    element={<MotivationQuotesPage />}
+                    path="/announcements"
+                    element={<AnnouncementsPage />}
                   />
                   <Route path="/video-library" element={<VideoLibraryPage />} />
                 </Route>

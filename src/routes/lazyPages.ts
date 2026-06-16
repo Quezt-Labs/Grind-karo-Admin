@@ -126,9 +126,9 @@ export const BigLiftPrPage = lazyPage(
   () => import("@/pages/BigLiftPrPage"),
   "BigLiftPrPage",
 );
-export const MotivationQuotesPage = lazyPage(
-  () => import("@/pages/MotivationQuotesPage"),
-  "MotivationQuotesPage",
+export const AnnouncementsPage = lazyPage(
+  () => import("@/pages/AnnouncementsPage"),
+  "AnnouncementsPage",
 );
 export const VideoLibraryPage = lazyPage(
   () => import("@/pages/VideoLibraryPage"),

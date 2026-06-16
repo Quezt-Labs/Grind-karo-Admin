@@ -1,12 +1,18 @@
-export interface BigLiftPrCheckin {
+export type AnnouncementKind = "text" | "audio" | "video";
+
+export interface Announcement {
   id: string;
-  userId: string;
-  squatKg: number;
-  benchKg: number;
-  deadliftKg: number;
-  totalKg: number;
-  notes: string | null;
+  kind: AnnouncementKind;
+  title: string | null;
+  text: string | null;
+  author: string | null;
+  mediaUrl: string | null;
+  isActive: boolean;
+  sortOrder: number;
   createdAt: string;
+  updatedAt: string;
+  youtubeVideoId: string | null;
+  thumbnailUrl: string | null;
 }
 
 export interface AdminBigLiftPrUserSummary {
@@ -17,14 +23,41 @@ export interface AdminBigLiftPrUserSummary {
   lastCheckin: BigLiftPrCheckin | null;
 }
 
-export interface MotivationQuote {
+export interface BigLiftPrCheckin {
   id: string;
-  text: string;
-  author: string | null;
-  isActive: boolean;
-  sortOrder: number;
+  userId: string;
+  squatKg: number;
+  squatLoadKg: number | null;
+  squatReps: number | null;
+  benchKg: number;
+  benchLoadKg: number | null;
+  benchReps: number | null;
+  deadliftKg: number;
+  deadliftLoadKg: number | null;
+  deadliftReps: number | null;
+  totalKg: number;
+  notes: string | null;
   createdAt: string;
-  updatedAt: string;
+}
+
+export interface CreateAnnouncementInput {
+  kind: AnnouncementKind;
+  title?: string;
+  text?: string;
+  author?: string;
+  mediaUrl?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateAnnouncementInput {
+  kind?: AnnouncementKind;
+  title?: string;
+  text?: string;
+  author?: string;
+  mediaUrl?: string;
+  isActive?: boolean;
+  sortOrder?: number;
 }
 
 export interface VideoLibraryItem {
@@ -39,20 +72,6 @@ export interface VideoLibraryItem {
   updatedAt: string;
   youtubeVideoId: string;
   thumbnailUrl: string;
-}
-
-export interface CreateMotivationQuoteInput {
-  text: string;
-  author?: string;
-  isActive?: boolean;
-  sortOrder?: number;
-}
-
-export interface UpdateMotivationQuoteInput {
-  text?: string;
-  author?: string;
-  isActive?: boolean;
-  sortOrder?: number;
 }
 
 export interface CreateVideoLibraryItemInput {

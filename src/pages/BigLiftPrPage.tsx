@@ -27,6 +27,39 @@ function formatKg(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
+function formatLiftCell(checkin: {
+  squatKg: number;
+  squatLoadKg: number | null;
+  squatReps: number | null;
+}): string {
+  if (checkin.squatLoadKg != null && checkin.squatReps != null) {
+    return `${formatKg(checkin.squatLoadKg)}×${checkin.squatReps} → ${formatKg(checkin.squatKg)}`;
+  }
+  return `${formatKg(checkin.squatKg)} kg`;
+}
+
+function formatBenchCell(checkin: {
+  benchKg: number;
+  benchLoadKg: number | null;
+  benchReps: number | null;
+}): string {
+  if (checkin.benchLoadKg != null && checkin.benchReps != null) {
+    return `${formatKg(checkin.benchLoadKg)}×${checkin.benchReps} → ${formatKg(checkin.benchKg)}`;
+  }
+  return `${formatKg(checkin.benchKg)} kg`;
+}
+
+function formatDeadliftCell(checkin: {
+  deadliftKg: number;
+  deadliftLoadKg: number | null;
+  deadliftReps: number | null;
+}): string {
+  if (checkin.deadliftLoadKg != null && checkin.deadliftReps != null) {
+    return `${formatKg(checkin.deadliftLoadKg)}×${checkin.deadliftReps} → ${formatKg(checkin.deadliftKg)}`;
+  }
+  return `${formatKg(checkin.deadliftKg)} kg`;
+}
+
 export function BigLiftPrPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-big-lift-pr"],
@@ -40,15 +73,9 @@ export function BigLiftPrPage() {
       userName: item.userName,
       userEmail: item.userEmail ?? "—",
       status: item.isDue ? "Due" : "Up to date",
-      squat: item.lastCheckin
-        ? `${formatKg(item.lastCheckin.squatKg)} kg`
-        : "—",
-      bench: item.lastCheckin
-        ? `${formatKg(item.lastCheckin.benchKg)} kg`
-        : "—",
-      deadlift: item.lastCheckin
-        ? `${formatKg(item.lastCheckin.deadliftKg)} kg`
-        : "—",
+      squat: item.lastCheckin ? formatLiftCell(item.lastCheckin) : "—",
+      bench: item.lastCheckin ? formatBenchCell(item.lastCheckin) : "—",
+      deadlift: item.lastCheckin ? formatDeadliftCell(item.lastCheckin) : "—",
       total: item.lastCheckin
         ? `${formatKg(item.lastCheckin.totalKg)} kg`
         : "—",

@@ -1,11 +1,11 @@
 import api from "./api";
 import type {
   AdminBigLiftPrUserSummary,
+  Announcement,
   BigLiftPrCheckin,
-  CreateMotivationQuoteInput,
+  CreateAnnouncementInput,
   CreateVideoLibraryItemInput,
-  MotivationQuote,
-  UpdateMotivationQuoteInput,
+  UpdateAnnouncementInput,
   UpdateVideoLibraryItemInput,
   VideoLibraryItem,
 } from "@/types/athleteEngagement";
@@ -26,28 +26,28 @@ export const athleteEngagementService = {
     return data.data ?? data;
   },
 
-  listQuotes: async (): Promise<MotivationQuote[]> => {
-    const { data } = await api.get("/admin/motivation-quotes");
+  listAnnouncements: async (): Promise<Announcement[]> => {
+    const { data } = await api.get("/admin/announcements");
     return data.data ?? data;
   },
 
-  createQuote: async (
-    payload: CreateMotivationQuoteInput,
-  ): Promise<MotivationQuote> => {
-    const { data } = await api.post("/admin/motivation-quotes", payload);
+  createAnnouncement: async (
+    payload: CreateAnnouncementInput,
+  ): Promise<Announcement> => {
+    const { data } = await api.post("/admin/announcements", payload);
     return data.data ?? data;
   },
 
-  updateQuote: async (
+  updateAnnouncement: async (
     id: string,
-    payload: UpdateMotivationQuoteInput,
-  ): Promise<MotivationQuote> => {
-    const { data } = await api.patch(`/admin/motivation-quotes/${id}`, payload);
+    payload: UpdateAnnouncementInput,
+  ): Promise<Announcement> => {
+    const { data } = await api.patch(`/admin/announcements/${id}`, payload);
     return data.data ?? data;
   },
 
-  deleteQuote: async (id: string): Promise<void> => {
-    await api.delete(`/admin/motivation-quotes/${id}`);
+  deleteAnnouncement: async (id: string): Promise<void> => {
+    await api.delete(`/admin/announcements/${id}`);
   },
 
   listVideos: async (): Promise<VideoLibraryItem[]> => {

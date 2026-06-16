@@ -22,7 +22,7 @@ import {
   ChevronDown,
   UserCog,
   MapPin,
-  Quote,
+  Megaphone,
   PlayCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -89,7 +89,7 @@ const NAV_SECTIONS: NavSection[] = [
       { path: "/subscriptions", label: "Subscriptions", icon: Award },
       { path: "/reviews", label: "Coaching Reviews", icon: MessageSquare },
       { path: "/big-lift-pr", label: "Big 3 PRs", icon: Dumbbell },
-      { path: "/motivation-quotes", label: "Motivation Quotes", icon: Quote },
+      { path: "/announcements", label: "Announcements", icon: Megaphone },
       { path: "/video-library", label: "Video Library", icon: PlayCircle },
     ],
   },

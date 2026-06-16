@@ -16,6 +16,39 @@ function formatKg(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
+function formatLiftDisplay(checkin: {
+  squatKg: number;
+  squatLoadKg: number | null;
+  squatReps: number | null;
+}): string {
+  if (checkin.squatLoadKg != null && checkin.squatReps != null) {
+    return `${formatKg(checkin.squatLoadKg)}×${checkin.squatReps} → ${formatKg(checkin.squatKg)} kg`;
+  }
+  return `${formatKg(checkin.squatKg)} kg`;
+}
+
+function formatBenchDisplay(checkin: {
+  benchKg: number;
+  benchLoadKg: number | null;
+  benchReps: number | null;
+}): string {
+  if (checkin.benchLoadKg != null && checkin.benchReps != null) {
+    return `${formatKg(checkin.benchLoadKg)}×${checkin.benchReps} → ${formatKg(checkin.benchKg)} kg`;
+  }
+  return `${formatKg(checkin.benchKg)} kg`;
+}
+
+function formatDeadliftDisplay(checkin: {
+  deadliftKg: number;
+  deadliftLoadKg: number | null;
+  deadliftReps: number | null;
+}): string {
+  if (checkin.deadliftLoadKg != null && checkin.deadliftReps != null) {
+    return `${formatKg(checkin.deadliftLoadKg)}×${checkin.deadliftReps} → ${formatKg(checkin.deadliftKg)} kg`;
+  }
+  return `${formatKg(checkin.deadliftKg)} kg`;
+}
+
 interface UserBigLiftPrPanelProps {
   userId: string;
 }
@@ -66,13 +99,13 @@ export function UserBigLiftPrPanel({ userId }: UserBigLiftPrPanelProps) {
                 <div>
                   <p className="text-[10px] uppercase text-gray-500">Squat</p>
                   <p className="text-lg font-bold tabular-nums">
-                    {formatKg(latest.squatKg)} kg
+                    {formatLiftDisplay(latest)}
                   </p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase text-gray-500">Bench</p>
                   <p className="text-lg font-bold tabular-nums">
-                    {formatKg(latest.benchKg)} kg
+                    {formatBenchDisplay(latest)}
                   </p>
                 </div>
                 <div>
@@ -80,7 +113,7 @@ export function UserBigLiftPrPanel({ userId }: UserBigLiftPrPanelProps) {
                     Deadlift
                   </p>
                   <p className="text-lg font-bold tabular-nums">
-                    {formatKg(latest.deadliftKg)} kg
+                    {formatDeadliftDisplay(latest)}
                   </p>
                 </div>
               </div>
@@ -109,8 +142,8 @@ export function UserBigLiftPrPanel({ userId }: UserBigLiftPrPanelProps) {
                     {formatDate(entry.createdAt)}
                   </span>
                   <span className="tabular-nums text-gray-900 dark:text-white">
-                    S {formatKg(entry.squatKg)} · B {formatKg(entry.benchKg)} ·
-                    D {formatKg(entry.deadliftKg)} kg
+                    S {formatLiftDisplay(entry)} · B {formatBenchDisplay(entry)}{" "}
+                    · D {formatDeadliftDisplay(entry)}
                   </span>
                 </div>
               ))}
