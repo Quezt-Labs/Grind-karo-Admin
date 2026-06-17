@@ -1,9 +1,15 @@
 import { useRef, useState } from "react";
 import { Upload, X, Headphones, Video } from "lucide-react";
-import { isAxiosError } from "axios";
 import toast from "react-hot-toast";
 import { Spinner } from "@/components/ui/Spinner";
 import { uploadService } from "@/services/uploadService";
+import {
+  formatUploadError,
+  isAudioFile,
+  isVideoFile,
+  logUploadFailure,
+  resolvePresignContentType,
+} from "@/utils/uploadErrors";
 
 type MediaUploadFieldProps = {
   label: string;
@@ -13,18 +19,6 @@ type MediaUploadFieldProps = {
   onUrlChange: (url: string | null) => void;
   hint?: string;
 };
-
-function uploadErrorMessage(error: unknown): string {
-  if (isAxiosError(error)) {
-    if (error.response?.status === 413) {
-      return "File too large — try a smaller file or contact support.";
-    }
-    const msg = error.response?.data?.message;
-    if (typeof msg === "string") return msg;
-  }
-  if (error instanceof Error && error.message) return error.message;
-  return "Upload failed";
-}
 
 function fileNameFromUrl(url: string): string {
   try {
@@ -46,6 +40,7 @@ export function MediaUploadField({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const Icon = mediaType === "audio" ? Headphones : Video;
 
@@ -53,25 +48,58 @@ export function MediaUploadField({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const isAudio = file.type.startsWith("audio/");
-    const isVideo = file.type.startsWith("video/");
-    if (mediaType === "audio" && !isAudio) {
-      toast.error("Please choose an audio file (MP3, M4A, WAV, etc.)");
+    setLastError(null);
+
+    const valid = mediaType === "audio" ? isAudioFile(file) : isVideoFile(file);
+    if (!valid) {
+      const msg =
+        mediaType === "audio"
+          ? "Please choose an audio file (MP3, M4A, WAV, etc.)"
+          : "Please choose a video file (MP4, MOV, WebM, etc.)";
+      setLastError(msg);
+      toast.error(msg);
       return;
     }
-    if (mediaType === "video" && !isVideo) {
-      toast.error("Please choose a video file (MP4, WebM, etc.)");
+
+    const contentType = resolvePresignContentType(file);
+    if (!contentType) {
+      const msg = `Could not detect type for "${file.name}". Use .mp4, .mov, or .webm extension.`;
+      logUploadFailure(
+        {
+          step: "validate",
+          fileName: file.name,
+          fileSize: file.size,
+          contentType: file.type || "(empty)",
+          mediaType,
+        },
+        new Error(msg),
+      );
+      setLastError(msg);
+      toast.error(msg);
       return;
     }
 
     setIsUploading(true);
     setProgress(0);
     try {
-      const url = await uploadService.smartUpload(file, setProgress);
+      const url = await uploadService.smartUpload(file, setProgress, mediaType);
       onUrlChange(url);
+      setLastError(null);
       toast.success(`${mediaType === "audio" ? "Audio" : "Video"} uploaded`);
     } catch (error) {
-      toast.error(uploadErrorMessage(error));
+      const message = formatUploadError(error);
+      logUploadFailure(
+        {
+          step: "presign",
+          fileName: file.name,
+          fileSize: file.size,
+          contentType,
+          mediaType,
+        },
+        error,
+      );
+      setLastError(message);
+      toast.error(message);
     } finally {
       setIsUploading(false);
       setProgress(0);
@@ -122,6 +150,23 @@ export function MediaUploadField({
             </>
           )}
         </button>
+      )}
+
+      {lastError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
+        >
+          <p className="font-semibold">Upload failed</p>
+          <p className="mt-1 leading-relaxed">{lastError}</p>
+          <p className="mt-1 text-red-600/80 dark:text-red-300/80">
+            Open browser DevTools → Console and search{" "}
+            <code className="rounded bg-red-100 px-1 dark:bg-red-900/40">
+              [admin-upload]
+            </code>{" "}
+            for full details.
+          </p>
+        </div>
       )}
 
       <input

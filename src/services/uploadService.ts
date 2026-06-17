@@ -1,19 +1,14 @@
 import api from "./api";
+import {
+  formatUploadError,
+  logUploadFailure,
+  resolvePresignContentType,
+  type UploadLogContext,
+} from "@/utils/uploadErrors";
 
 export interface UploadResponse {
   url: string;
   key: string;
-}
-
-/** Strip codec params (e.g. `audio/webm;codecs=opus` → `audio/webm`). */
-function normalizePresignContentType(file: File): string {
-  const raw = file.type?.trim();
-  if (raw) {
-    return raw.split(";")[0]!.trim().toLowerCase();
-  }
-  const ext = file.name.split(".").pop()?.toLowerCase();
-  if (ext === "webm") return "audio/webm";
-  return raw ?? "";
 }
 
 export interface PresignResponse {
@@ -25,35 +20,79 @@ export interface PresignResponse {
   maxSizeBytes: number;
 }
 
+function parseS3ErrorBody(responseText: string): string | null {
+  const code = responseText.match(/<Code>([^<]+)<\/Code>/)?.[1];
+  const message = responseText.match(/<Message>([^<]+)<\/Message>/)?.[1];
+  if (code && message) return `${code}: ${message}`;
+  if (message) return message;
+  if (code) return code;
+  const trimmed = responseText.trim();
+  return trimmed.length > 0 && trimmed.length < 200 ? trimmed : null;
+}
+
+function assertPresignContentType(file: File): string {
+  const contentType = resolvePresignContentType(file);
+  if (!contentType) {
+    throw new Error(
+      `Could not detect file type for "${file.name}". Rename with a known extension (e.g. .mp4, .mov, .webm) and try again.`,
+    );
+  }
+  return contentType;
+}
+
 export const uploadService = {
   /** Small files (images, CSVs, PDFs ≤ a few MB) — server-buffered. */
   async upload(file: File): Promise<UploadResponse> {
+    const contentType = resolvePresignContentType(file);
+    const logBase: UploadLogContext = {
+      step: "buffered",
+      fileName: file.name,
+      fileSize: file.size,
+      contentType,
+    };
+
     const formData = new FormData();
     formData.append("file", file);
-    const { data } = await api.post("/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return data.data ?? data;
+    try {
+      const { data } = await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data.data ?? data;
+    } catch (error) {
+      logUploadFailure(logBase, error);
+      throw error;
+    }
   },
 
   /** Direct-to-S3 — bypasses reverse-proxy body limits (no 413). */
   async presignUpload(
     file: File,
     onProgress?: (percent: number) => void,
+    mediaType?: "audio" | "video",
   ): Promise<string> {
-    // 1. Get presigned policy from API
-    const { data } = await api.post("/upload/presign", {
-      filename: file.name,
-      contentType: normalizePresignContentType(file),
-      sizeBytes: file.size,
-    });
-    const presign: PresignResponse = data.data ?? data;
+    const contentType = assertPresignContentType(file);
+    const logBase: UploadLogContext = {
+      step: "presign",
+      fileName: file.name,
+      fileSize: file.size,
+      contentType,
+      mediaType,
+    };
 
-    // 2. Build multipart form — all policy fields first, file LAST.
-    // S3 policy pins Content-Type; MediaRecorder blobs often use
-    // `audio/webm;codecs=opus` — re-wrap so the part matches the signed MIME.
-    const signedType =
-      presign.fields["Content-Type"] ?? normalizePresignContentType(file);
+    let presign: PresignResponse;
+    try {
+      const { data } = await api.post("/upload/presign", {
+        filename: file.name,
+        contentType,
+        sizeBytes: file.size,
+      });
+      presign = data.data ?? data;
+    } catch (error) {
+      logUploadFailure(logBase, error);
+      throw new Error(formatUploadError(error));
+    }
+
+    const signedType = presign.fields["Content-Type"] ?? contentType;
     const uploadFile =
       file.type !== signedType
         ? new File([file], file.name, { type: signedType })
@@ -65,31 +104,46 @@ export const uploadService = {
     }
     form.append("file", uploadFile);
 
-    // 3. Upload directly to S3 with progress tracking
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", presign.url);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", presign.url);
 
-      if (onProgress) {
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            onProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        };
-      }
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve();
-        } else {
-          reject(new Error(`S3 upload failed: ${xhr.status}`));
+        if (onProgress) {
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              onProgress(Math.round((e.loaded / e.total) * 100));
+            }
+          };
         }
-      };
-      xhr.onerror = () => reject(new Error("Network error during S3 upload"));
-      xhr.send(form);
-    });
 
-    // 4. cloudfrontUrl is live immediately
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+            return;
+          }
+          const s3Detail = parseS3ErrorBody(xhr.responseText ?? "");
+          reject(
+            new Error(
+              s3Detail
+                ? `Storage upload rejected (${xhr.status}): ${s3Detail}`
+                : `Storage upload failed with status ${xhr.status}`,
+            ),
+          );
+        };
+        xhr.onerror = () =>
+          reject(
+            new Error(
+              "Network error while uploading to storage — check connection or try a smaller file.",
+            ),
+          );
+        xhr.send(form);
+      });
+    } catch (error) {
+      logUploadFailure({ ...logBase, step: "s3" }, error);
+      throw error;
+    }
+
     return presign.cloudfrontUrl;
   },
 
@@ -97,14 +151,16 @@ export const uploadService = {
   async smartUpload(
     file: File,
     onProgress?: (percent: number) => void,
+    mediaType?: "audio" | "video",
   ): Promise<string> {
+    const contentType = resolvePresignContentType(file);
     const usePresign =
-      file.type.startsWith("video/") ||
-      file.type.startsWith("audio/") ||
+      contentType.startsWith("video/") ||
+      contentType.startsWith("audio/") ||
       file.size > 4 * 1024 * 1024;
 
     if (usePresign) {
-      return this.presignUpload(file, onProgress);
+      return this.presignUpload(file, onProgress, mediaType);
     }
 
     try {
@@ -117,7 +173,7 @@ export const uploadService = {
         "response" in err &&
         (err as { response?: { status?: number } }).response?.status;
       if (status === 413) {
-        return this.presignUpload(file, onProgress);
+        return this.presignUpload(file, onProgress, mediaType);
       }
       throw err;
     }

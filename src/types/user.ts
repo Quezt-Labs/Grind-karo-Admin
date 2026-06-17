@@ -315,7 +315,8 @@ export type NotificationType =
   | "PROGRAM_PURCHASE_PAID"
   | "BOOK_PURCHASE_PAID"
   | "CHAT_MESSAGE"
-  | "FORM_CHECK_VIDEO_UPLOAD";
+  | "FORM_CHECK_VIDEO_UPLOAD"
+  | "CLIENT_UPLOAD_FAILED";
 
 export interface AdminNotification {
   id: string;

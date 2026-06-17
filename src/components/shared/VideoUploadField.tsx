@@ -4,8 +4,14 @@ import { Spinner } from "@/components/ui/Spinner";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import toast from "react-hot-toast";
 import { uploadService } from "@/services/uploadService";
+import {
+  formatBytes,
+  formatUploadError,
+  isVideoFile,
+  logUploadFailure,
+  resolvePresignContentType,
+} from "@/utils/uploadErrors";
 
-const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/mpeg"];
 const MAX_VIDEO_SIZE = 150 * 1024 * 1024; // 150 MB
 
 interface VideoUploadFieldProps {
@@ -20,29 +26,57 @@ export function VideoUploadField({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-      toast.error("Only MP4, WebM, and MPEG videos are allowed");
+    setLastError(null);
+
+    if (!isVideoFile(file)) {
+      const msg = "Only MP4, MOV, WebM, and MPEG videos are allowed";
+      setLastError(msg);
+      toast.error(msg);
       return;
     }
 
     if (file.size > MAX_VIDEO_SIZE) {
-      toast.error("Video must be less than 150 MB");
+      const msg = `Video must be ${formatBytes(MAX_VIDEO_SIZE)} or smaller (selected: ${formatBytes(file.size)})`;
+      setLastError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    const contentType = resolvePresignContentType(file);
+    if (!contentType) {
+      const msg = `Could not detect video type for "${file.name}". Use .mp4, .mov, or .webm.`;
+      setLastError(msg);
+      toast.error(msg);
       return;
     }
 
     setIsUploading(true);
     setProgress(0);
     try {
-      const url = await uploadService.presignUpload(file, setProgress);
+      const url = await uploadService.presignUpload(file, setProgress, "video");
       onVideoChange(url);
+      setLastError(null);
       toast.success("Video uploaded");
-    } catch {
-      toast.error("Failed to upload video");
+    } catch (error) {
+      const message = formatUploadError(error);
+      logUploadFailure(
+        {
+          step: "presign",
+          fileName: file.name,
+          fileSize: file.size,
+          contentType,
+          mediaType: "video",
+        },
+        error,
+      );
+      setLastError(message);
+      toast.error(message);
     } finally {
       setIsUploading(false);
       setProgress(0);
@@ -110,17 +144,33 @@ export function VideoUploadField({
                 Click to upload video
               </span>
               <span className="text-xs text-gray-400 dark:text-gray-500">
-                MP4, WebM up to 150 MB
+                MP4, MOV, WebM up to 150 MB
               </span>
             </>
           )}
         </button>
       )}
 
+      {lastError && (
+        <div
+          role="alert"
+          className="max-w-md rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
+        >
+          <p className="font-semibold">Upload failed</p>
+          <p className="mt-1 leading-relaxed">{lastError}</p>
+          <p className="mt-1 text-red-600/80 dark:text-red-300/80">
+            DevTools Console → search{" "}
+            <code className="rounded bg-red-100 px-1 dark:bg-red-900/40">
+              [admin-upload]
+            </code>
+          </p>
+        </div>
+      )}
+
       <input
         ref={fileInputRef}
         type="file"
-        accept="video/mp4,video/webm,video/mpeg"
+        accept="video/mp4,video/webm,video/mpeg,video/quicktime,.mp4,.mov,.webm,.m4v"
         className="hidden"
         onChange={handleUpload}
       />
