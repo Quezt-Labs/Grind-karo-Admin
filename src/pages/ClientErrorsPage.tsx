@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   AlertTriangle,
   Bug,
@@ -8,6 +9,7 @@ import {
   Globe,
   Monitor,
   Smartphone,
+  Trash2,
   X,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -15,6 +17,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Shimmer } from "@/components/ui/Shimmer";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
+import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { Button } from "@/components/ui/Button";
 import { clientErrorService } from "@/services/clientErrorService";
 import type {
@@ -45,6 +48,9 @@ export function ClientErrorsPage() {
   const [selectedError, setSelectedError] = useState<ClientErrorReport | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = useState<ClientErrorReport | null>(
+    null,
+  );
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["client-errors", searchTerm, unreadOnly, sourceFilter],
@@ -62,6 +68,21 @@ export function ClientErrorsPage() {
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["client-errors"] });
       setSelectedError(updated);
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => clientErrorService.remove(id),
+    onSuccess: (_data, deletedId) => {
+      toast.success("Error report deleted");
+      queryClient.invalidateQueries({ queryKey: ["client-errors"] });
+      setDeleteTarget(null);
+      setSelectedError((current) =>
+        current?.id === deletedId ? null : current,
+      );
+    },
+    onError: () => {
+      toast.error("Could not delete error report");
     },
   });
 
@@ -222,16 +243,28 @@ export function ClientErrorsPage() {
                   <span className="text-xs text-gray-400">
                     {new Date(item.createdAt).toLocaleString()}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpen(item);
-                    }}
-                    className="rounded p-1 text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-700"
-                    title="View details"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpen(item);
+                      }}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+                      title="View details"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(item);
+                      }}
+                      className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -327,6 +360,14 @@ export function ClientErrorsPage() {
                 </Button>
               )}
               <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setDeleteTarget(selectedError)}
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                Delete
+              </Button>
+              <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setSelectedError(null)}
@@ -337,6 +378,21 @@ export function ClientErrorsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Error Report"
+        message={`Delete this error report from ${
+          deleteTarget?.userName?.trim() ||
+          deleteTarget?.userEmail ||
+          "Unknown user"
+        }? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        isLoading={deleteMut.isPending}
+        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

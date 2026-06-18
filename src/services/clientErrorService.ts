@@ -20,4 +20,8 @@ export const clientErrorService = {
     const { data } = await api.post(`/admin/client-errors/${id}/read`);
     return data.data ?? data;
   },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/admin/client-errors/${id}`);
+  },
 };
