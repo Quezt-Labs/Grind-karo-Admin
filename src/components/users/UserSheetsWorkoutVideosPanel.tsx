@@ -17,6 +17,8 @@ import {
   type AdminSheetsSetVideo,
 } from "@/services/sheetsSetVideoService";
 import type { FormCheckQuota } from "@/types/user";
+import { SheetWorkoutContextChips } from "@/components/users/SheetWorkoutContextChips";
+import { buildSheetWorkoutContextChips } from "@/lib/sheetWorkoutContextChips";
 import {
   bulkUpsertFormCheckComments,
   type FormCheckCommentTarget,
@@ -95,6 +97,9 @@ function SheetVideoCommentEditor({
         void queryClient.invalidateQueries({
           queryKey: ["form-check-pending-count"],
         });
+        void queryClient.invalidateQueries({
+          queryKey: ["admin-user-sheets-set-videos-pending", userId],
+        });
         void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
       }
     },
@@ -134,15 +139,30 @@ function SheetVideoCommentEditor({
 interface UserSheetsWorkoutVideosPanelProps {
   userId: string;
   formCheckQuota?: FormCheckQuota;
+  weekFilter?: number | "all";
+  onWeekFilterChange?: (week: number | "all") => void;
+  reviewFilter?: "all" | "unreviewed";
+  onReviewFilterChange?: (filter: "all" | "unreviewed") => void;
 }
 
 export function UserSheetsWorkoutVideosPanel({
   userId,
   formCheckQuota,
+  weekFilter: weekFilterProp,
+  onWeekFilterChange,
+  reviewFilter: reviewFilterProp,
+  onReviewFilterChange,
 }: UserSheetsWorkoutVideosPanelProps) {
   const queryClient = useQueryClient();
-  const [weekFilter, setWeekFilter] = useState<number | "all">("all");
-  const [reviewFilter, setReviewFilter] = useState<"all" | "unreviewed">("all");
+  const [weekFilterState, setWeekFilterState] = useState<number | "all">("all");
+  const [reviewFilterState, setReviewFilterState] = useState<
+    "all" | "unreviewed"
+  >("all");
+
+  const weekFilter = weekFilterProp ?? weekFilterState;
+  const setWeekFilter = onWeekFilterChange ?? setWeekFilterState;
+  const reviewFilter = reviewFilterProp ?? reviewFilterState;
+  const setReviewFilter = onReviewFilterChange ?? setReviewFilterState;
 
   const { data: weeks = [] } = useQuery({
     queryKey: ["admin-user-sheet-weeks", userId],
@@ -216,6 +236,9 @@ export function UserSheetsWorkoutVideosPanel({
       void queryClient.invalidateQueries({
         queryKey: ["form-check-pending-count"],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-user-sheets-set-videos-pending", userId],
+      });
       void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
     }
     return result;
@@ -226,7 +249,7 @@ export function UserSheetsWorkoutVideosPanel({
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <SheetPanelIcon />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Sheet workout videos
+          Form-check review
         </h2>
         {data && (
           <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
@@ -318,10 +341,19 @@ export function UserSheetsWorkoutVideosPanel({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    {video.tabName} · W{video.weekNumber} · Day{" "}
-                    {video.dayNumber} · Set {video.setNumber} ·{" "}
-                    {formatDateTime(video.createdAt)}
+                  <SheetWorkoutContextChips
+                    className="mt-1.5"
+                    chips={buildSheetWorkoutContextChips({
+                      tabName: video.tabName,
+                      weekNumber: video.weekNumber,
+                      dayNumber: video.dayNumber,
+                      setNumber: video.setNumber,
+                      category: video.sheetContext?.category,
+                      sortOrder: video.sortOrder,
+                    })}
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    Uploaded {formatDateTime(video.createdAt)}
                   </p>
                   <FormCheckAthleteLoggedMetrics
                     ctx={video.sheetContext}

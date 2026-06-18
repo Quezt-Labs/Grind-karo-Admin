@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,12 +19,7 @@ import {
   RefreshCw,
   Settings2,
   Activity,
-  ClipboardList,
-  StickyNote,
-  BarChart3,
-  ImageIcon,
   MapPin,
-  Dumbbell,
 } from "lucide-react";
 import { formatAthleteLocation } from "@/lib/indianStates";
 import { useForm } from "react-hook-form";
@@ -44,8 +39,15 @@ import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorko
 import { UserSheetProgramPanel } from "@/components/users/UserSheetProgramPanel";
 import { UserSheetsExerciseNotesPanel } from "@/components/users/UserSheetsExerciseNotesPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
-import { UserProgressPanel } from "@/components/users/UserProgressPanel";
-import { UserBigLiftPrPanel } from "@/components/users/UserBigLiftPrPanel";
+import { UserCheckInsPanel } from "@/components/users/UserCheckInsPanel";
+import { UserAthleteActivityQueue } from "@/components/users/UserAthleteActivityQueue";
+import {
+  buildAthleteActivityTabs,
+  defaultAthleteActivitySection,
+  hasSheetCoachingContext,
+  type AthleteActivitySection,
+} from "@/components/users/athleteActivitySections";
+import { sheetsSetVideoService } from "@/services/sheetsSetVideoService";
 import { cn } from "@/utils/cn";
 import type {
   Purchase,
@@ -63,14 +65,6 @@ import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { useIsAdmin } from "@/hooks/useRole";
 
 type MainTab = "setup" | "activity" | "purchases";
-type ActivitySection =
-  | "sheet"
-  | "videos"
-  | "logs"
-  | "notes"
-  | "summaries"
-  | "progress"
-  | "bigLiftPr";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -105,7 +99,11 @@ export function UserDetailPage() {
   const isAdmin = useIsAdmin();
   const [mainTab, setMainTab] = useState<MainTab>("activity");
   const [activitySection, setActivitySection] =
-    useState<ActivitySection>("sheet");
+    useState<AthleteActivitySection>("videos");
+  const [videoWeekFilter, setVideoWeekFilter] = useState<number | "all">("all");
+  const [videoReviewFilter, setVideoReviewFilter] = useState<
+    "all" | "unreviewed"
+  >("all");
   const [sheetIdOverride, setSheetIdOverride] = useState<
     string | null | undefined
   >(undefined);
@@ -136,6 +134,47 @@ export function UserDetailPage() {
     sheetIdOverride !== undefined
       ? sheetIdOverride
       : (data?.user.spreadsheetId ?? null);
+
+  const purchases = useMemo(() => data?.purchases ?? [], [data?.purchases]);
+  const athleteUserId = data?.user.id;
+
+  const showSheetActivity = hasSheetCoachingContext(
+    purchases,
+    effectiveSpreadsheetId,
+  );
+
+  const { data: allSheetVideos = [] } = useQuery({
+    queryKey: ["admin-user-sheets-set-videos-pending", athleteUserId],
+    queryFn: () => sheetsSetVideoService.listForUser(athleteUserId!),
+    enabled: !!athleteUserId && showSheetActivity,
+  });
+
+  const pendingVideoCount = useMemo(
+    () => allSheetVideos.filter((v) => !v.coachComment?.trim()).length,
+    [allSheetVideos],
+  );
+
+  const activityTabs = useMemo(
+    () =>
+      buildAthleteActivityTabs({
+        purchases,
+        spreadsheetId: effectiveSpreadsheetId,
+        pendingVideoCount,
+      }),
+    [purchases, effectiveSpreadsheetId, pendingVideoCount],
+  );
+
+  const resolvedActivitySection = useMemo((): AthleteActivitySection => {
+    if (activityTabs.length === 0) return activitySection;
+    if (activityTabs.some((tab) => tab.key === activitySection)) {
+      return activitySection;
+    }
+    return defaultAthleteActivitySection(activityTabs);
+  }, [activityTabs, activitySection]);
+
+  const activeActivityTab = activityTabs.find(
+    (tab) => tab.key === resolvedActivitySection,
+  );
 
   const handleSheetIdChange = useCallback(
     (spreadsheetId: string | null) => {
@@ -219,7 +258,7 @@ export function UserDetailPage() {
     return <ErrorAlert message="Failed to load user details." />;
   }
 
-  const { user, purchases } = data;
+  const { user } = data;
   const chatEnabled = data.chatEnabled ?? false;
 
   const isPurchaser =
@@ -416,87 +455,82 @@ export function UserDetailPage() {
 
       {resolvedMainTab === "activity" && (
         <div className="space-y-4">
+          {showSheetActivity ? (
+            <UserAthleteActivityQueue
+              pendingVideoCount={pendingVideoCount}
+              formCheckQuota={data.formCheckQuota}
+              onReviewClick={() => {
+                setActivitySection("videos");
+                setVideoReviewFilter("unreviewed");
+              }}
+            />
+          ) : null}
+
           <div className="flex gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-            {(
-              [
-                {
-                  key: "sheet" as const,
-                  label: "Sheet program",
-                  icon: <Sheet className="h-3.5 w-3.5" />,
-                },
-                {
-                  key: "videos" as const,
-                  label: "Form-check videos",
-                  icon: <Video className="h-3.5 w-3.5" />,
-                },
-                {
-                  key: "logs" as const,
-                  label: "Workout logs",
-                  icon: <ClipboardList className="h-3.5 w-3.5" />,
-                },
-                {
-                  key: "notes" as const,
-                  label: "Exercise notes",
-                  icon: <StickyNote className="h-3.5 w-3.5" />,
-                },
-                {
-                  key: "summaries" as const,
-                  label: "Weekly summaries",
-                  icon: <BarChart3 className="h-3.5 w-3.5" />,
-                },
-                {
-                  key: "progress" as const,
-                  label: "Progress photos",
-                  icon: <ImageIcon className="h-3.5 w-3.5" />,
-                },
-                {
-                  key: "bigLiftPr" as const,
-                  label: "Big 3 PRs",
-                  icon: <Dumbbell className="h-3.5 w-3.5" />,
-                },
-              ] as const
-            ).map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => setActivitySection(s.key)}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  activitySection === s.key
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200",
-                )}
-              >
-                {s.icon}
-                {s.label}
-              </button>
-            ))}
+            {activityTabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActivitySection(tab.key)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    resolvedActivitySection === tab.key
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200",
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                  {tab.badge != null ? (
+                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      {tab.badge}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
 
+          {activeActivityTab ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {activeActivityTab.description}
+            </p>
+          ) : null}
+
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
-            {activitySection === "sheet" && (
+            {resolvedActivitySection === "sheet" && (
               <UserSheetProgramPanel userId={user.id} />
             )}
-            {activitySection === "videos" && (
+            {resolvedActivitySection === "videos" && (
               <UserSheetsWorkoutVideosPanel
                 userId={user.id}
                 formCheckQuota={data.formCheckQuota}
+                weekFilter={videoWeekFilter}
+                onWeekFilterChange={setVideoWeekFilter}
+                reviewFilter={videoReviewFilter}
+                onReviewFilterChange={setVideoReviewFilter}
               />
             )}
-            {activitySection === "logs" && (
+            {resolvedActivitySection === "logs" && (
               <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
             )}
-            {activitySection === "notes" && (
-              <UserSheetsExerciseNotesPanel userId={user.id} />
+            {resolvedActivitySection === "notes" && (
+              <UserSheetsExerciseNotesPanel
+                userId={user.id}
+                onOpenVideos={({ weekNumber, reviewFilter }) => {
+                  setVideoWeekFilter(weekNumber);
+                  setVideoReviewFilter(reviewFilter);
+                  setActivitySection("videos");
+                }}
+              />
             )}
-            {activitySection === "summaries" && (
+            {resolvedActivitySection === "summaries" && (
               <UserWeeklySummariesPanel userId={user.id} />
             )}
-            {activitySection === "progress" && (
-              <UserProgressPanel userId={user.id} />
-            )}
-            {activitySection === "bigLiftPr" && (
-              <UserBigLiftPrPanel userId={user.id} />
+            {resolvedActivitySection === "checkins" && (
+              <UserCheckInsPanel userId={user.id} />
             )}
           </div>
         </div>
@@ -829,13 +863,8 @@ function ProvisionSheetSection({
   onInvalidateUser,
 }: ProvisionSheetSectionProps) {
   const linkedId = currentSpreadsheetId?.trim() || null;
-  const [revision, setRevision] = useState(sheetContentRevision);
   const [showGuide, setShowGuide] = useState(false);
   const [linking, setLinking] = useState(false);
-
-  useEffect(() => {
-    setRevision(sheetContentRevision);
-  }, [sheetContentRevision]);
 
   const sheetUrl = linkedId
     ? `https://docs.google.com/spreadsheets/d/${linkedId}/edit`
@@ -881,7 +910,7 @@ function ProvisionSheetSection({
   const notifySheetMutation = useMutation({
     mutationFn: () => sheetsService.notifySheetUpdated(userId),
     onSuccess: (res) => {
-      setRevision(res.sheetContentRevision);
+      onInvalidateUser?.();
       toast.success(
         `Athlete notified to refresh sheet (revision ${res.sheetContentRevision}).`,
       );
@@ -1008,8 +1037,8 @@ function ProvisionSheetSection({
             {linkedId}
           </code>
           <p className="mb-2 text-xs text-green-700 dark:text-green-400">
-            Sheet revision: {revision} — bump via Notify refresh after coach
-            edits the workbook.
+            Sheet revision: {sheetContentRevision} — bump via Notify refresh
+            after coach edits the workbook.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <a

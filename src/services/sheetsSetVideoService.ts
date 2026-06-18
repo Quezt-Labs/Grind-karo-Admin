@@ -43,6 +43,7 @@ export interface AdminSheetsExerciseNote {
   dayNumber: number;
   exerciseName: string;
   category: string;
+  sortOrder: number;
   notes: string;
   completed: boolean;
   updatedAt: string;

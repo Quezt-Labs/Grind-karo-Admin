@@ -42,9 +42,13 @@ function formatDateTime(iso: string): string {
 
 interface UserProgressPanelProps {
   userId: string;
+  compactHeader?: boolean;
 }
 
-export function UserProgressPanel({ userId }: UserProgressPanelProps) {
+export function UserProgressPanel({
+  userId,
+  compactHeader = false,
+}: UserProgressPanelProps) {
   const [offset, setOffset] = useState(0);
 
   const { data, isLoading } = useQuery({
@@ -60,20 +64,27 @@ export function UserProgressPanel({ userId }: UserProgressPanelProps) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <ImageIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Progress check-ins
-        </h2>
-        {data && (
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-            {data.total}
+      {!compactHeader ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <ImageIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Progress check-ins
+          </h2>
+          {data && (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              {data.total}
+            </span>
+          )}
+          <span className="w-full text-xs text-gray-500 dark:text-gray-400 sm:ml-auto sm:w-auto">
+            Photos/videos auto-deleted after 30 days
           </span>
-        )}
-        <span className="w-full text-xs text-gray-500 dark:text-gray-400 sm:ml-auto sm:w-auto">
+        </div>
+      ) : (
+        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
           Photos/videos auto-deleted after 30 days
-        </span>
-      </div>
+          {data ? ` · ${data.total} entries` : ""}
+        </p>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-10">

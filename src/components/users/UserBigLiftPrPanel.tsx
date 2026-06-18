@@ -51,9 +51,13 @@ function formatDeadliftDisplay(checkin: {
 
 interface UserBigLiftPrPanelProps {
   userId: string;
+  compactHeader?: boolean;
 }
 
-export function UserBigLiftPrPanel({ userId }: UserBigLiftPrPanelProps) {
+export function UserBigLiftPrPanel({
+  userId,
+  compactHeader = false,
+}: UserBigLiftPrPanelProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-user-big-lift-pr", userId],
     queryFn: () => athleteEngagementService.getUserBigLiftPrHistory(userId),
@@ -64,15 +68,21 @@ export function UserBigLiftPrPanel({ userId }: UserBigLiftPrPanelProps) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Dumbbell className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Big 3 PR check-ins
-        </h2>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+      {!compactHeader ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Dumbbell className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Big 3 PR check-ins
+          </h2>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            Squat · Bench · Deadlift — every ~2 months
+          </span>
+        </div>
+      ) : (
+        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
           Squat · Bench · Deadlift — every ~2 months
-        </span>
-      </div>
+        </p>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-10">

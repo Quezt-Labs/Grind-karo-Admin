@@ -93,6 +93,54 @@ export function UserSheetProgramPanel({ userId }: UserSheetProgramPanelProps) {
     });
   }, [exercises, weekFilter, dayFilter]);
 
+  const dayGroups = useMemo(() => {
+    const map = new Map<string, SheetExerciseRow[]>();
+    for (const row of filtered) {
+      const key = `${row.weekNumber}-${row.dayNumber}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(row);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => {
+        const [aw, ad] = a.split("-").map(Number);
+        const [bw, bd] = b.split("-").map(Number);
+        if (aw !== bw) return aw - bw;
+        return ad - bd;
+      })
+      .map(([key, rows]) => {
+        const [weekNumber, dayNumber] = key.split("-").map(Number);
+        return {
+          weekNumber,
+          dayNumber,
+          dayFocus: rows[0]?.dayFocus,
+          rows,
+        };
+      });
+  }, [filtered]);
+
+  const dayGroupSignature = dayGroups
+    .map((group) => `${group.weekNumber}-${group.dayNumber}`)
+    .join("|");
+
+  const expansionScopeKey = `${activeTab}|${weekFilter}|${dayFilter}|${dayGroupSignature}`;
+  const defaultExpandedDayKey =
+    dayGroups.length === 0
+      ? null
+      : `${dayGroups[dayGroups.length - 1].weekNumber}-${dayGroups[dayGroups.length - 1].dayNumber}`;
+
+  const [expandedByScope, setExpandedByScope] = useState<
+    Record<string, string | null>
+  >({});
+
+  const expandedDayKey =
+    expansionScopeKey in expandedByScope
+      ? expandedByScope[expansionScopeKey]
+      : defaultExpandedDayKey;
+
+  const setExpandedDayKey = (key: string | null) => {
+    setExpandedByScope((prev) => ({ ...prev, [expansionScopeKey]: key }));
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-10">
@@ -186,25 +234,51 @@ export function UserSheetProgramPanel({ userId }: UserSheetProgramPanelProps) {
       </div>
 
       <div className="space-y-2">
-        {filtered.map((row) => (
-          <div
-            key={`${row.weekNumber}-${row.dayNumber}-${row.sortOrder}-${row.exerciseName}`}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {row.exerciseName}
-                </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  W{row.weekNumber} · Day {row.dayNumber}
-                  {row.dayFocus ? ` · ${row.dayFocus}` : ""}
-                </p>
-              </div>
+        {dayGroups.map((group) => {
+          const groupKey = `${group.weekNumber}-${group.dayNumber}`;
+          const isOpen = expandedDayKey === groupKey;
+          return (
+            <div
+              key={groupKey}
+              className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+            >
+              <button
+                type="button"
+                onClick={() => setExpandedDayKey(isOpen ? null : groupKey)}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-900/40"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Week {group.weekNumber} · Day {group.dayNumber}
+                    {group.dayFocus ? ` — ${group.dayFocus}` : ""}
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {group.rows.length} exercise
+                    {group.rows.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <span className="text-xs text-gray-400">
+                  {isOpen ? "−" : "+"}
+                </span>
+              </button>
+              {isOpen ? (
+                <div className="space-y-2 border-t border-gray-100 px-3 py-2 dark:border-gray-700">
+                  {group.rows.map((row) => (
+                    <div
+                      key={`${row.weekNumber}-${row.dayNumber}-${row.sortOrder}-${row.exerciseName}`}
+                      className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 dark:border-gray-700 dark:bg-gray-900/30"
+                    >
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {row.exerciseName}
+                      </p>
+                      <FormCheckSheetContextBadges ctx={toSheetContext(row)} />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
-            <FormCheckSheetContextBadges ctx={toSheetContext(row)} />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
