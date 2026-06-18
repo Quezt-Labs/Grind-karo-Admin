@@ -51,6 +51,8 @@ export function ClientErrorsPage() {
   const [deleteTarget, setDeleteTarget] = useState<ClientErrorReport | null>(
     null,
   );
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["client-errors", searchTerm, unreadOnly, sourceFilter],
@@ -77,6 +79,12 @@ export function ClientErrorsPage() {
       toast.success("Error report deleted");
       queryClient.invalidateQueries({ queryKey: ["client-errors"] });
       setDeleteTarget(null);
+      setSelectedIds((prev) => {
+        if (!prev.has(deletedId)) return prev;
+        const next = new Set(prev);
+        next.delete(deletedId);
+        return next;
+      });
       setSelectedError((current) =>
         current?.id === deletedId ? null : current,
       );
@@ -86,8 +94,43 @@ export function ClientErrorsPage() {
     },
   });
 
+  const bulkDeleteMut = useMutation({
+    mutationFn: (ids: string[]) => clientErrorService.removeMany(ids),
+    onSuccess: (deletedCount, ids) => {
+      toast.success(
+        deletedCount === 1
+          ? "1 error report deleted"
+          : `${deletedCount} error reports deleted`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["client-errors"] });
+      setBulkDeleteOpen(false);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) next.delete(id);
+        return next;
+      });
+      setSelectedError((current) =>
+        current && ids.includes(current.id) ? null : current,
+      );
+    },
+    onError: () => {
+      toast.error("Could not delete selected error reports");
+    },
+  });
+
   const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
+    setSelectedIds(new Set());
+  }, []);
+
+  const applyUnreadFilter = useCallback((value: boolean) => {
+    setUnreadOnly(value);
+    setSelectedIds(new Set());
+  }, []);
+
+  const applySourceFilter = useCallback((value: ClientErrorSource | "ALL") => {
+    setSourceFilter(value);
+    setSelectedIds(new Set());
   }, []);
 
   function handleOpen(item: ClientErrorReport) {
@@ -100,6 +143,26 @@ export function ClientErrorsPage() {
   const items = data?.items ?? [];
   const unreadCount = data?.unreadCount ?? 0;
   const total = data?.total ?? 0;
+  const selectedCount = selectedIds.size;
+  const allOnPageSelected =
+    items.length > 0 && items.every((item) => selectedIds.has(item.id));
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllOnPage() {
+    if (allOnPageSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(items.map((item) => item.id)));
+  }
 
   return (
     <div className="space-y-6">
@@ -111,7 +174,7 @@ export function ClientErrorsPage() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setUnreadOnly(false)}
+            onClick={() => applyUnreadFilter(false)}
             className={cn(
               "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
               !unreadOnly
@@ -122,7 +185,7 @@ export function ClientErrorsPage() {
             All ({total})
           </button>
           <button
-            onClick={() => setUnreadOnly(true)}
+            onClick={() => applyUnreadFilter(true)}
             className={cn(
               "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
               unreadOnly
@@ -136,7 +199,7 @@ export function ClientErrorsPage() {
           {(["ALL", "CLIENT", "ADMIN"] as const).map((value) => (
             <button
               key={value}
-              onClick={() => setSourceFilter(value)}
+              onClick={() => applySourceFilter(value)}
               className={cn(
                 "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                 sourceFilter === value
@@ -154,6 +217,43 @@ export function ClientErrorsPage() {
           className="w-full lg:w-72"
         />
       </div>
+
+      {items.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={allOnPageSelected}
+              onChange={toggleSelectAllOnPage}
+              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            Select all on page ({items.length})
+          </label>
+          {selectedCount > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {selectedCount} selected
+              </span>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+                disabled={bulkDeleteMut.isPending}
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                Delete selected
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {isError ? (
         <ErrorAlert message="Failed to load client errors." />
@@ -185,13 +285,24 @@ export function ClientErrorsPage() {
               <div
                 key={item.id}
                 className={cn(
-                  "group flex cursor-pointer items-start gap-4 rounded-xl border bg-white p-4 shadow-sm transition-colors hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750",
-                  isUnread
-                    ? "border-red-200 dark:border-red-900/50"
-                    : "border-gray-200 dark:border-gray-700",
+                  "group flex cursor-pointer items-start gap-3 rounded-xl border bg-white p-4 shadow-sm transition-colors hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750",
+                  selectedIds.has(item.id)
+                    ? "border-primary-300 bg-primary-50/40 dark:border-primary-800 dark:bg-primary-950/20"
+                    : isUnread
+                      ? "border-red-200 dark:border-red-900/50"
+                      : "border-gray-200 dark:border-gray-700",
                 )}
                 onClick={() => handleOpen(item)}
               >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggleSelected(item.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-2 h-4 w-4 shrink-0 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  aria-label={`Select error from ${displayName}`}
+                />
+
                 <div
                   className={cn(
                     "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
@@ -392,6 +503,21 @@ export function ClientErrorsPage() {
         isLoading={deleteMut.isPending}
         onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmModal
+        open={bulkDeleteOpen}
+        title="Delete Selected Errors"
+        message={`Delete ${selectedCount} error report${
+          selectedCount === 1 ? "" : "s"
+        }? This cannot be undone.`}
+        confirmLabel={`Delete ${selectedCount}`}
+        variant="danger"
+        isLoading={bulkDeleteMut.isPending}
+        onConfirm={() =>
+          bulkDeleteMut.mutate(Array.from(selectedIds).slice(0, 200))
+        }
+        onCancel={() => setBulkDeleteOpen(false)}
       />
     </div>
   );

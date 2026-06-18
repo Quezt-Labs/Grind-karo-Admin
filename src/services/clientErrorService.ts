@@ -24,4 +24,12 @@ export const clientErrorService = {
   async remove(id: string): Promise<void> {
     await api.delete(`/admin/client-errors/${id}`);
   },
+
+  async removeMany(ids: string[]): Promise<number> {
+    const { data } = await api.post("/admin/client-errors/bulk-delete", {
+      ids,
+    });
+    const payload = data.data ?? data;
+    return payload.deletedCount ?? 0;
+  },
 };
