@@ -1,6 +1,11 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
+import {
+  formatApiErrorMessage,
+  reportClientError,
+  shouldReportApiError,
+} from "@/lib/clientErrorReporting";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -102,6 +107,19 @@ api.interceptors.response.use(
       const message =
         (data?.message as string) || error.message || "Something went wrong";
       toast.error(message);
+    }
+
+    if (shouldReportApiError(error, originalRequest.url)) {
+      reportClientError({
+        category: "API",
+        message: formatApiErrorMessage(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        metadata: {
+          method: originalRequest.method,
+          url: originalRequest.url,
+          status: error.response?.status,
+        },
+      });
     }
 
     return Promise.reject(error);

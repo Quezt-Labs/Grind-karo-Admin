@@ -1,6 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
 import { Button } from "@/components/ui/Button";
 import { Dumbbell, RotateCcw } from "lucide-react";
+import { reportClientError } from "@/lib/clientErrorReporting";
 
 interface Props {
   children: ReactNode;
@@ -24,6 +25,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo);
+    reportClientError({
+      category: "REACT",
+      message: error.message || "Admin app render error",
+      stack: error.stack,
+      metadata: { componentStack: errorInfo.componentStack },
+    });
   }
 
   render() {

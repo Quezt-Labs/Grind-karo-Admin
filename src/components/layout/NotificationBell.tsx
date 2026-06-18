@@ -10,6 +10,7 @@ import {
   BookOpen,
   MessageCircle,
   Upload,
+  Bug,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { notificationService } from "@/services/notificationService";
@@ -128,6 +129,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       onClose();
       return;
     }
+    if (n.type === "CLIENT_ERROR") {
+      navigate("/client-errors");
+      onClose();
+      return;
+    }
     if (userId) {
       navigate(`/users/${userId}`);
       onClose();
@@ -204,7 +210,8 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                         ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
                         : n.type === "CHAT_MESSAGE"
                           ? "bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400"
-                          : n.type === "CLIENT_UPLOAD_FAILED"
+                          : n.type === "CLIENT_UPLOAD_FAILED" ||
+                              n.type === "CLIENT_ERROR"
                             ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
                             : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
                   )}
@@ -217,6 +224,8 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                     <MessageCircle className="h-4 w-4" />
                   ) : n.type === "CLIENT_UPLOAD_FAILED" ? (
                     <Upload className="h-4 w-4" />
+                  ) : n.type === "CLIENT_ERROR" ? (
+                    <Bug className="h-4 w-4" />
                   ) : (
                     <ShoppingBag className="h-4 w-4" />
                   )}

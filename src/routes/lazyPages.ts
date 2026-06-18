@@ -81,6 +81,10 @@ export const ContactSubmissionsPage = lazyPage(
   () => import("@/pages/ContactSubmissionsPage"),
   "ContactSubmissionsPage",
 );
+export const ClientErrorsPage = lazyPage(
+  () => import("@/pages/ClientErrorsPage"),
+  "ClientErrorsPage",
+);
 export const CouponsPage = lazyPage(
   () => import("@/pages/CouponsPage"),
   "CouponsPage",
