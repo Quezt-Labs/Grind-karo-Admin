@@ -20,13 +20,24 @@ interface BlockNodeProps {
   toggleDay: (id: string) => void;
   onEditBlock: () => void;
   onDeleteBlock: () => void;
+  onCloneBlock: () => void;
   onAddWeek: (blockId: string) => void;
   onEditWeek: (week: Week) => void;
   onDeleteWeek: (week: Week) => void;
+  onCloneWeek: (week: Week) => void;
   onAddDay: (weekId: string) => void;
   onEditDay: (day: Day) => void;
   onDeleteDay: (day: Day) => void;
-  onEditExercise: (row: ExerciseRow) => void;
+  onEditExercise: (
+    row: ExerciseRow,
+    dayId: string,
+    dayExercises: ExerciseRow[],
+  ) => void;
+  onAddExercise: (
+    dayId: string,
+    dayExercises: ExerciseRow[],
+    nextSortOrder: number,
+  ) => void;
   onDeleteExercise: (row: ExerciseRow) => void;
   onRefresh: () => void;
 }
@@ -42,13 +53,16 @@ export const BlockNode = memo(function BlockNode({
   toggleDay,
   onEditBlock,
   onDeleteBlock,
+  onCloneBlock,
   onAddWeek,
   onEditWeek,
   onDeleteWeek,
+  onCloneWeek,
   onAddDay,
   onEditDay,
   onDeleteDay,
   onEditExercise,
+  onAddExercise,
   onDeleteExercise,
   onRefresh,
 }: BlockNodeProps) {
@@ -58,7 +72,7 @@ export const BlockNode = memo(function BlockNode({
   );
 
   return (
-    <div className="overflow-hidden rounded-xl border-2 border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="flex h-full w-[min(100%,28rem)] min-w-72 shrink-0 flex-col overflow-hidden rounded-xl border-2 border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       {/* Block header */}
       <div
         className={cn(
@@ -107,6 +121,8 @@ export const BlockNode = memo(function BlockNode({
         <TreeNodeActions
           onAdd={() => onAddWeek(block.id)}
           addTitle="Add Week"
+          onClone={onCloneBlock}
+          cloneTitle="Clone Block"
           onEdit={onEditBlock}
           editTitle="Edit Block"
           onDelete={onDeleteBlock}
@@ -116,7 +132,7 @@ export const BlockNode = memo(function BlockNode({
       </div>
 
       {expanded && (
-        <div className="space-y-2 p-3">
+        <div className="flex gap-2 overflow-x-auto p-3">
           {block.weeks.length === 0 ? (
             <EmptySection
               icon={<Calendar className="h-6 w-6" />}
@@ -138,10 +154,12 @@ export const BlockNode = memo(function BlockNode({
                   toggleDay={toggleDay}
                   onEdit={() => onEditWeek(week)}
                   onDelete={() => onDeleteWeek(week)}
+                  onClone={() => onCloneWeek(week)}
                   onAddDay={() => onAddDay(week.id)}
                   onEditDay={onEditDay}
                   onDeleteDay={onDeleteDay}
                   onEditExercise={onEditExercise}
+                  onAddExercise={onAddExercise}
                   onDeleteExercise={onDeleteExercise}
                   onRefresh={onRefresh}
                 />

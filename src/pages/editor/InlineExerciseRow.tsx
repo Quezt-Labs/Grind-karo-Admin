@@ -14,19 +14,23 @@ import {
   SelectValue,
 } from "@/components/ui/ShadSelect";
 import type { ExerciseCategory } from "@/types/programs";
+import {
+  EXERCISE_CATEGORY_ORDER,
+  EXERCISE_CATEGORY_LABELS,
+  flattenExercises,
+} from "@/utils/exerciseLibrary";
 
-const CATEGORY_OPTIONS: { value: ExerciseCategory; label: string }[] = [
-  { value: "SQUAT", label: "Squat" },
-  { value: "BENCH", label: "Bench" },
-  { value: "DEADLIFT", label: "Deadlift" },
-  { value: "ACCESSORY", label: "Accessory" },
-  { value: "OTHER", label: "Other" },
-];
+const CATEGORY_OPTIONS: { value: ExerciseCategory; label: string }[] =
+  EXERCISE_CATEGORY_ORDER.map((value) => ({
+    value,
+    label: EXERCISE_CATEGORY_LABELS[value],
+  }));
 
 interface InlineExerciseRowProps {
   programId: string;
   dayId: string;
   nextSortOrder: number;
+  compact?: boolean;
   onSuccess: () => void;
 }
 
@@ -64,13 +68,16 @@ export function InlineExerciseRow({
   const [row, setRow] = useState<RowData>(emptyRow);
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const { data: exercises } = useQuery({
+  const { data: groupedExercises } = useQuery({
     queryKey: ["exercises"],
     queryFn: exerciseService.getAll,
     enabled: isAdding,
   });
 
-  const activeExercises = (exercises ?? []).filter((e) => e.isActive);
+  const categories = groupedExercises?.categories;
+  const activeExercises = groupedExercises
+    ? flattenExercises(groupedExercises).filter((e) => e.isActive)
+    : [];
 
   const createMut = useMutation({
     mutationFn: () => {
@@ -86,8 +93,6 @@ export function InlineExerciseRow({
         repScheme: row.repScheme || null,
         targetRpe: row.targetRpe || null,
         percentOneRm: pctValue,
-        computedLoadKg: null,
-        loadSource: null,
         loadNote: row.loadNote || null,
         notes: row.notes || null,
       });
@@ -178,8 +183,8 @@ export function InlineExerciseRow({
               </SelectTrigger>
               <SelectContent>
                 {CATEGORY_OPTIONS.map((cat) => {
-                  const catExercises = activeExercises.filter(
-                    (e) => e.category === cat.value,
+                  const catExercises = (categories?.[cat.value] ?? []).filter(
+                    (e) => e.isActive,
                   );
                   if (catExercises.length === 0) return null;
                   return (

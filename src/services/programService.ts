@@ -16,6 +16,9 @@ import type {
   ExerciseRow,
   CreateExerciseRowPayload,
   UpdateExerciseRowPayload,
+  ExerciseSet,
+  CreateExerciseSetPayload,
+  UpdateExerciseSetPayload,
   ProgramResource,
   CreateResourcePayload,
   UpdateResourcePayload,
@@ -92,6 +95,14 @@ export const programService = {
     await api.delete(`/admin/programs/${programId}/blocks/${blockId}`);
   },
 
+  async cloneBlock(programId: string, blockId: string): Promise<Block> {
+    const { data } = await api.post(
+      `/admin/programs/${programId}/blocks/${blockId}/clone`,
+      {},
+    );
+    return data.data ?? data;
+  },
+
   // ---- Weeks ---------------------------------------------------------------
   async createWeek(
     programId: string,
@@ -119,6 +130,14 @@ export const programService = {
 
   async removeWeek(programId: string, weekId: string): Promise<void> {
     await api.delete(`/admin/programs/${programId}/weeks/${weekId}`);
+  },
+
+  async cloneWeek(programId: string, weekId: string): Promise<Week> {
+    const { data } = await api.post(
+      `/admin/programs/${programId}/weeks/${weekId}/clone`,
+      {},
+    );
+    return data.data ?? data;
   },
 
   // ---- Days ----------------------------------------------------------------
@@ -177,6 +196,52 @@ export const programService = {
 
   async removeExerciseRow(programId: string, rowId: string): Promise<void> {
     await api.delete(`/admin/programs/${programId}/exercises/${rowId}`);
+  },
+
+  // ---- Exercise sets (per-set prescription) --------------------------------
+  async listExerciseSets(
+    programId: string,
+    rowId: string,
+  ): Promise<ExerciseSet[]> {
+    const { data } = await api.get(
+      `/admin/programs/${programId}/exercises/${rowId}/sets`,
+    );
+    return data.data ?? data;
+  },
+
+  async createExerciseSet(
+    programId: string,
+    rowId: string,
+    payload: CreateExerciseSetPayload,
+  ): Promise<ExerciseSet> {
+    const { data } = await api.post(
+      `/admin/programs/${programId}/exercises/${rowId}/sets`,
+      payload,
+    );
+    return data.data ?? data;
+  },
+
+  async updateExerciseSet(
+    programId: string,
+    rowId: string,
+    setId: string,
+    payload: UpdateExerciseSetPayload,
+  ): Promise<ExerciseSet> {
+    const { data } = await api.patch(
+      `/admin/programs/${programId}/exercises/${rowId}/sets/${setId}`,
+      payload,
+    );
+    return data.data ?? data;
+  },
+
+  async removeExerciseSet(
+    programId: string,
+    rowId: string,
+    setId: string,
+  ): Promise<void> {
+    await api.delete(
+      `/admin/programs/${programId}/exercises/${rowId}/sets/${setId}`,
+    );
   },
 
   // ---- Resources -----------------------------------------------------------

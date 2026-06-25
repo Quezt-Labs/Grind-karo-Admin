@@ -1,11 +1,12 @@
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { FormModal } from "@/components/ui/FormModal";
 import { programService } from "@/services/programService";
 import { exerciseService } from "@/services/exerciseService";
+import { flattenExercises } from "@/utils/exerciseLibrary";
 import type { ExerciseRow, MovementSlot } from "@/types/programs";
 import { ExerciseRowFields } from "./ExerciseRowFields";
 import {
@@ -19,7 +20,9 @@ interface ExerciseRowFormModalProps {
   programId: string;
   dayId?: string;
   row?: ExerciseRow;
+  dayExercises?: ExerciseRow[];
   movementSlots?: MovementSlot[];
+  nextSortOrder?: number;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -28,30 +31,35 @@ export function ExerciseRowFormModal({
   programId,
   dayId,
   row,
+  dayExercises = [],
   movementSlots,
+  nextSortOrder = 0,
   onClose,
   onSuccess,
 }: ExerciseRowFormModalProps) {
   const isEdit = !!row;
 
-  const { data: exercises } = useQuery({
+  const { data: groupedExercises } = useQuery({
     queryKey: ["exercises"],
     queryFn: exerciseService.getAll,
   });
 
-  const exerciseOptions = (exercises ?? [])
+  const exerciseOptions = (
+    groupedExercises ? flattenExercises(groupedExercises) : []
+  )
     .filter((e) => e.isActive)
     .map((e) => ({ value: e.id, label: `${e.name} (${e.category})` }));
 
   const {
     register,
     handleSubmit,
+    control,
     watch,
     setValue,
     formState: { errors },
   } = useForm<ExerciseRowFormData>({
     resolver: zodResolver(exerciseRowSchema) as Resolver<ExerciseRowFormData>,
-    defaultValues: getDefaultValues(row),
+    defaultValues: getDefaultValues(row, nextSortOrder),
   });
 
   const createMut = useMutation({
@@ -80,39 +88,33 @@ export function ExerciseRowFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {isEdit ? "Edit Exercise Row" : "Add Exercise Row"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <ExerciseRowFields
-            register={register}
-            watch={watch}
-            setValue={setValue}
-            errors={errors}
-            exerciseOptions={exerciseOptions}
-            movementSlots={movementSlots}
-          />
+    <FormModal
+      title={isEdit ? "Edit Exercise Row" : "Add Exercise Row"}
+      onClose={onClose}
+      contentClassName="max-w-lg"
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <ExerciseRowFields
+          register={register}
+          control={control}
+          watch={watch}
+          setValue={setValue}
+          errors={errors}
+          exerciseOptions={exerciseOptions}
+          movementSlots={movementSlots}
+          dayExercises={dayExercises}
+          currentRowId={row?.id}
+        />
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isSaving}>
-              {isEdit ? "Update" : "Add"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="secondary" type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" isLoading={isSaving}>
+            {isEdit ? "Update" : "Add"}
+          </Button>
+        </div>
+      </form>
+    </FormModal>
   );
 }

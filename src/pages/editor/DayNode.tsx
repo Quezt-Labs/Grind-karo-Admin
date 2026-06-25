@@ -13,7 +13,16 @@ interface DayNodeProps {
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onEditExercise: (row: ExerciseRow) => void;
+  onEditExercise: (
+    row: ExerciseRow,
+    dayId: string,
+    dayExercises: ExerciseRow[],
+  ) => void;
+  onAddExercise: (
+    dayId: string,
+    dayExercises: ExerciseRow[],
+    nextSortOrder: number,
+  ) => void;
   onDeleteExercise: (row: ExerciseRow) => void;
   onRefresh: () => void;
 }
@@ -26,6 +35,7 @@ export const DayNode = memo(function DayNode({
   onEdit,
   onDelete,
   onEditExercise,
+  onAddExercise,
   onDeleteExercise,
   onRefresh,
 }: DayNodeProps) {
@@ -35,7 +45,7 @@ export const DayNode = memo(function DayNode({
       : 0;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800">
+    <div className="flex w-64 min-w-64 shrink-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800">
       {/* Day header */}
       <div className="flex items-center justify-between bg-linear-to-r from-yellow-50 to-white px-3 py-2.5 dark:from-yellow-900/5 dark:to-gray-800">
         <button
@@ -79,8 +89,11 @@ export const DayNode = memo(function DayNode({
           programId={programId}
           dayId={day.id}
           exercises={day.exercises}
-          nextSortOrder={nextSortOrder}
-          onEditExercise={onEditExercise}
+          compact
+          onAddExercise={() =>
+            onAddExercise(day.id, day.exercises, nextSortOrder)
+          }
+          onEditExercise={(row) => onEditExercise(row, day.id, day.exercises)}
           onDeleteExercise={onDeleteExercise}
           onRefresh={onRefresh}
         />

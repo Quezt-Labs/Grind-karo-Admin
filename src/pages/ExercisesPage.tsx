@@ -3,13 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Dumbbell } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/ShadSelect";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -19,8 +12,15 @@ import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { ExerciseFormModal } from "@/components/programs/ExerciseFormModal";
 import { exerciseService } from "@/services/exerciseService";
+import {
+  EXERCISE_CATEGORY_ORDER,
+  EXERCISE_CATEGORY_LABELS,
+  countExercises,
+  filterGroupedExercises,
+  flattenExercises,
+} from "@/utils/exerciseLibrary";
 import type { Column } from "@/types/dashboard";
-import type { Exercise } from "@/types/programs";
+import type { Exercise, ExerciseCategory } from "@/types/programs";
 
 type ExerciseRow = {
   id: string;
@@ -35,34 +35,6 @@ type ExerciseRow = {
 const exerciseColumns: Column<ExerciseRow>[] = [
   { key: "name", header: "Name", sortable: true },
   { key: "slug", header: "Slug", sortable: true },
-  {
-    key: "category",
-    header: "Category",
-    sortable: true,
-    render: (value) => {
-      const colors: Record<string, string> = {
-        SQUAT:
-          "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-        BENCH:
-          "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-        DEADLIFT:
-          "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-        ACCESSORY:
-          "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-        OTHER: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
-      };
-      return (
-        <span
-          className={cn(
-            "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-            colors[value as string] ?? colors.OTHER,
-          )}
-        >
-          {value as string}
-        </span>
-      );
-    },
-  },
   {
     key: "videoUrl",
     header: "Video",
@@ -90,25 +62,18 @@ const exerciseColumns: Column<ExerciseRow>[] = [
 ];
 
 type StatusFilter = "all" | "active" | "inactive";
-type CategoryFilter =
-  | ""
-  | "SQUAT"
-  | "BENCH"
-  | "DEADLIFT"
-  | "ACCESSORY"
-  | "OTHER";
 
 export function ExercisesPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [activeTab, setActiveTab] = useState<ExerciseCategory>("SQUAT");
   const [deleteTarget, setDeleteTarget] = useState<Exercise | null>(null);
   const [editTarget, setEditTarget] = useState<Exercise | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const queryClient = useQueryClient();
 
   const {
-    data: exercises,
+    data: groupedExercises,
     isLoading,
     isError,
   } = useQuery({
@@ -116,8 +81,13 @@ export function ExercisesPage() {
     queryFn: exerciseService.getAll,
   });
 
+  const exercises = useMemo(
+    () => (groupedExercises ? flattenExercises(groupedExercises) : []),
+    [groupedExercises],
+  );
+
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => exerciseService.remove(id),
+    mutationFn: (id: string) => exerciseService.remove(id, true),
     onSuccess: () => {
       toast.success("Exercise deleted");
       queryClient.invalidateQueries({ queryKey: ["exercises"] });
@@ -138,28 +108,38 @@ export function ExercisesPage() {
     return map;
   }, [exercises]);
 
-  const tableData: ExerciseRow[] = useMemo(() => {
-    if (!exercises) return [];
-    let filtered = exercises;
+  const filteredGrouped = useMemo(() => {
+    if (!groupedExercises) return null;
 
-    if (statusFilter === "active")
-      filtered = filtered.filter((e) => e.isActive);
-    else if (statusFilter === "inactive")
-      filtered = filtered.filter((e) => !e.isActive);
-
-    if (categoryFilter)
-      filtered = filtered.filter((e) => e.category === categoryFilter);
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (e) =>
+    return filterGroupedExercises(groupedExercises, (e) => {
+      if (statusFilter === "active" && !e.isActive) return false;
+      if (statusFilter === "inactive" && e.isActive) return false;
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        return (
           e.name.toLowerCase().includes(term) ||
-          e.slug.toLowerCase().includes(term),
-      );
-    }
+          e.slug.toLowerCase().includes(term)
+        );
+      }
+      return true;
+    });
+  }, [groupedExercises, searchTerm, statusFilter]);
 
-    return filtered.map((e) => ({
+  const tabCounts = useMemo(() => {
+    const counts = {} as Record<ExerciseCategory, number>;
+    for (const cat of EXERCISE_CATEGORY_ORDER) {
+      counts[cat] = filteredGrouped?.categories[cat]?.length ?? 0;
+    }
+    return counts;
+  }, [filteredGrouped]);
+
+  const activeTabRows = filteredGrouped?.categories[activeTab] ?? [];
+  const totalVisible = filteredGrouped ? countExercises(filteredGrouped) : 0;
+  const libraryEmpty =
+    !isLoading && groupedExercises && countExercises(groupedExercises) === 0;
+
+  const toTableRows = useCallback((items: Exercise[]): ExerciseRow[] => {
+    return items.map((e) => ({
       id: e.id,
       name: e.name,
       slug: e.slug,
@@ -168,7 +148,7 @@ export function ExercisesPage() {
       sortOrder: String(e.sortOrder),
       isActive: e.isActive ? "Active" : "Inactive",
     }));
-  }, [exercises, searchTerm, statusFilter, categoryFilter]);
+  }, []);
 
   const actionsColumn = {
     key: "id" as keyof ExerciseRow & string,
@@ -178,20 +158,26 @@ export function ExercisesPage() {
       if (!exercise) return null;
       return (
         <div className="flex items-center gap-1">
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setEditTarget(exercise)}
-            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             title="Edit"
           >
             <Pencil className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setDeleteTarget(exercise)}
-            className="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            className="p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
             title="Delete"
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       );
     },
@@ -213,37 +199,17 @@ export function ExercisesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
           {(["all", "active", "inactive"] as const).map((s) => (
-            <button
+            <Button
               key={s}
+              type="button"
+              size="sm"
+              variant={statusFilter === s ? "primary" : "secondary"}
               onClick={() => setStatusFilter(s)}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                statusFilter === s
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300",
-              )}
+              className="text-xs"
             >
               {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
+            </Button>
           ))}
-          <Select
-            value={categoryFilter || "__all__"}
-            onValueChange={(v) =>
-              setCategoryFilter((v === "__all__" ? "" : v) as CategoryFilter)
-            }
-          >
-            <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs h-8 w-36 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All categories</SelectItem>
-              <SelectItem value="SQUAT">Squat</SelectItem>
-              <SelectItem value="BENCH">Bench</SelectItem>
-              <SelectItem value="DEADLIFT">Deadlift</SelectItem>
-              <SelectItem value="ACCESSORY">Accessory</SelectItem>
-              <SelectItem value="OTHER">Other</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
         <DebouncedSearch
           onSearch={handleSearch}
@@ -252,9 +218,40 @@ export function ExercisesPage() {
         />
       </div>
 
+      {!isError && !libraryEmpty && (
+        <div className="flex gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+          {EXERCISE_CATEGORY_ORDER.map((cat) => (
+            <Button
+              key={cat}
+              type="button"
+              size="sm"
+              variant={activeTab === cat ? "secondary" : "ghost"}
+              onClick={() => setActiveTab(cat)}
+              className={cn(
+                "shrink-0 gap-1.5",
+                activeTab === cat &&
+                  "bg-white shadow-sm dark:bg-gray-700 dark:text-white",
+              )}
+            >
+              {EXERCISE_CATEGORY_LABELS[cat]}
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-medium",
+                  activeTab === cat
+                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400"
+                    : "bg-gray-200/70 text-gray-500 dark:bg-gray-600/50 dark:text-gray-400",
+                )}
+              >
+                {tabCounts[cat]}
+              </span>
+            </Button>
+          ))}
+        </div>
+      )}
+
       {isError ? (
         <ErrorAlert message="Failed to load exercises." />
-      ) : !isLoading && tableData.length === 0 ? (
+      ) : libraryEmpty ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20">
             <Dumbbell className="h-8 w-8 text-primary-500" />
@@ -270,9 +267,31 @@ export function ExercisesPage() {
             Add Your First Exercise
           </Button>
         </div>
+      ) : !isLoading && totalVisible === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+            No matches
+          </h3>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+            Try a different search or status filter.
+          </p>
+        </div>
+      ) : !isLoading && activeTabRows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+            No {EXERCISE_CATEGORY_LABELS[activeTab].toLowerCase()} exercises
+          </h3>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+            Add one to this category or check another tab.
+          </p>
+          <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" />
+            Add Exercise
+          </Button>
+        </div>
       ) : (
         <DataTable
-          data={tableData}
+          data={toTableRows(activeTabRows)}
           columns={[...exerciseColumns, actionsColumn]}
           isLoading={isLoading}
         />
@@ -281,7 +300,7 @@ export function ExercisesPage() {
       <ConfirmModal
         open={!!deleteTarget}
         title="Delete Exercise"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This will deactivate it.`}
+        message={`Are you sure you want to permanently delete "${deleteTarget?.name}"? This cannot be undone.`}
         confirmLabel="Delete"
         isLoading={deleteMutation.isPending}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}

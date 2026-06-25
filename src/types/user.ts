@@ -277,7 +277,7 @@ export interface UserInfo {
 
 // ---- Coaching setup queue -----------------------------------------------
 
-export type CoachingSetupStatus = "needs_intake" | "awaiting_sheet" | "ready";
+export type CoachingSetupStatus = "needs_intake" | "awaiting_program" | "ready";
 
 export type CoachingSetupStatusFilter = CoachingSetupStatus | "all";
 
@@ -287,6 +287,7 @@ export interface CoachingSetupMember {
   email: string;
   setupStatus: CoachingSetupStatus;
   planName: string;
+  planSlug: string;
   city?: string | null;
   state?: string | null;
   expiresAt: string;
@@ -296,7 +297,7 @@ export interface CoachingSetupMember {
 
 export interface CoachingSetupCounts {
   needsIntake: number;
-  awaitingSheet: number;
+  awaitingProgram: number;
   ready: number;
 }
 

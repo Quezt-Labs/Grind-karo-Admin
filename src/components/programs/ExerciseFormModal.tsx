@@ -1,10 +1,11 @@
-import { useForm, useWatch, type Resolver } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -74,8 +75,6 @@ export function ExerciseFormModal({
           sortOrder: 0,
         },
   });
-
-  const category = useWatch({ control, name: "category" });
 
   const createMutation = useMutation({
     mutationFn: exerciseService.create,
@@ -147,13 +146,20 @@ export function ExerciseFormModal({
             />
           </div>
 
-          <Select
-            id="exercise-category"
-            label="Category"
-            options={CATEGORY_OPTIONS}
-            error={errors.category?.message}
-            value={category}
-            {...register("category")}
+          <Controller
+            control={control}
+            name="category"
+            render={({ field }) => (
+              <Select
+                id="exercise-category"
+                label="Category"
+                options={CATEGORY_OPTIONS}
+                value={field.value}
+                onValueChange={field.onChange}
+                onBlur={field.onBlur}
+                error={errors.category?.message}
+              />
+            )}
           />
 
           <Textarea
@@ -181,16 +187,18 @@ export function ExerciseFormModal({
             {...register("sortOrder")}
           />
 
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              {...register("isActive")}
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              Active
-            </span>
-          </label>
+          <Controller
+            control={control}
+            name="isActive"
+            render={({ field }) => (
+              <CheckboxField
+                id="exercise-active"
+                label="Active"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
+          />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" type="button" onClick={onClose}>

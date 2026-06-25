@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indianStates";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { userService } from "@/services/userService";
 import type { UserInfo } from "@/types/user";
 
@@ -79,35 +81,27 @@ export function AthleteLocationEditor({ userId, intake }: Props) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block min-w-0">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            State
-          </span>
-          <select
-            value={state}
-            onChange={(e) => setState(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm text-gray-900 outline-none focus:border-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-          >
-            <option value="">Select state</option>
-            {INDIAN_STATES_AND_UTS.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block min-w-0">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            City
-          </span>
-          <input
-            type="text"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="e.g. Pune"
-            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm text-gray-900 outline-none focus:border-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-          />
-        </label>
+        <Select
+          id="athlete-state"
+          label="State"
+          options={[
+            { value: "", label: "Select state" },
+            ...INDIAN_STATES_AND_UTS.map((item) => ({
+              value: item,
+              label: item,
+            })),
+          ]}
+          value={state}
+          onValueChange={setState}
+        />
+        <Input
+          id="athlete-city"
+          label="City"
+          type="text"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="e.g. Pune"
+        />
       </div>
 
       <button

@@ -34,6 +34,7 @@ export type CoachingSetupRow = {
   name: string;
   email: string;
   planName: string;
+  planSlug: string;
   city: string;
   state: string;
   setupStatus: string;

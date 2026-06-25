@@ -7,6 +7,7 @@ import { FormCheckAthleteLoggedMetrics } from "@/components/shared/FormCheckShee
 import { formatAthleteLoggedLine } from "@/components/shared/formCheckSheetContext.utils";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { Spinner } from "@/components/ui/Spinner";
+import { Select } from "@/components/ui/Select";
 import {
   SheetWeekFilter,
   SheetPanelIcon,
@@ -23,6 +24,10 @@ import {
   bulkUpsertFormCheckComments,
   type FormCheckCommentTarget,
 } from "@/utils/bulkFormCheckComments";
+import {
+  activityScopeKey,
+  type UserActivityScope,
+} from "@/utils/userActivityScope";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-IN", {
@@ -139,6 +144,7 @@ function SheetVideoCommentEditor({
 interface UserSheetsWorkoutVideosPanelProps {
   userId: string;
   formCheckQuota?: FormCheckQuota;
+  activityScope?: UserActivityScope;
   weekFilter?: number | "all";
   onWeekFilterChange?: (week: number | "all") => void;
   reviewFilter?: "all" | "unreviewed";
@@ -148,6 +154,7 @@ interface UserSheetsWorkoutVideosPanelProps {
 export function UserSheetsWorkoutVideosPanel({
   userId,
   formCheckQuota,
+  activityScope = { mode: "all" },
   weekFilter: weekFilterProp,
   onWeekFilterChange,
   reviewFilter: reviewFilterProp,
@@ -164,24 +171,31 @@ export function UserSheetsWorkoutVideosPanel({
   const reviewFilter = reviewFilterProp ?? reviewFilterState;
   const setReviewFilter = onReviewFilterChange ?? setReviewFilterState;
 
+  const scopeKey = activityScopeKey(activityScope);
+  const subscriptionId =
+    activityScope.mode === "subscription"
+      ? activityScope.subscriptionId
+      : undefined;
+
   const { data: weeks = [] } = useQuery({
-    queryKey: ["admin-user-sheet-weeks", userId],
-    queryFn: () => sheetsSetVideoService.listSheetWeeks(userId),
+    queryKey: ["admin-user-sheet-weeks", userId, scopeKey],
+    queryFn: () => sheetsSetVideoService.listSheetWeeks(userId, subscriptionId),
   });
 
   const queryKey = [
     "admin-user-sheets-set-videos",
     userId,
     weekFilter,
+    scopeKey,
   ] as const;
 
   const { data, isLoading } = useQuery({
     queryKey,
     queryFn: () =>
-      sheetsSetVideoService.listForUser(
-        userId,
-        weekFilter === "all" ? undefined : weekFilter,
-      ),
+      sheetsSetVideoService.listForUser(userId, {
+        weekNumber: weekFilter === "all" ? undefined : weekFilter,
+        subscriptionId,
+      }),
   });
 
   const rawVideos = useMemo(() => data ?? [], [data]);
@@ -234,9 +248,6 @@ export function UserSheetsWorkoutVideosPanel({
         queryKey: ["admin-user-purchases", userId],
       });
       void queryClient.invalidateQueries({
-        queryKey: ["form-check-pending-count"],
-      });
-      void queryClient.invalidateQueries({
         queryKey: ["admin-user-sheets-set-videos-pending", userId],
       });
       void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
@@ -260,16 +271,15 @@ export function UserSheetsWorkoutVideosPanel({
           </span>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <select
+          <Select
+            className="h-8 w-36 text-xs"
+            options={[
+              { value: "all", label: "All videos" },
+              { value: "unreviewed", label: "Needs review" },
+            ]}
             value={reviewFilter}
-            onChange={(e) =>
-              setReviewFilter(e.target.value as "all" | "unreviewed")
-            }
-            className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-          >
-            <option value="all">All videos</option>
-            <option value="unreviewed">Needs review</option>
-          </select>
+            onValueChange={(v) => setReviewFilter(v as "all" | "unreviewed")}
+          />
           <SheetWeekFilter
             weeks={weeks}
             value={weekFilter}

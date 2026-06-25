@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { userService } from "@/services/userService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
+import { Select } from "@/components/ui/Select";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/utils/cn";
@@ -26,6 +27,10 @@ import {
   bulkUpsertFormCheckComments,
   type FormCheckCommentTarget,
 } from "@/utils/bulkFormCheckComments";
+import {
+  isWithinSubscriptionRange,
+  type UserActivityScope,
+} from "@/utils/userActivityScope";
 
 const PAGE_SIZE = 10;
 
@@ -205,12 +210,14 @@ interface UserWorkoutLogsPanelProps {
   userId: string;
   purchases?: Purchase[];
   coachMode?: boolean;
+  activityScope?: UserActivityScope;
 }
 
 export function UserWorkoutLogsPanel({
   userId,
   purchases = [],
   coachMode = false,
+  activityScope = { mode: "all" },
 }: UserWorkoutLogsPanelProps) {
   const [offset, setOffset] = useState(0);
   const [programId, setProgramId] = useState<string>("");
@@ -255,7 +262,15 @@ export function UserWorkoutLogsPanel({
   });
 
   const total = data?.total ?? 0;
-  const items: AdminWorkoutLog[] = data?.items ?? [];
+  const items: AdminWorkoutLog[] = useMemo(() => {
+    const raw = data?.items ?? [];
+    if (activityScope.mode !== "subscription") return raw;
+    return raw.filter((log) =>
+      isWithinSubscriptionRange(log.completedAt, activityScope.range),
+    );
+  }, [data?.items, activityScope]);
+  const displayTotal =
+    activityScope.mode === "subscription" ? items.length : total;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
 
@@ -268,26 +283,28 @@ export function UserWorkoutLogsPanel({
         </h2>
         {data && (
           <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-            {total}
+            {displayTotal}
           </span>
         )}
         {programOptions.length > 1 && (
-          <select
-            value={programId}
-            onChange={(e) => {
-              setProgramId(e.target.value);
-              setOffset(0);
-              setExpandedId(null);
-            }}
-            className="ml-auto rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-          >
-            <option value="">All programs</option>
-            {programOptions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <div className="ml-auto w-48">
+            <Select
+              className="h-9 text-sm"
+              options={[
+                { value: "", label: "All programs" },
+                ...programOptions.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                })),
+              ]}
+              value={programId}
+              onValueChange={(v) => {
+                setProgramId(v);
+                setOffset(0);
+                setExpandedId(null);
+              }}
+            />
+          </div>
         )}
       </div>
 

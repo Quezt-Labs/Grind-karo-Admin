@@ -74,6 +74,45 @@ button:disabled,
   background: rgb(156 163 175 / 0.45);
 }
 
+/* Program editor — Google Sheets–style pan canvas */
+.program-sheet-canvas {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-color: #bdc1c6 #f1f3f4;
+}
+
+.program-sheet-canvas::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.program-sheet-canvas::-webkit-scrollbar-track {
+  background: #f1f3f4;
+}
+
+.program-sheet-canvas::-webkit-scrollbar-thumb {
+  border: 2px solid #f1f3f4;
+  border-radius: 8px;
+  background: #bdc1c6;
+}
+
+.program-sheet-canvas::-webkit-scrollbar-thumb:hover {
+  background: #9aa0a6;
+}
+
+.dark .program-sheet-canvas {
+  scrollbar-color: #5f6368 #303134;
+}
+
+.dark .program-sheet-canvas::-webkit-scrollbar-track {
+  background: #303134;
+}
+
+.dark .program-sheet-canvas::-webkit-scrollbar-thumb {
+  border-color: #303134;
+  background: #5f6368;
+}
+
 /* Tables / wide blocks on small screens */
 .table-scroll {
   -webkit-overflow-scrolling: touch;

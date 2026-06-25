@@ -3,11 +3,24 @@ import { useQuery } from "@tanstack/react-query";
 import { FileSpreadsheet, StickyNote, Video } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/ShadTable";
+import { Select } from "@/components/ui/Select";
+import {
   sheetsExerciseNotesService,
   sheetsSetVideoService,
   type AdminSheetsExerciseNote,
 } from "@/services/sheetsSetVideoService";
 import { findVideosForNote } from "@/lib/sheetTabMatch";
+import {
+  activityScopeKey,
+  type UserActivityScope,
+} from "@/utils/userActivityScope";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-IN", {
@@ -21,6 +34,7 @@ function formatDateTime(iso: string): string {
 
 interface UserSheetsExerciseNotesPanelProps {
   userId: string;
+  activityScope?: UserActivityScope;
   onOpenVideos?: (opts: {
     weekNumber: number;
     reviewFilter: "all" | "unreviewed";
@@ -29,27 +43,39 @@ interface UserSheetsExerciseNotesPanelProps {
 
 export function UserSheetsExerciseNotesPanel({
   userId,
+  activityScope = { mode: "all" },
   onOpenVideos,
 }: UserSheetsExerciseNotesPanelProps) {
   const [weekFilter, setWeekFilter] = useState<number | "all">("all");
+  const scopeKey = activityScopeKey(activityScope);
+  const subscriptionId =
+    activityScope.mode === "subscription"
+      ? activityScope.subscriptionId
+      : undefined;
 
   const { data: weeks = [] } = useQuery({
-    queryKey: ["admin-user-sheet-weeks", userId],
-    queryFn: () => sheetsSetVideoService.listSheetWeeks(userId),
+    queryKey: ["admin-user-sheet-weeks", userId, scopeKey],
+    queryFn: () => sheetsSetVideoService.listSheetWeeks(userId, subscriptionId),
   });
 
   const { data: notes, isLoading } = useQuery({
-    queryKey: ["admin-user-sheets-exercise-notes", userId, weekFilter],
+    queryKey: [
+      "admin-user-sheets-exercise-notes",
+      userId,
+      weekFilter,
+      scopeKey,
+    ],
     queryFn: () =>
-      sheetsExerciseNotesService.listForUser(
-        userId,
-        weekFilter === "all" ? undefined : weekFilter,
-      ),
+      sheetsExerciseNotesService.listForUser(userId, {
+        weekNumber: weekFilter === "all" ? undefined : weekFilter,
+        subscriptionId,
+      }),
   });
 
   const { data: allVideos = [] } = useQuery({
-    queryKey: ["admin-user-sheets-set-videos-all", userId],
-    queryFn: () => sheetsSetVideoService.listForUser(userId),
+    queryKey: ["admin-user-sheets-set-videos-all", userId, scopeKey],
+    queryFn: () =>
+      sheetsSetVideoService.listForUser(userId, { subscriptionId }),
     enabled: Boolean(onOpenVideos),
   });
 
@@ -79,21 +105,13 @@ export function UserSheetsExerciseNotesPanel({
           </span>
         )}
         {weeks.length > 0 && (
-          <select
-            value={weekFilter === "all" ? "all" : String(weekFilter)}
-            onChange={(e) => {
-              const v = e.target.value;
-              setWeekFilter(v === "all" ? "all" : Number(v));
-            }}
-            className="ml-auto rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-          >
-            <option value="all">All weeks</option>
-            {weeks.map((w) => (
-              <option key={w} value={w}>
-                Week {w}
-              </option>
-            ))}
-          </select>
+          <div className="ml-auto">
+            <SheetWeekFilter
+              weeks={weeks}
+              value={weekFilter}
+              onChange={setWeekFilter}
+            />
+          </div>
         )}
       </div>
 
@@ -107,29 +125,29 @@ export function UserSheetsExerciseNotesPanel({
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-400">
-                <tr>
-                  <th className="px-3 py-2.5">Week / Day</th>
-                  <th className="px-3 py-2.5">Exercise</th>
-                  <th className="px-3 py-2.5">Note</th>
-                  <th className="px-3 py-2.5">Updated</th>
-                  {onOpenVideos ? <th className="px-3 py-2.5">Video</th> : null}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {visibleNotes.map((note) => (
-                  <NoteRow
-                    key={note.id}
-                    note={note}
-                    videoCount={videoCountByNoteId.get(note.id) ?? 0}
-                    onOpenVideos={onOpenVideos}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table className="min-w-full text-left text-sm">
+            <TableHeader className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-400">
+              <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
+                <TableHead className="h-auto px-3 py-2.5">Week / Day</TableHead>
+                <TableHead className="h-auto px-3 py-2.5">Exercise</TableHead>
+                <TableHead className="h-auto px-3 py-2.5">Note</TableHead>
+                <TableHead className="h-auto px-3 py-2.5">Updated</TableHead>
+                {onOpenVideos ? (
+                  <TableHead className="h-auto px-3 py-2.5">Video</TableHead>
+                ) : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleNotes.map((note) => (
+                <NoteRow
+                  key={note.id}
+                  note={note}
+                  videoCount={videoCountByNoteId.get(note.id) ?? 0}
+                  onOpenVideos={onOpenVideos}
+                />
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
@@ -149,31 +167,31 @@ function NoteRow({
   }) => void;
 }) {
   return (
-    <tr>
-      <td className="whitespace-nowrap px-3 py-2.5 text-gray-700 dark:text-gray-300">
+    <TableRow>
+      <TableCell className="whitespace-nowrap px-3 py-2.5 text-gray-700 dark:text-gray-300">
         W{note.weekNumber} · Day {note.dayNumber}
         {note.completed && (
           <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-300">
             Done
           </span>
         )}
-      </td>
-      <td className="px-3 py-2.5 font-medium text-gray-900 dark:text-white">
+      </TableCell>
+      <TableCell className="px-3 py-2.5 font-medium text-gray-900 dark:text-white">
         {note.exerciseName}
         <span className="mt-0.5 block text-[11px] font-normal text-gray-500 dark:text-gray-400">
           {note.tabName}
           {note.category ? ` · ${note.category}` : ""}
           {note.sortOrder > 0 ? ` · #${note.sortOrder}` : ""}
         </span>
-      </td>
-      <td className="max-w-md px-3 py-2.5 text-gray-700 dark:text-gray-300">
+      </TableCell>
+      <TableCell className="max-w-md px-3 py-2.5 text-gray-700 dark:text-gray-300">
         {note.notes}
-      </td>
-      <td className="whitespace-nowrap px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">
+      </TableCell>
+      <TableCell className="whitespace-nowrap px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">
         {formatDateTime(note.updatedAt)}
-      </td>
+      </TableCell>
       {onOpenVideos ? (
-        <td className="whitespace-nowrap px-3 py-2.5">
+        <TableCell className="whitespace-nowrap px-3 py-2.5">
           {videoCount > 0 ? (
             <button
               type="button"
@@ -191,9 +209,9 @@ function NoteRow({
           ) : (
             <span className="text-[11px] text-gray-400">No video</span>
           )}
-        </td>
+        </TableCell>
       ) : null}
-    </tr>
+    </TableRow>
   );
 }
 
@@ -206,21 +224,15 @@ interface WeekFilterProps {
 export function SheetWeekFilter({ weeks, value, onChange }: WeekFilterProps) {
   if (weeks.length === 0) return null;
   return (
-    <select
+    <Select
+      className="h-8 w-32 text-xs"
+      options={[
+        { value: "all", label: "All weeks" },
+        ...weeks.map((w) => ({ value: String(w), label: `Week ${w}` })),
+      ]}
       value={value === "all" ? "all" : String(value)}
-      onChange={(e) => {
-        const v = e.target.value;
-        onChange(v === "all" ? "all" : Number(v));
-      }}
-      className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-    >
-      <option value="all">All weeks</option>
-      {weeks.map((w) => (
-        <option key={w} value={w}>
-          Week {w}
-        </option>
-      ))}
-    </select>
+      onValueChange={(v) => onChange(v === "all" ? "all" : Number(v))}
+    />
   );
 }
 

@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, FileText, Pencil } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  FileText,
+  Pencil,
+  LayoutList,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -111,7 +118,15 @@ export function ProgramDetailPage() {
           onClick={() => setShowEditProgramModal(true)}
         >
           <Pencil className="h-3.5 w-3.5" />
-          Edit Program
+          Edit Details
+        </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => navigate(`/programs/${tree.slug}/editor`)}
+        >
+          <LayoutList className="h-3.5 w-3.5" />
+          Build Content
         </Button>
       </div>
 

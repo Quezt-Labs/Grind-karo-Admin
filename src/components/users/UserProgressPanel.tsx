@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { userService } from "@/services/userService";
 import type { UserProgressEntry } from "@/types/user";
+import {
+  isWithinSubscriptionRange,
+  type UserActivityScope,
+} from "@/utils/userActivityScope";
 
 const PROGRESS_PAGE_SIZE = 12;
 const PHOTO_LABELS = ["Front", "Side", "Back"] as const;
@@ -43,11 +47,13 @@ function formatDateTime(iso: string): string {
 interface UserProgressPanelProps {
   userId: string;
   compactHeader?: boolean;
+  activityScope?: UserActivityScope;
 }
 
 export function UserProgressPanel({
   userId,
   compactHeader = false,
+  activityScope = { mode: "all" },
 }: UserProgressPanelProps) {
   const [offset, setOffset] = useState(0);
 
@@ -60,7 +66,16 @@ export function UserProgressPanel({
       }),
   });
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => {
+    const raw = data?.items ?? [];
+    if (activityScope.mode !== "subscription") return raw;
+    return raw.filter((entry) =>
+      isWithinSubscriptionRange(entry.createdAt, activityScope.range),
+    );
+  }, [data?.items, activityScope]);
+
+  const displayTotal =
+    activityScope.mode === "subscription" ? items.length : (data?.total ?? 0);
 
   return (
     <div>
@@ -72,7 +87,7 @@ export function UserProgressPanel({
           </h2>
           {data && (
             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-              {data.total}
+              {displayTotal}
             </span>
           )}
           <span className="w-full text-xs text-gray-500 dark:text-gray-400 sm:ml-auto sm:w-auto">

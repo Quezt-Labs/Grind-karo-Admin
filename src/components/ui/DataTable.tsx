@@ -2,6 +2,14 @@ import { useState, useMemo } from "react";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/utils/cn";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/ShadTable";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -97,71 +105,66 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="overflow-hidden rounded-xl border bg-white dark:bg-gray-800">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  className={cn(
-                    "whitespace-nowrap px-3 py-3 font-medium text-gray-600 dark:text-gray-300 sm:px-4",
-                    col.sortable &&
-                      "cursor-pointer select-none hover:text-gray-900 dark:hover:text-white",
-                  )}
-                  onClick={col.sortable ? () => handleSort(col.key) : undefined}
-                >
-                  <div className="flex items-center gap-1">
-                    {col.header}
-                    {col.sortable && (
-                      <span className="ml-1">
-                        {sortKey === col.key ? (
-                          sortDir === "asc" ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )
-                        ) : (
-                          <ChevronsUpDown className="h-4 w-4 opacity-40" />
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.map((row) => (
-              <tr
-                key={row.id}
-                className="border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/30"
+      <Table className="text-left text-sm">
+        <TableHeader className="bg-gray-50 dark:bg-gray-700/50">
+          <TableRow className="border-b hover:bg-transparent dark:hover:bg-transparent">
+            {columns.map((col) => (
+              <TableHead
+                key={col.key}
+                className={cn(
+                  "whitespace-nowrap px-3 py-3 sm:px-4",
+                  col.sortable &&
+                    "cursor-pointer select-none hover:text-gray-900 dark:hover:text-white",
+                )}
+                onClick={col.sortable ? () => handleSort(col.key) : undefined}
               >
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className="whitespace-nowrap px-3 py-3 text-gray-700 dark:text-gray-300 sm:px-4"
-                  >
-                    {col.render
-                      ? col.render(row[col.key], row)
-                      : String(row[col.key] ?? "")}
-                  </td>
-                ))}
-              </tr>
+                <div className="flex items-center gap-1">
+                  {col.header}
+                  {col.sortable && (
+                    <span className="ml-1">
+                      {sortKey === col.key ? (
+                        sortDir === "asc" ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronsUpDown className="h-4 w-4 opacity-40" />
+                      )}
+                    </span>
+                  )}
+                </div>
+              </TableHead>
             ))}
-            {paginatedData.length === 0 && (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paginatedData.map((row) => (
+            <TableRow key={row.id}>
+              {columns.map((col) => (
+                <TableCell
+                  key={col.key}
+                  className="whitespace-nowrap px-3 py-3 sm:px-4"
                 >
-                  No data found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  {col.render
+                    ? col.render(row[col.key], row)
+                    : String(row[col.key] ?? "")}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+          {paginatedData.length === 0 && (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
+              >
+                No data found
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
 
       <div className="flex flex-col items-center justify-between gap-3 border-t px-3 py-3 sm:flex-row sm:px-4">
         <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">

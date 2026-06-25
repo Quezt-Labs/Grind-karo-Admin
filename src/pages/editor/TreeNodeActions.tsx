@@ -1,10 +1,12 @@
 import { memo } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 interface TreeNodeActionsProps {
   onAdd?: () => void;
   addTitle?: string;
+  onClone?: () => void;
+  cloneTitle?: string;
   onEdit: () => void;
   editTitle?: string;
   onDelete: () => void;
@@ -15,6 +17,8 @@ interface TreeNodeActionsProps {
 export const TreeNodeActions = memo(function TreeNodeActions({
   onAdd,
   addTitle = "Add",
+  onClone,
+  cloneTitle = "Clone",
   onEdit,
   editTitle = "Edit",
   onDelete,
@@ -39,6 +43,20 @@ export const TreeNodeActions = memo(function TreeNodeActions({
           title={addTitle}
         >
           <Plus className={iconCn} />
+        </button>
+      )}
+      {onClone && (
+        <button
+          onClick={onClone}
+          className={cn(
+            "rounded-md p-1.5 text-gray-400 hover:text-primary-500",
+            size === "md"
+              ? "hover:bg-gray-100 dark:hover:bg-gray-700"
+              : "hover:bg-white dark:hover:bg-gray-700",
+          )}
+          title={cloneTitle}
+        >
+          <Copy className={iconCn} />
         </button>
       )}
       <button

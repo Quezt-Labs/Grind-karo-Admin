@@ -57,19 +57,33 @@ export interface UpsertSheetsVideoCommentPayload {
 export const sheetsSetVideoService = {
   async listForUser(
     userId: string,
-    weekNumber?: number,
+    opts?: { weekNumber?: number; subscriptionId?: string },
   ): Promise<AdminSheetsSetVideo[]> {
-    const params =
-      weekNumber != null ? { weekNumber: String(weekNumber) } : undefined;
+    const params: Record<string, string> = {};
+    if (opts?.weekNumber != null) {
+      params.weekNumber = String(opts.weekNumber);
+    }
+    if (opts?.subscriptionId) {
+      params.subscriptionId = opts.subscriptionId;
+    }
     const { data } = await api.get(`/sheets/admin/users/${userId}/set-videos`, {
-      params,
+      params: Object.keys(params).length > 0 ? params : undefined,
       timeout: 60_000,
     });
     return data.data ?? data;
   },
 
-  async listSheetWeeks(userId: string): Promise<number[]> {
-    const { data } = await api.get(`/sheets/admin/users/${userId}/sheet-weeks`);
+  async listSheetWeeks(
+    userId: string,
+    subscriptionId?: string,
+  ): Promise<number[]> {
+    const params = subscriptionId ? { subscriptionId } : undefined;
+    const { data } = await api.get(
+      `/sheets/admin/users/${userId}/sheet-weeks`,
+      {
+        params,
+      },
+    );
     return data.data ?? data;
   },
 
@@ -87,13 +101,18 @@ export const sheetsSetVideoService = {
 export const sheetsExerciseNotesService = {
   async listForUser(
     userId: string,
-    weekNumber?: number,
+    opts?: { weekNumber?: number; subscriptionId?: string },
   ): Promise<AdminSheetsExerciseNote[]> {
-    const params =
-      weekNumber != null ? { weekNumber: String(weekNumber) } : undefined;
+    const params: Record<string, string> = {};
+    if (opts?.weekNumber != null) {
+      params.weekNumber = String(opts.weekNumber);
+    }
+    if (opts?.subscriptionId) {
+      params.subscriptionId = opts.subscriptionId;
+    }
     const { data } = await api.get(
       `/sheets/admin/users/${userId}/exercise-notes`,
-      { params },
+      { params: Object.keys(params).length > 0 ? params : undefined },
     );
     return data.data ?? data;
   },

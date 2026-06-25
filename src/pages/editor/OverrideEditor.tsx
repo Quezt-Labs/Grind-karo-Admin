@@ -3,6 +3,21 @@ import { useMutation } from "@tanstack/react-query";
 import { X, Save } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/ShadTable";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/ShadSelect";
 import { movementSlotService } from "@/services/movementSlotService";
 import type {
   MovementOption,
@@ -18,6 +33,8 @@ const LOAD_COMP_OPTIONS = [
   "PERCENT_OF_ROW",
   "NONE",
 ] as const;
+
+const INHERIT_LOAD_COMP = "__inherit__";
 
 interface OverrideEditorProps {
   option: MovementOption;
@@ -153,19 +170,33 @@ export function OverrideEditor({
               No exercise rows are linked to this slot yet.
             </p>
           ) : (
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-gray-500 dark:text-gray-400">
-                  <th className="pb-2 pr-2 font-semibold">Row</th>
-                  <th className="pb-2 pr-2 font-semibold">Sets</th>
-                  <th className="pb-2 pr-2 font-semibold">Reps</th>
-                  <th className="pb-2 pr-2 font-semibold">RPE</th>
-                  <th className="pb-2 pr-2 font-semibold">%1RM</th>
-                  <th className="pb-2 pr-2 font-semibold">Load Strategy</th>
-                  <th className="pb-2 pr-2 font-semibold">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow className="text-left hover:bg-transparent dark:hover:bg-transparent">
+                  <TableHead className="h-auto pb-2 pr-2 font-semibold text-gray-500 dark:text-gray-400">
+                    Row
+                  </TableHead>
+                  <TableHead className="h-auto pb-2 pr-2 font-semibold text-gray-500 dark:text-gray-400">
+                    Sets
+                  </TableHead>
+                  <TableHead className="h-auto pb-2 pr-2 font-semibold text-gray-500 dark:text-gray-400">
+                    Reps
+                  </TableHead>
+                  <TableHead className="h-auto pb-2 pr-2 font-semibold text-gray-500 dark:text-gray-400">
+                    RPE
+                  </TableHead>
+                  <TableHead className="h-auto pb-2 pr-2 font-semibold text-gray-500 dark:text-gray-400">
+                    %1RM
+                  </TableHead>
+                  <TableHead className="h-auto pb-2 pr-2 font-semibold text-gray-500 dark:text-gray-400">
+                    Load Strategy
+                  </TableHead>
+                  <TableHead className="h-auto pb-2 pr-2 font-semibold text-gray-500 dark:text-gray-400">
+                    Notes
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {overrides.map((o, idx) => {
                   const baseRow = rowLookup.get(o.programExerciseId);
                   const name =
@@ -175,7 +206,7 @@ export function OverrideEditor({
                   const isHidden = o.sets === "0";
 
                   return (
-                    <tr
+                    <TableRow
                       key={o.programExerciseId}
                       className={
                         isHidden
@@ -183,7 +214,7 @@ export function OverrideEditor({
                           : "odd:bg-gray-50/50 dark:odd:bg-gray-750/50"
                       }
                     >
-                      <td className="py-1.5 pr-2">
+                      <TableCell className="py-1.5 pr-2">
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                           {name}
                         </span>
@@ -192,8 +223,8 @@ export function OverrideEditor({
                             (hidden)
                           </span>
                         )}
-                      </td>
-                      <td className="py-1.5 pr-2">
+                      </TableCell>
+                      <TableCell className="py-1.5 pr-2">
                         <input
                           type="number"
                           min={0}
@@ -204,8 +235,8 @@ export function OverrideEditor({
                             updateField(idx, "sets", e.target.value)
                           }
                         />
-                      </td>
-                      <td className="py-1.5 pr-2">
+                      </TableCell>
+                      <TableCell className="py-1.5 pr-2">
                         <input
                           className="w-16 rounded-md border border-gray-300 px-1.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                           placeholder={baseRow?.repScheme ?? "—"}
@@ -214,8 +245,8 @@ export function OverrideEditor({
                             updateField(idx, "repScheme", e.target.value)
                           }
                         />
-                      </td>
-                      <td className="py-1.5 pr-2">
+                      </TableCell>
+                      <TableCell className="py-1.5 pr-2">
                         <input
                           className="w-14 rounded-md border border-gray-300 px-1.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                           placeholder={baseRow?.targetRpe ?? "—"}
@@ -224,8 +255,8 @@ export function OverrideEditor({
                             updateField(idx, "targetRpe", e.target.value)
                           }
                         />
-                      </td>
-                      <td className="py-1.5 pr-2">
+                      </TableCell>
+                      <TableCell className="py-1.5 pr-2">
                         <input
                           type="number"
                           step={0.5}
@@ -240,24 +271,34 @@ export function OverrideEditor({
                             updateField(idx, "percentOneRm", e.target.value)
                           }
                         />
-                      </td>
-                      <td className="py-1.5 pr-2">
-                        <select
-                          className="w-32 rounded-md border border-gray-300 px-1.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
-                          value={o.loadComputation}
-                          onChange={(e) =>
-                            updateField(idx, "loadComputation", e.target.value)
+                      </TableCell>
+                      <TableCell className="py-1.5 pr-2">
+                        <Select
+                          value={o.loadComputation || INHERIT_LOAD_COMP}
+                          onValueChange={(value) =>
+                            updateField(
+                              idx,
+                              "loadComputation",
+                              value === INHERIT_LOAD_COMP ? "" : value,
+                            )
                           }
                         >
-                          <option value="">— inherit —</option>
-                          {LOAD_COMP_OPTIONS.map((lc) => (
-                            <option key={lc} value={lc}>
-                              {lc}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-1.5">
+                          <SelectTrigger className="h-7 w-32 text-xs">
+                            <SelectValue placeholder="— inherit —" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={INHERIT_LOAD_COMP}>
+                              — inherit —
+                            </SelectItem>
+                            {LOAD_COMP_OPTIONS.map((lc) => (
+                              <SelectItem key={lc} value={lc}>
+                                {lc}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="py-1.5">
                         <input
                           className="w-24 rounded-md border border-gray-300 px-1.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                           placeholder="notes"
@@ -266,12 +307,12 @@ export function OverrideEditor({
                             updateField(idx, "notes", e.target.value)
                           }
                         />
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
         </div>
 

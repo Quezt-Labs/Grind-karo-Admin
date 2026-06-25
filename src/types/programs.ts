@@ -31,6 +31,10 @@ export interface CreateExercisePayload {
 
 export type UpdateExercisePayload = Partial<CreateExercisePayload>;
 
+export interface ExercisesGrouped {
+  categories: Record<ExerciseCategory, Exercise[]>;
+}
+
 // ---- Programs (top-level) -----------------------------------------------
 export interface Program {
   id: string;
@@ -48,6 +52,8 @@ export interface Program {
   highlights: string[];
   displayOrder: number;
   isActive: boolean;
+  kind?: "RETAIL" | "COACHING";
+  assignedUserId?: string | null;
   /** Only present in admin endpoints (GET /admin/programs, /admin/programs/:id) */
   googleSpreadsheetId?: string | null;
   /** Auto-assign spreadsheet: linked to buyer on every PAID purchase if they have no sheet yet */
@@ -149,6 +155,31 @@ export interface CreateDayPayload {
 
 export type UpdateDayPayload = Partial<CreateDayPayload>;
 
+// ---- Exercise Sets (per-set prescriptions) ------------------------------
+export interface ExerciseSet {
+  id: string;
+  programExerciseId: string;
+  setNumber: number;
+  percentOneRm: number | null;
+  reps: number | null;
+  repScheme: string | null;
+  targetRpe: number | null;
+  absoluteWeightKg: number | null;
+  notes: string | null;
+}
+
+export interface CreateExerciseSetPayload {
+  setNumber: number;
+  percentOneRm?: number | null;
+  reps?: number | null;
+  repScheme?: string | null;
+  targetRpe?: number | null;
+  absoluteWeightKg?: number | null;
+  notes?: string | null;
+}
+
+export type UpdateExerciseSetPayload = Partial<CreateExerciseSetPayload>;
+
 // ---- Exercise Rows (program_exercises) ----------------------------------
 export type LoadComputation =
   | "RPE_CHART"
@@ -168,6 +199,7 @@ export interface ExerciseRow {
   repScheme: string | null;
   targetRpe: string | null;
   percentOneRm: number | null; // basis points (5300 = 53.00%)
+  loadKg?: number | null;
   computedLoadKg?: number | null;
   loadSource?: "percent" | "rpe" | null;
   loadNote: string | null;
@@ -177,6 +209,8 @@ export interface ExerciseRow {
   loadRefFactor: number | null;
   loadRefExerciseId: string | null;
   hasPlateCheck: boolean;
+  /** Per-set prescription rows — populated by the tree/day endpoints */
+  exerciseSets?: ExerciseSet[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -190,8 +224,7 @@ export interface CreateExerciseRowPayload {
   repScheme?: string | null;
   targetRpe?: string | null;
   percentOneRm?: number | null;
-  computedLoadKg?: number | null;
-  loadSource?: "percent" | "rpe" | null;
+  loadKg?: number | null;
   loadNote?: string | null;
   notes?: string | null;
   movementSlotId?: string | null;
@@ -352,6 +385,55 @@ export interface AthleteSelectionRecord {
   squatOneRm: number | null;
   benchOneRm: number | null;
   deadliftOneRm: number | null;
+}
+
+// ---- Movement Selection (admin grouped form) -----------------------------
+export type MovementLiftKey = "squat" | "bench" | "deadlift" | "other";
+export type MovementPositionKey =
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "other";
+
+export interface MovementSelectionFormSlot {
+  position: MovementPositionKey;
+  slot: {
+    id: string;
+    slotKey: string;
+    label: string;
+    category: SlotCategory;
+    sortOrder: number;
+  };
+  options: Array<{
+    id: string;
+    exerciseId: string | null;
+    exerciseName: string;
+    isDefault: boolean;
+    sortOrder: number;
+  }>;
+  selectedOptionId: string | null;
+}
+
+export interface MovementSelectionSection {
+  lift: MovementLiftKey;
+  label: string;
+  slots: MovementSelectionFormSlot[];
+}
+
+export interface MovementSelectionProfile {
+  has125kgPlates: boolean;
+  selectionsLockedAt: string | null;
+  movementSelections: Record<string, string> | null;
+}
+
+export interface MovementSelectionForm {
+  sections: MovementSelectionSection[];
+  profile: MovementSelectionProfile | null;
+}
+
+export interface AdminMovementSelectionPatch {
+  movementSelections: Record<string, string>;
+  has125kgPlates?: boolean;
 }
 
 // ---- Program Purchases --------------------------------------------------

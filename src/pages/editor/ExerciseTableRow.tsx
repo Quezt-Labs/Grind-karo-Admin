@@ -1,43 +1,75 @@
-import { memo } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { memo, useState } from "react";
+import { ChevronDown, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { TableCell, TableRow } from "@/components/ui/ShadTable";
 import type { ExerciseRow } from "@/types/programs";
 import {
   CATEGORY_COLORS,
   CATEGORY_BORDER,
   formatPercent,
 } from "./programConstants";
+import { ExerciseSetsPanel } from "./ExerciseSetsPanel";
+import { useProgramPreview } from "./useProgramPreview";
 
 interface ExerciseTableRowProps {
+  programId: string;
   row: ExerciseRow;
+  dayExercises: ExerciseRow[];
   index: number;
+  compact?: boolean;
+  cellPy?: string;
   onEdit: () => void;
   onDelete: () => void;
+  onRefresh: () => void;
 }
 
 export const ExerciseTableRow = memo(function ExerciseTableRow({
+  programId,
   row,
+  dayExercises,
   index,
+  compact = false,
+  cellPy = "py-4",
   onEdit,
   onDelete,
+  onRefresh,
 }: ExerciseTableRowProps) {
-  const exerciseName = row.resolvedName || row.exerciseNameOverride || "—";
-  const hasNotes = row.loadNote || row.notes;
+  const preview = useProgramPreview();
+  const hasSets = (row.exerciseSets?.length ?? 0) > 0;
+  const [expanded, setExpanded] = useState(hasSets);
+
+  const previewRow = preview?.enabled
+    ? preview.getPreviewRow(dayExercises, row.id)
+    : null;
+
+  if (previewRow?.hidden) return null;
+
+  const previewLoad = previewRow?.load ?? null;
+  const displayLoad = previewLoad ?? row.loadKg ?? row.computedLoadKg ?? null;
+  const exerciseName =
+    previewRow?.resolvedName ??
+    (row.resolvedName || row.exerciseNameOverride || "—");
+  const displaySets = previewRow?.sets ?? row.sets;
+  const displayRepScheme = previewRow?.repScheme ?? row.repScheme;
+  const displayTargetRpe = previewRow?.targetRpe ?? row.targetRpe;
+  const displayPercentOneRm = previewRow?.percentOneRm ?? row.percentOneRm;
+  const hasNotes =
+    (previewRow?.loadNote ?? row.loadNote) || (previewRow?.notes ?? row.notes);
   const isAccessory = row.category === "ACCESSORY" || row.category === "OTHER";
 
   return (
     <>
-      <tr
+      <TableRow
         className={cn(
           "group border-l-3 transition-colors",
           CATEGORY_BORDER[row.category] || CATEGORY_BORDER.OTHER,
           isAccessory
             ? "bg-white hover:bg-gray-50/80 dark:bg-gray-800 dark:hover:bg-gray-750"
             : "hover:bg-blue-50/30 dark:hover:bg-gray-750",
-          "border-t border-gray-100 dark:border-gray-700/60",
+          "border-t border-[#e8eaed] dark:border-gray-700/60",
         )}
       >
-        <td className="py-4 pl-4">
+        <TableCell className={cn(cellPy, "pl-2")}>
           <span
             className={cn(
               "font-mono text-xs",
@@ -46,12 +78,12 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
           >
             {index + 1}
           </span>
-        </td>
-        <td className="py-4 pl-2">
-          <div className="flex items-center gap-2">
+        </TableCell>
+        <TableCell className={cn(cellPy, "pl-1")}>
+          <div className="flex items-center gap-1">
             {row.movementSlotId && (
               <span
-                className="inline-flex shrink-0 items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/20 dark:text-violet-400"
+                className="inline-flex shrink-0 text-[10px]"
                 title="Linked to movement slot"
               >
                 🔀
@@ -59,7 +91,8 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             )}
             <span
               className={cn(
-                "font-medium",
+                "font-medium leading-tight",
+                compact ? "text-xs" : "text-sm",
                 isAccessory
                   ? "text-gray-600 dark:text-gray-400"
                   : "text-gray-900 dark:text-white",
@@ -68,38 +101,49 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
               {exerciseName}
             </span>
           </div>
-          {hasNotes && (
+          {hasNotes && !compact && (
             <p className="mt-1 text-xs leading-tight text-gray-400 dark:text-gray-500">
-              {row.loadNote && <span className="italic">{row.loadNote}</span>}
-              {row.loadNote && row.notes && <span> · </span>}
-              {row.notes && <span>{row.notes}</span>}
+              {(previewRow?.loadNote ?? row.loadNote) && (
+                <span className="italic">
+                  {previewRow?.loadNote ?? row.loadNote}
+                </span>
+              )}
+              {(previewRow?.loadNote ?? row.loadNote) &&
+                (previewRow?.notes ?? row.notes) && <span> · </span>}
+              {(previewRow?.notes ?? row.notes) && (
+                <span>{previewRow?.notes ?? row.notes}</span>
+              )}
             </p>
           )}
-        </td>
-        <td className="py-2.5">
-          <span
-            className={cn(
-              "inline-block rounded-md px-2 py-1 text-xs font-semibold",
-              CATEGORY_COLORS[row.category] || CATEGORY_COLORS.OTHER,
-            )}
-          >
-            {row.category}
-          </span>
-        </td>
-        <td
+        </TableCell>
+        {!compact && (
+          <TableCell className="py-2.5">
+            <span
+              className={cn(
+                "inline-block rounded-md px-2 py-1 text-xs font-semibold",
+                CATEGORY_COLORS[row.category] || CATEGORY_COLORS.OTHER,
+              )}
+            >
+              {row.category}
+            </span>
+          </TableCell>
+        )}
+        <TableCell
           className={cn(
-            "py-4 text-center font-mono text-sm",
+            cellPy,
+            "text-center font-mono",
+            compact ? "text-xs" : "text-sm",
             isAccessory
               ? "text-gray-500 dark:text-gray-400"
               : "text-gray-800 dark:text-gray-200",
           )}
         >
-          {row.sets ?? (
+          {displaySets ?? (
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
-        </td>
-        <td className="py-4 text-center">
-          {row.repScheme ? (
+        </TableCell>
+        <TableCell className={cn(cellPy, "text-center")}>
+          {displayRepScheme ? (
             <span
               className={cn(
                 "font-mono text-sm",
@@ -108,14 +152,14 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
                   : "text-gray-800 dark:text-gray-200",
               )}
             >
-              {row.repScheme}
+              {displayRepScheme}
             </span>
           ) : (
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
-        </td>
-        <td className="py-4 text-center">
-          {row.targetRpe ? (
+        </TableCell>
+        <TableCell className={cn(cellPy, "text-center")}>
+          {displayTargetRpe ? (
             <span
               className={cn(
                 "inline-block rounded-md px-2 py-1 font-mono text-xs font-semibold",
@@ -124,25 +168,30 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
                 isAccessory && "text-gray-500 dark:text-gray-400",
               )}
             >
-              {row.targetRpe}
+              {displayTargetRpe}
             </span>
           ) : (
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
-        </td>
-        <td className="py-4 text-center">
-          {row.percentOneRm ? (
+        </TableCell>
+        <TableCell className={cn(cellPy, "text-center")}>
+          {displayPercentOneRm ? (
             <span className="inline-block rounded-md bg-indigo-50 px-2 py-1 font-mono text-xs font-semibold text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400">
-              {formatPercent(row.percentOneRm)}
+              {formatPercent(displayPercentOneRm)}
             </span>
           ) : (
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
-        </td>
-        <td className="py-4 text-center">
-          {row.computedLoadKg ? (
-            <span className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-400">
-              {row.computedLoadKg}
+        </TableCell>
+        <TableCell className={cn(cellPy, "text-center")}>
+          {displayLoad != null ? (
+            <span
+              className={cn(
+                "font-mono font-bold text-emerald-700 dark:text-emerald-400",
+                compact ? "text-xs" : "text-base",
+              )}
+            >
+              {displayLoad}
               <span className="ml-0.5 text-xs font-normal text-emerald-600/70 dark:text-emerald-400/70">
                 kg
               </span>
@@ -150,26 +199,52 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
           ) : (
             <span className="text-gray-300 dark:text-gray-600">–</span>
           )}
-        </td>
-        <td className="py-4">
-          <div className="flex items-center justify-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-40 sm:group-hover:opacity-100">
+        </TableCell>
+        <TableCell className={cellPy}>
+          <div className="flex items-center justify-center gap-0.5">
             <button
-              onClick={onEdit}
-              className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-200"
-              title="Edit exercise"
+              onClick={() => setExpanded((v) => !v)}
+              className={cn(
+                "rounded p-1 transition-colors",
+                expanded
+                  ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400"
+                  : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600",
+              )}
+              title={expanded ? "Hide per-set config" : "Show per-set config"}
             >
-              <Pencil className="h-4 w-4" />
+              {expanded ? (
+                <ChevronDown className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+              ) : (
+                <ChevronRight className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+              )}
             </button>
-            <button
-              onClick={onDelete}
-              className="rounded-md p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
-              title="Delete exercise"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-0.5 opacity-100 sm:opacity-60 sm:group-hover:opacity-100">
+              <button
+                onClick={onEdit}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-200"
+                title="Edit exercise"
+              >
+                <Pencil className={compact ? "h-3 w-3" : "h-4 w-4"} />
+              </button>
+              <button
+                onClick={onDelete}
+                className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+                title="Delete exercise"
+              >
+                <Trash2 className={compact ? "h-3 w-3" : "h-4 w-4"} />
+              </button>
+            </div>
           </div>
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
+      {expanded && (
+        <ExerciseSetsPanel
+          programId={programId}
+          exerciseRowId={row.id}
+          sets={row.exerciseSets ?? []}
+          onRefresh={onRefresh}
+        />
+      )}
     </>
   );
 });

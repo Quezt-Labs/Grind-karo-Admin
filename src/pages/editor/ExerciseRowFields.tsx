@@ -1,10 +1,13 @@
-import type {
-  UseFormRegister,
-  UseFormWatch,
-  UseFormSetValue,
-  FieldErrors,
+import {
+  Controller,
+  type Control,
+  type UseFormRegister,
+  type UseFormSetValue,
+  type UseFormWatch,
+  type FieldErrors,
 } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import {
@@ -12,60 +15,101 @@ import {
   LOAD_COMPUTATION_OPTIONS,
 } from "./exerciseRowSchema";
 import type { ExerciseRowFormData } from "./exerciseRowSchema";
-import type { MovementSlot } from "@/types/programs";
+import type { ExerciseRow, MovementSlot } from "@/types/programs";
 
 interface ExerciseRowFieldsProps {
   register: UseFormRegister<ExerciseRowFormData>;
+  control: Control<ExerciseRowFormData>;
   watch: UseFormWatch<ExerciseRowFormData>;
   setValue: UseFormSetValue<ExerciseRowFormData>;
   errors: FieldErrors<ExerciseRowFormData>;
   exerciseOptions: { value: string; label: string }[];
   movementSlots?: MovementSlot[];
+  dayExercises?: ExerciseRow[];
+  currentRowId?: string;
 }
 
 export function ExerciseRowFields({
   register,
+  control,
   watch,
   setValue,
   errors,
   exerciseOptions,
   movementSlots = [],
+  dayExercises = [],
+  currentRowId,
 }: ExerciseRowFieldsProps) {
   const loadComputation = watch("loadComputation");
+  const exerciseId = watch("exerciseId");
+  const hasLibraryExercise = Boolean(exerciseId);
   const slotOptions = movementSlots.map((s) => ({
     value: s.id,
     label: `${s.label} [${s.category}]`,
   }));
 
+  const refRowOptions = dayExercises
+    .filter((r) => r.id !== currentRowId)
+    .map((r, i) => ({
+      value: r.id,
+      label: `${i + 1}. ${r.resolvedName || r.exerciseNameOverride || "Exercise"}`,
+    }));
+
   return (
     <>
-      <Select
-        id="row-category"
-        label="Category"
-        options={CATEGORY_OPTIONS}
-        error={errors.category?.message}
-        value={watch("category")}
-        {...register("category")}
+      <Controller
+        control={control}
+        name="category"
+        render={({ field }) => (
+          <Select
+            id="row-category"
+            label="Category"
+            options={CATEGORY_OPTIONS}
+            value={field.value}
+            onValueChange={field.onChange}
+            onBlur={field.onBlur}
+            error={errors.category?.message}
+          />
+        )}
       />
 
-      <Select
-        id="row-exercise"
-        label="Exercise (from library)"
-        options={exerciseOptions}
-        value={watch("exerciseId")}
-        {...register("exerciseId")}
+      <Controller
+        control={control}
+        name="exerciseId"
+        render={({ field }) => (
+          <Select
+            id="row-exercise"
+            label="Exercise (from library)"
+            labelInfo="Exercise library se pick karo jab ek clear movement ho. Slash/combo options (jaise Lunges/BSS) ke liye neeche manual name likho."
+            options={[
+              { value: "", label: "— Manual name only —" },
+              ...exerciseOptions,
+            ]}
+            value={field.value ?? ""}
+            onValueChange={(value) => {
+              field.onChange(value);
+              if (value) setValue("exerciseNameOverride", "");
+            }}
+            onBlur={field.onBlur}
+            placeholder="Select exercise..."
+          />
+        )}
       />
 
-      <Input
-        id="row-override"
-        label="Exercise Name (Manual)"
-        placeholder="e.g. Lunges / BSS / Leg Press"
-        {...register("exerciseNameOverride")}
-      />
-      <p className="text-xs text-gray-400 -mt-2">
-        Library se select karo ya manually name likho — dono mein se ek hi
-        chahiye
-      </p>
+      {!hasLibraryExercise && (
+        <>
+          <Input
+            id="row-override"
+            label="Exercise Name (Manual)"
+            placeholder="e.g. Lunges / BSS / Leg Press"
+            {...register("exerciseNameOverride")}
+          />
+          <p className="-mt-2 text-xs text-gray-400">
+            Library se select karo ya manually name likho — dono mein se ek hi
+            chahiye
+          </p>
+        </>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Input
@@ -90,7 +134,7 @@ export function ExerciseRowFields({
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Input
           id="row-pct"
           label="% of 1RM"
@@ -102,6 +146,15 @@ export function ExerciseRowFields({
           {...register("percentOneRmDisplay")}
         />
         <Input
+          id="row-load-kg"
+          label="Load (kg)"
+          type="number"
+          min={0}
+          step={0.5}
+          placeholder="60"
+          {...register("loadKg")}
+        />
+        <Input
           id="row-order"
           label="Sort Order"
           type="number"
@@ -110,24 +163,38 @@ export function ExerciseRowFields({
         />
       </div>
 
-      {/* ── Movement Slot ──────────────────────────────────── */}
       {slotOptions.length > 0 && (
-        <Select
-          id="row-slot"
-          label="Movement Slot"
-          options={slotOptions}
-          value={watch("movementSlotId")}
-          {...register("movementSlotId")}
+        <Controller
+          control={control}
+          name="movementSlotId"
+          render={({ field }) => (
+            <Select
+              id="row-slot"
+              label="Movement Slot"
+              options={[{ value: "", label: "— None —" }, ...slotOptions]}
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
+              onBlur={field.onBlur}
+            />
+          )}
         />
       )}
 
-      {/* ── Load Computation ───────────────────────────────── */}
-      <Select
-        id="row-load-computation"
-        label="Load Computation"
-        options={LOAD_COMPUTATION_OPTIONS}
-        value={watch("loadComputation")}
-        {...register("loadComputation")}
+      <Controller
+        control={control}
+        name="loadComputation"
+        render={({ field }) => (
+          <Select
+            id="row-load-computation"
+            label="Load Computation"
+            labelInfo="Kaunsi strategy se athlete ka working weight calculate hoga."
+            options={LOAD_COMPUTATION_OPTIONS}
+            value={field.value}
+            onValueChange={field.onChange}
+            onBlur={field.onBlur}
+            error={errors.loadComputation?.message}
+          />
+        )}
       />
 
       {loadComputation === "PERCENT_OF_ROW" && (
@@ -142,24 +209,38 @@ export function ExerciseRowFields({
             placeholder="0.90"
             {...register("loadRefFactor")}
           />
-          <Input
-            id="row-ref-exercise"
-            label="Reference Row ID"
-            placeholder="exercise-row-uuid"
-            {...register("loadRefExerciseId")}
+          <Controller
+            control={control}
+            name="loadRefExerciseId"
+            render={({ field }) => (
+              <Select
+                id="row-ref-exercise"
+                label="Reference exercise (top set row)"
+                options={[
+                  { value: "", label: "— Select row —" },
+                  ...refRowOptions,
+                ]}
+                value={field.value ?? ""}
+                onValueChange={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
           />
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-          checked={watch("hasPlateCheck") ?? false}
-          onChange={(e) => setValue("hasPlateCheck", e.target.checked)}
-        />
-        Plate Rounding (round to nearest plate increment)
-      </label>
+      <Controller
+        control={control}
+        name="hasPlateCheck"
+        render={({ field }) => (
+          <CheckboxField
+            id="row-plate-check"
+            label="Plate Rounding (round to nearest plate increment)"
+            checked={field.value ?? false}
+            onCheckedChange={field.onChange}
+          />
+        )}
+      />
 
       <Input
         id="row-load"

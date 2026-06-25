@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BarChart3,
@@ -15,6 +15,10 @@ import {
 } from "@/services/workoutSummaryService";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/utils/cn";
+import {
+  weekRangeOverlapsSubscription,
+  type UserActivityScope,
+} from "@/utils/userActivityScope";
 
 function formatWeekRange(start: string, end: string) {
   const fmt = (iso: string) =>
@@ -187,10 +191,12 @@ function SummaryCard({ summary }: { summary: WorkoutWeeklySummary }) {
 
 interface UserWeeklySummariesPanelProps {
   userId: string;
+  activityScope?: UserActivityScope;
 }
 
 export function UserWeeklySummariesPanel({
   userId,
+  activityScope = { mode: "all" },
 }: UserWeeklySummariesPanelProps) {
   const queryClient = useQueryClient();
 
@@ -211,7 +217,17 @@ export function UserWeeklySummariesPanel({
     onError: () => toast.error("Failed to regenerate summary"),
   });
 
-  const summaries = data ?? [];
+  const summaries = useMemo(() => {
+    const all = data ?? [];
+    if (activityScope.mode !== "subscription") return all;
+    return all.filter((summary) =>
+      weekRangeOverlapsSubscription(
+        summary.weekStart,
+        summary.weekEnd,
+        activityScope.range,
+      ),
+    );
+  }, [data, activityScope]);
 
   return (
     <div>

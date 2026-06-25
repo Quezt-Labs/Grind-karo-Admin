@@ -31,23 +31,26 @@ export function hasPaidProgramPurchase(purchases: Purchase[]): boolean {
   );
 }
 
-export function hasSheetCoachingContext(
-  purchases: Purchase[],
-  spreadsheetId?: string | null,
-): boolean {
-  const activeCoaching = purchases.some(
+export function hasCoachingAthleteContext(purchases: Purchase[]): boolean {
+  return purchases.some(
     (p) => p.kind === "coaching_subscription" && p.status === "ACTIVE",
   );
-  return activeCoaching || Boolean(spreadsheetId?.trim());
+}
+
+/** @deprecated Use hasCoachingAthleteContext */
+export function hasSheetCoachingContext(
+  purchases: Purchase[],
+  _spreadsheetId?: string | null,
+): boolean {
+  return hasCoachingAthleteContext(purchases);
 }
 
 export function buildAthleteActivityTabs(opts: {
   purchases: Purchase[];
-  spreadsheetId?: string | null;
   pendingVideoCount?: number;
 }): AthleteActivityTab[] {
-  const { purchases, spreadsheetId, pendingVideoCount = 0 } = opts;
-  const sheet = hasSheetCoachingContext(purchases, spreadsheetId);
+  const { purchases, pendingVideoCount = 0 } = opts;
+  const sheet = hasCoachingAthleteContext(purchases);
   const program = hasPaidProgramPurchase(purchases);
 
   const tabs: AthleteActivityTab[] = [];
@@ -62,8 +65,8 @@ export function buildAthleteActivityTabs(opts: {
     });
     tabs.push({
       key: "sheet",
-      label: "Sheet program",
-      description: "Full block/week/day view with logged load and RPE",
+      label: "Program",
+      description: "Athlete program is built in Setup → Open Program Editor",
       icon: Sheet,
     });
     tabs.push({

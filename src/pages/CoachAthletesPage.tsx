@@ -4,6 +4,14 @@ import { MapPin, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/ShadTable";
 import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import { cn } from "@/utils/cn";
 import { formatAthleteLocation } from "@/lib/indianStates";
@@ -63,76 +71,76 @@ export function CoachAthletesPage() {
 
       {!isLoading && !isError && (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/40">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <Table className="min-w-full">
+            <TableHeader className="bg-gray-50 dark:bg-gray-900/40">
+              <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Athlete
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Location
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Program purchased
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Personal coaching
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Form check
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Assigned
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {(data?.items ?? []).length === 0 ? (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={6}
                     className="px-4 py-10 text-center text-sm text-gray-500"
                   >
                     No athletes assigned yet.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 data?.items.map((row) => (
-                  <tr
+                  <TableRow
                     key={row.athleteId}
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                    className="cursor-pointer"
                     onClick={() => navigate(`/coach/athletes/${row.athleteId}`)}
                   >
-                    <td className="px-4 py-3">
+                    <TableCell className="px-4 py-3">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {row.athleteName || "Unnamed"}
                       </p>
                       <p className="text-xs text-gray-500">
                         {row.athleteEmail}
                       </p>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {formatAthleteLocation(row.city, row.state)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {row.programsPurchased.length > 0
                         ? row.programsPurchased.join(", ")
                         : "—"}
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <StatusPill active={row.personalCoachingEnabled} />
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <StatusPill active={row.formCheckEnabled} />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-500">
                       {formatDate(row.assignedAt)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

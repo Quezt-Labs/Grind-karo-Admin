@@ -1,5 +1,11 @@
 import { Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useParams,
+} from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
@@ -30,6 +36,7 @@ import {
   ProgramAddonsPage,
   ProgramBooksPage,
   ProgramDetailPage,
+  ProgramEditorPage,
   ProgramPurchasesPage,
   ProgramReviewsPage,
   ProgramsPage,
@@ -49,6 +56,12 @@ function HomeRedirect() {
     return <Navigate to="/coach/athletes" replace />;
   }
   return <Navigate to="/dashboard" replace />;
+}
+
+function LegacyCoachingEditorRedirect() {
+  const { userId } = useParams<{ userId: string }>();
+  if (!userId) return <Navigate to="/users" replace />;
+  return <Navigate to={`/coaching/${userId}/editor`} replace />;
 }
 
 export default function App() {
@@ -73,6 +86,20 @@ export default function App() {
                 />
                 <Route path="/form-checks" element={<FormCheckInboxPage />} />
                 <Route path="/chat" element={<ChatPage />} />
+
+                {/* Retail template editor vs per-athlete coaching editor */}
+                <Route
+                  path="/programs/:programKey/editor"
+                  element={<ProgramEditorPage />}
+                />
+                <Route
+                  path="/coaching/:userId/editor"
+                  element={<ProgramEditorPage />}
+                />
+                <Route
+                  path="/users/:userId/program/editor"
+                  element={<LegacyCoachingEditorRedirect />}
+                />
 
                 <Route element={<AdminOnlyRoute />}>
                   <Route path="/dashboard" element={<DashboardPage />} />

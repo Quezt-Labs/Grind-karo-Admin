@@ -7,6 +7,14 @@ import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/ShadTable";
 import { assistantCoachService } from "@/services/athleteAssignmentService";
 
 export function AssistantCoachesPage() {
@@ -107,53 +115,53 @@ export function AssistantCoachesPage() {
 
       {!isLoading && !isError && (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/40">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <Table className="min-w-full">
+            <TableHeader className="bg-gray-50 dark:bg-gray-900/40">
+              <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Name
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Email
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Assigned athletes
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Created
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {coaches.length === 0 ? (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={4}
                     className="px-4 py-10 text-center text-sm text-gray-500"
                   >
                     No assistant coaches yet.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 coaches.map((coach) => (
-                  <tr key={coach.id}>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                  <TableRow key={coach.id}>
+                    <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                       {coach.name || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {coach.email}
-                    </td>
-                    <td className="px-4 py-3 text-sm tabular-nums text-gray-600 dark:text-gray-300">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm tabular-nums text-gray-600 dark:text-gray-300">
                       {coach.assignedAthleteCount}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-500">
                       {new Date(coach.createdAt).toLocaleDateString("en-IN")}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

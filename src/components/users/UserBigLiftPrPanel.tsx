@@ -1,8 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { Dumbbell } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { athleteEngagementService } from "@/services/athleteEngagementService";
+import {
+  isWithinSubscriptionRange,
+  type UserActivityScope,
+} from "@/utils/userActivityScope";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -52,18 +57,26 @@ function formatDeadliftDisplay(checkin: {
 interface UserBigLiftPrPanelProps {
   userId: string;
   compactHeader?: boolean;
+  activityScope?: UserActivityScope;
 }
 
 export function UserBigLiftPrPanel({
   userId,
   compactHeader = false,
+  activityScope = { mode: "all" },
 }: UserBigLiftPrPanelProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-user-big-lift-pr", userId],
     queryFn: () => athleteEngagementService.getUserBigLiftPrHistory(userId),
   });
 
-  const items = data ?? [];
+  const items = useMemo(() => {
+    const raw = data ?? [];
+    if (activityScope.mode !== "subscription") return raw;
+    return raw.filter((entry) =>
+      isWithinSubscriptionRange(entry.createdAt, activityScope.range),
+    );
+  }, [data, activityScope]);
   const latest = items[0];
 
   return (

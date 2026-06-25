@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   MessageCircle,
   Send,
@@ -68,7 +69,6 @@ export function ChatPage() {
   const debouncedUserSearch = useDebounce(userSearch.trim(), 300);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const voice = useVoiceRecorder();
 
@@ -182,11 +182,6 @@ export function ChatPage() {
     select: (msgs) => [...msgs].reverse(), // API returns newest-first; reverse for bottom-up
   });
 
-  // Scroll to bottom when thread loads / new messages arrive
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, selectedUserId]);
-
   // Invalidate inbox after reading a thread (unread counts update server-side)
   useEffect(() => {
     if (selectedUserId) {
@@ -276,8 +271,51 @@ export function ChatPage() {
     }
   }
 
+  // ── Message items with date dividers ───────────────────────
+  const items = useMemo(
+    () =>
+      messages.map((msg, i) => ({
+        msg,
+        msgDate: dateDivider(msg.createdAt),
+        showDivider:
+          i === 0 ||
+          dateDivider(msg.createdAt) !== dateDivider(messages[i - 1].createdAt),
+        isFromUser: msg.senderId === msg.userId,
+      })),
+    [messages],
+  );
+
   const showInbox = !selectedUserId;
   const showThread = !!selectedUserId;
+
+  // ── Inbox virtualizer ──────────────────────────────────────
+  const inboxScrollRef = useRef<HTMLDivElement>(null);
+  const inboxVirtualizer = useVirtualizer({
+    count: inbox.length,
+    getScrollElement: () => inboxScrollRef.current,
+    estimateSize: () => 72,
+    overscan: 5,
+  });
+
+  // ── Thread virtualizer ─────────────────────────────────────
+  const threadScrollRef = useRef<HTMLDivElement>(null);
+  const threadVirtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => threadScrollRef.current,
+    estimateSize: () => 64,
+    overscan: 8,
+  });
+
+  // Scroll thread to bottom on new messages / thread switch
+  useEffect(() => {
+    if (!threadScrollRef.current || messages.length === 0) return;
+    requestAnimationFrame(() => {
+      if (threadScrollRef.current) {
+        threadScrollRef.current.scrollTop =
+          threadScrollRef.current.scrollHeight;
+      }
+    });
+  }, [messages.length, selectedUserId]);
 
   // ---------- render ----------
   return (
@@ -362,7 +400,7 @@ export function ChatPage() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" ref={inboxScrollRef}>
           {inboxLoading ? (
             <div className="flex justify-center pt-8">
               <Spinner />
@@ -373,14 +411,31 @@ export function ChatPage() {
               <p className="mt-2 text-sm text-gray-400">No conversations yet</p>
             </div>
           ) : (
-            inbox.map((item) => (
-              <InboxRow
-                key={item.userId}
-                item={item}
-                selected={item.userId === selectedUserId}
-                onClick={() => selectUser(item.userId)}
-              />
-            ))
+            <div
+              style={{
+                height: inboxVirtualizer.getTotalSize(),
+                position: "relative",
+              }}
+            >
+              {inboxVirtualizer.getVirtualItems().map((vi) => (
+                <div
+                  key={vi.key}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${vi.start}px)`,
+                  }}
+                >
+                  <InboxRow
+                    item={inbox[vi.index]}
+                    selected={inbox[vi.index].userId === selectedUserId}
+                    onClick={() => selectUser(inbox[vi.index].userId)}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </aside>
@@ -424,7 +479,10 @@ export function ChatPage() {
             </div>
 
             {/* Messages */}
-            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-1 sm:px-5 sm:py-4">
+            <div
+              ref={threadScrollRef}
+              className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5 sm:py-4"
+            >
               {threadLoading ? (
                 <div className="flex justify-center pt-10">
                   <Spinner />
@@ -434,9 +492,45 @@ export function ChatPage() {
                   No messages yet. Say hello!
                 </div>
               ) : (
-                <MessageList messages={messages} />
+                <div
+                  style={{
+                    height: threadVirtualizer.getTotalSize(),
+                    position: "relative",
+                  }}
+                >
+                  {threadVirtualizer.getVirtualItems().map((vi) => {
+                    const item = items[vi.index];
+                    return (
+                      <div
+                        key={vi.key}
+                        data-index={vi.index}
+                        ref={threadVirtualizer.measureElement}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          transform: `translateY(${vi.start}px)`,
+                        }}
+                      >
+                        {item.showDivider && (
+                          <div className="flex items-center gap-3 py-3">
+                            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                            <span className="text-[10px] font-medium text-gray-400">
+                              {item.msgDate}
+                            </span>
+                            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                          </div>
+                        )}
+                        <MessageBubble
+                          msg={item.msg}
+                          isFromUser={item.isFromUser}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-              <div ref={bottomRef} />
             </div>
 
             {/* Compose */}
@@ -604,36 +698,6 @@ function InboxRow({
         </span>
       )}
     </button>
-  );
-}
-
-function MessageList({ messages }: { messages: ChatMessage[] }) {
-  const items = messages.map((msg, i) => ({
-    msg,
-    msgDate: dateDivider(msg.createdAt),
-    showDivider:
-      i === 0 ||
-      dateDivider(msg.createdAt) !== dateDivider(messages[i - 1].createdAt),
-    isFromUser: msg.senderId === msg.userId,
-  }));
-
-  return (
-    <>
-      {items.map(({ msg, msgDate, showDivider, isFromUser }) => (
-        <div key={msg.id}>
-          {showDivider && (
-            <div className="flex items-center gap-3 py-3">
-              <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-              <span className="text-[10px] font-medium text-gray-400">
-                {msgDate}
-              </span>
-              <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-            </div>
-          )}
-          <MessageBubble msg={msg} isFromUser={isFromUser} />
-        </div>
-      ))}
-    </>
   );
 }
 

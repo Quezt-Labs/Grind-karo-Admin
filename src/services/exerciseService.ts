@@ -1,14 +1,16 @@
 import api from "./api";
 import type {
   Exercise,
+  ExercisesGrouped,
   CreateExercisePayload,
   UpdateExercisePayload,
 } from "@/types/programs";
+import { normalizeExercisesGrouped } from "@/utils/exerciseLibrary";
 
 export const exerciseService = {
-  async getAll(): Promise<Exercise[]> {
+  async getAll(): Promise<ExercisesGrouped> {
     const { data } = await api.get("/admin/exercises");
-    return data.data ?? data;
+    return normalizeExercisesGrouped(data.data ?? data);
   },
 
   async getById(id: string): Promise<Exercise> {

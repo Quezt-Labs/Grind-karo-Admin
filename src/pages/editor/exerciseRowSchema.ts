@@ -10,10 +10,26 @@ export const CATEGORY_OPTIONS = [
 ];
 
 export const LOAD_COMPUTATION_OPTIONS = [
-  { value: "RPE_CHART", label: "RPE Chart" },
-  { value: "PERCENT_1RM", label: "% of 1RM" },
-  { value: "PERCENT_OF_ROW", label: "% of Another Row" },
-  { value: "NONE", label: "None" },
+  {
+    value: "RPE_CHART",
+    label: "RPE Chart",
+    info: "E1RM aur RPE/reps table se working weight calculate hota hai. Main lifts (Squat, Bench, Deadlift) ke liye.",
+  },
+  {
+    value: "PERCENT_1RM",
+    label: "% of 1RM",
+    info: "Category 1RM ka percentage use karke load nikalta hai. Accessories ke liye common.",
+  },
+  {
+    value: "PERCENT_OF_ROW",
+    label: "% of Another Row",
+    info: "Kisi aur exercise row ke computed load × reference factor. Back-off sets ke liye.",
+  },
+  {
+    value: "NONE",
+    label: "None",
+    info: "Auto load compute nahi hoga. Bodyweight ya coach manual load ke liye.",
+  },
 ];
 
 export const exerciseRowSchema = z.object({
@@ -25,6 +41,7 @@ export const exerciseRowSchema = z.object({
   repScheme: z.string().optional(),
   targetRpe: z.string().optional(),
   percentOneRmDisplay: z.coerce.number().nullable().optional(),
+  loadKg: z.coerce.number().nullable().optional(),
   loadNote: z.string().optional(),
   notes: z.string().optional(),
   movementSlotId: z.string().optional(),
@@ -51,8 +68,7 @@ export function toPayload(d: ExerciseRowFormData) {
     repScheme: d.repScheme || null,
     targetRpe: d.targetRpe || null,
     percentOneRm: pctBasisPoints,
-    computedLoadKg: null,
-    loadSource: null,
+    loadKg: d.loadKg ?? null,
     loadNote: d.loadNote || null,
     notes: d.notes || null,
     movementSlotId: d.movementSlotId || null,
@@ -63,7 +79,10 @@ export function toPayload(d: ExerciseRowFormData) {
   };
 }
 
-export function getDefaultValues(row?: ExerciseRow): ExerciseRowFormData {
+export function getDefaultValues(
+  row?: ExerciseRow,
+  nextSortOrder = 0,
+): ExerciseRowFormData {
   if (row) {
     return {
       sortOrder: row.sortOrder,
@@ -74,6 +93,7 @@ export function getDefaultValues(row?: ExerciseRow): ExerciseRowFormData {
       repScheme: row.repScheme || "",
       targetRpe: row.targetRpe || "",
       percentOneRmDisplay: row.percentOneRm ? row.percentOneRm / 100 : null,
+      loadKg: row.loadKg ?? null,
       loadNote: row.loadNote || "",
       notes: row.notes || "",
       movementSlotId: row.movementSlotId || "",
@@ -84,7 +104,7 @@ export function getDefaultValues(row?: ExerciseRow): ExerciseRowFormData {
     };
   }
   return {
-    sortOrder: 0,
+    sortOrder: nextSortOrder,
     category: "ACCESSORY",
     exerciseId: "",
     exerciseNameOverride: "",
@@ -92,6 +112,7 @@ export function getDefaultValues(row?: ExerciseRow): ExerciseRowFormData {
     repScheme: "",
     targetRpe: "",
     percentOneRmDisplay: null,
+    loadKg: null,
     loadNote: "",
     notes: "",
     movementSlotId: "",

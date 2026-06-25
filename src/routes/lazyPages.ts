@@ -138,3 +138,7 @@ export const VideoLibraryPage = lazyPage(
   () => import("@/pages/VideoLibraryPage"),
   "VideoLibraryPage",
 );
+export const ProgramEditorPage = lazyPage(
+  () => import("@/pages/ProgramEditorPage"),
+  "ProgramEditorPage",
+);

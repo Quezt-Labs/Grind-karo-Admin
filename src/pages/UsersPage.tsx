@@ -30,7 +30,7 @@ export function UsersPage() {
     "" | "USER" | "ADMIN" | "ASSISTANT_COACH"
   >("");
   const [coachingSetupFilter, setCoachingSetupFilter] =
-    useState<CoachingSetupStatusFilter>("awaiting_sheet");
+    useState<CoachingSetupStatusFilter>("awaiting_program");
   const [coachingSetupStateFilter, setCoachingSetupStateFilter] =
     useState<string>("");
 
@@ -119,6 +119,7 @@ export function UsersPage() {
       name: m.name || "—",
       email: m.email,
       planName: m.planName,
+      planSlug: m.planSlug,
       city: m.city?.trim() || "—",
       state: m.state?.trim() || "—",
       setupStatus: m.setupStatus,
@@ -181,7 +182,7 @@ export function UsersPage() {
               {
                 key: "coaching-setup",
                 label: "Coaching setup",
-                count: coachingSetupData?.counts?.awaitingSheet,
+                count: coachingSetupData?.counts?.awaitingProgram,
                 icon: <ClipboardList className="h-3.5 w-3.5" />,
               },
             ] as const

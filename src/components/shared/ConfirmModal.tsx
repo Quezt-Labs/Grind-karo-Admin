@@ -1,4 +1,12 @@
 import { Button } from "@/components/ui/Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/ShadDialog";
 
 interface ConfirmModalProps {
   open: boolean;
@@ -23,19 +31,19 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50" onClick={onCancel} />
-      <div className="relative w-full max-w-md rounded-xl border bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {title}
-        </h3>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {message}
-        </p>
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !isLoading) onCancel();
+      }}
+    >
+      <DialogContent className="max-w-md" showClose={false}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-2">
           <Button variant="secondary" onClick={onCancel} disabled={isLoading}>
             {cancelLabel}
           </Button>
@@ -46,8 +54,8 @@ export function ConfirmModal({
           >
             {confirmLabel}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

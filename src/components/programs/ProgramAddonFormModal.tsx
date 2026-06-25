@@ -1,10 +1,11 @@
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { programAddonService } from "@/services/programAddonService";
@@ -41,6 +42,7 @@ export function ProgramAddonFormModal({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
@@ -159,27 +161,31 @@ export function ProgramAddonFormModal({
             />
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-primary-600"
-              {...register("grantsFormCheck")}
-            />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Grants form-check (set video uploads)
-            </span>
-          </label>
+          <Controller
+            control={control}
+            name="grantsFormCheck"
+            render={({ field }) => (
+              <CheckboxField
+                id="prog-addon-form-check"
+                label="Grants form-check (set video uploads)"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
+          />
 
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-primary-600"
-              {...register("isActive")}
-            />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Active
-            </span>
-          </label>
+          <Controller
+            control={control}
+            name="isActive"
+            render={({ field }) => (
+              <CheckboxField
+                id="prog-addon-active"
+                label="Active"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
+          />
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={onClose}>

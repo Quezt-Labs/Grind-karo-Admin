@@ -1,10 +1,11 @@
-import { useForm, useWatch, type Resolver } from "react-hook-form";
+import { useForm, useWatch, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -179,11 +180,19 @@ export function CouponFormModal({
               error={errors.code?.message}
               {...register("code")}
             />
-            <Select
-              id="c-type"
-              label="Discount Type"
-              options={DISCOUNT_TYPE_OPTIONS}
-              {...register("discountType")}
+            <Controller
+              control={control}
+              name="discountType"
+              render={({ field }) => (
+                <Select
+                  id="c-type"
+                  label="Discount Type"
+                  options={DISCOUNT_TYPE_OPTIONS}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
           </div>
           <Textarea
@@ -227,21 +236,33 @@ export function CouponFormModal({
 
           {/* Scope */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select
-              id="c-scope"
-              label="Scope"
-              options={SCOPE_OPTIONS}
-              {...register("scope")}
+            <Controller
+              control={control}
+              name="scope"
+              render={({ field }) => (
+                <Select
+                  id="c-scope"
+                  label="Scope"
+                  options={SCOPE_OPTIONS}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
             <div className="flex items-end pb-1">
-              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  {...register("applyToAddons")}
-                />
-                Apply to add-ons
-              </label>
+              <Controller
+                control={control}
+                name="applyToAddons"
+                render={({ field }) => (
+                  <CheckboxField
+                    id="c-addons"
+                    label="Apply to add-ons"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
             </div>
           </div>
 
@@ -282,20 +303,18 @@ export function CouponFormModal({
           </div>
 
           {/* Active */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="c-active"
-              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              {...register("isActive")}
-            />
-            <label
-              htmlFor="c-active"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Active
-            </label>
-          </div>
+          <Controller
+            control={control}
+            name="isActive"
+            render={({ field }) => (
+              <CheckboxField
+                id="c-active"
+                label="Active"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
+          />
 
           {isEdit && (
             <p className="text-xs text-gray-400">

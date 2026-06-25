@@ -10,10 +10,19 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/ShadTable";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
@@ -24,6 +33,7 @@ import { LinkAddonModal } from "@/components/coaching/LinkAddonModal";
 import type { Column } from "@/types/dashboard";
 import type { CoachingAddon, PublicAddon } from "@/types/program";
 import type { PlanUserStatusFilter } from "@/types/user";
+import { requiresPersonalCoachingProgram } from "@/utils/coachingCapabilities";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -163,6 +173,8 @@ export function PlanDetailPage() {
       );
     },
   };
+
+  const personalCoachingPlan = requiresPersonalCoachingProgram(plan.slug);
 
   return (
     <div className="space-y-6">
@@ -323,65 +335,92 @@ export function PlanDetailPage() {
         ) : (
           <>
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-              <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800/60">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <Table className="min-w-full text-sm">
+                <TableHeader className="bg-gray-50 dark:bg-gray-800/60">
+                  <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
+                    <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       User
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    </TableHead>
+                    <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    </TableHead>
+                    <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       Amount
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    </TableHead>
+                    <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       Start Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    </TableHead>
+                    <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       Expires
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                    </TableHead>
+                    {personalCoachingPlan && (
+                      <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Program
+                      </TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {(subscribersData.items ?? []).map(
                     ({ user, subscription }) => (
-                      <tr
+                      <TableRow
                         key={subscription.id}
-                        onClick={() => navigate(`/users/${user.id}`)}
-                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                        onClick={() =>
+                          navigate(
+                            `/users/${user.id}?subscriptionId=${subscription.id}`,
+                          )
+                        }
+                        className="cursor-pointer"
                       >
-                        <td className="px-4 py-3">
+                        <TableCell className="px-4 py-3">
                           <p className="font-medium text-gray-900 dark:text-white">
                             {user.name || "—"}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {user.email}
                           </p>
-                        </td>
-                        <td className="px-4 py-3">
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
                           <SubscriptionStatusBadge
                             status={subscription.status}
                           />
-                        </td>
-                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-700 dark:text-gray-300">
                           {formatINR(subscription.totalAmount)}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600 dark:text-gray-400">
                           {new Date(subscription.startDate).toLocaleDateString(
                             "en-IN",
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600 dark:text-gray-400">
                           {new Date(subscription.expiresAt).toLocaleDateString(
                             "en-IN",
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                        {personalCoachingPlan && (
+                          <TableCell className="px-4 py-3">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(
+                                  `/coaching/${user.id}/editor?subscriptionId=${subscription.id}`,
+                                );
+                              }}
+                            >
+                              <Pencil className="mr-1 h-3.5 w-3.5" />
+                              Build program
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
                     ),
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
 
             {/* Pagination */}

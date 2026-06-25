@@ -10,6 +10,7 @@ import {
   Clock,
   Zap,
   ArrowUpDown,
+  LayoutList,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
@@ -69,16 +70,17 @@ export function ProgramsPage() {
 
   const statusCounts = useMemo(() => {
     if (!programs) return { all: 0, active: 0, inactive: 0 };
+    const retail = programs.filter((p) => p.kind !== "COACHING");
     return {
-      all: programs.length,
-      active: programs.filter((p) => p.isActive).length,
-      inactive: programs.filter((p) => !p.isActive).length,
+      all: retail.length,
+      active: retail.filter((p) => p.isActive).length,
+      inactive: retail.filter((p) => !p.isActive).length,
     };
   }, [programs]);
 
   const filtered = useMemo(() => {
     if (!programs) return [];
-    let list = programs;
+    let list = programs.filter((p) => p.kind !== "COACHING");
     if (statusFilter === "active") list = list.filter((p) => p.isActive);
     else if (statusFilter === "inactive")
       list = list.filter((p) => !p.isActive);
@@ -191,6 +193,7 @@ export function ProgramsPage() {
               onEdit={() => setEditTarget(program)}
               onDelete={() => setDeleteTarget(program)}
               onOpen={() => navigate(`/programs/${program.id}`)}
+              onBuild={() => navigate(`/programs/${program.slug}/editor`)}
             />
           ))}
         </div>
@@ -232,9 +235,16 @@ interface ProgramCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onOpen: () => void;
+  onBuild: () => void;
 }
 
-function ProgramCard({ program, onEdit, onDelete, onOpen }: ProgramCardProps) {
+function ProgramCard({
+  program,
+  onEdit,
+  onDelete,
+  onOpen,
+  onBuild,
+}: ProgramCardProps) {
   const hasDiscount =
     program.salePrice !== null && program.salePrice < program.regularPrice;
   const displayPrice = program.salePrice ?? program.regularPrice;
@@ -351,11 +361,20 @@ function ProgramCard({ program, onEdit, onDelete, onOpen }: ProgramCardProps) {
       <div className="flex items-center gap-1 border-t border-gray-100 px-3 py-2 dark:border-gray-700">
         <Button
           size="sm"
-          variant="primary"
+          variant="ghost"
           className="flex-1 text-xs"
           onClick={onOpen}
         >
-          Edit Program
+          View Details
+        </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          className="flex-1 text-xs"
+          onClick={onBuild}
+        >
+          <LayoutList className="h-3.5 w-3.5" />
+          Build
         </Button>
         <button
           onClick={onEdit}

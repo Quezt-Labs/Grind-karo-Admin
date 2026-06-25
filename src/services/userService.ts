@@ -81,8 +81,14 @@ export const userService = {
     return data;
   },
 
-  async getPurchases(id: string): Promise<UserPurchasesResponse> {
-    const { data } = await api.get(`/admin/users/${id}/purchases`);
+  async getPurchases(
+    id: string,
+    opts?: { subscriptionId?: string },
+  ): Promise<UserPurchasesResponse> {
+    const params = opts?.subscriptionId
+      ? { subscriptionId: opts.subscriptionId }
+      : undefined;
+    const { data } = await api.get(`/admin/users/${id}/purchases`, { params });
     return data;
   },
 

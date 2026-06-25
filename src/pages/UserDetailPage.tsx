@@ -1,6 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import {
+  useParams,
+  useNavigate,
+  Link,
+  useSearchParams,
+} from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CreditCard,
@@ -8,35 +13,27 @@ import {
   Calendar,
   Mail,
   User,
-  Sheet,
-  CheckCircle2,
-  ExternalLink,
   Loader2,
-  Link2,
   Video,
   MessageCircle,
   BookOpen,
-  RefreshCw,
   Settings2,
   Activity,
   MapPin,
+  Pencil,
 } from "lucide-react";
 import { formatAthleteLocation } from "@/lib/indianStates";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import toast from "react-hot-toast";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { userService } from "@/services/userService";
-import { sheetsService } from "@/services/sheetsService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
-import { UserSheetProgramPanel } from "@/components/users/UserSheetProgramPanel";
+import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
+import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
 import { UserSheetsExerciseNotesPanel } from "@/components/users/UserSheetsExerciseNotesPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
 import { UserCheckInsPanel } from "@/components/users/UserCheckInsPanel";
@@ -44,17 +41,10 @@ import { UserAthleteActivityQueue } from "@/components/users/UserAthleteActivity
 import {
   buildAthleteActivityTabs,
   defaultAthleteActivitySection,
-  hasSheetCoachingContext,
   type AthleteActivitySection,
 } from "@/components/users/athleteActivitySections";
-import { sheetsSetVideoService } from "@/services/sheetsSetVideoService";
 import { cn } from "@/utils/cn";
-import type {
-  Purchase,
-  CoachingSetupStatus,
-  FormCheckQuota,
-  UserPurchasesResponse,
-} from "@/types/user";
+import type { Purchase, FormCheckQuota } from "@/types/user";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
 import { CoachingIntakePanel } from "@/components/users/CoachingIntakePanel";
@@ -63,8 +53,8 @@ import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjus
 import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { useIsAdmin } from "@/hooks/useRole";
-
-type MainTab = "setup" | "activity" | "purchases";
+import { useUserDetail, type UserDetailTab } from "@/hooks/useUserDetail";
+import { useUserActivityScope } from "@/hooks/useUserActivityScope";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -92,76 +82,96 @@ function formatDateTime(iso: string): string {
   });
 }
 
+function parseTab(value: string | null): UserDetailTab {
+  if (value === "coaching" || value === "setup") return "coaching";
+  if (value === "purchases") return "purchases";
+  if (value === "activity") return "activity";
+  return "activity";
+}
+
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const isAdmin = useIsAdmin();
-  const [mainTab, setMainTab] = useState<MainTab>("activity");
+
+  const mainTab = parseTab(searchParams.get("tab"));
+  const setMainTab = useCallback(
+    (tab: UserDetailTab) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (tab === "activity") next.delete("tab");
+          else next.set("tab", tab);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   const [activitySection, setActivitySection] =
     useState<AthleteActivitySection>("videos");
   const [videoWeekFilter, setVideoWeekFilter] = useState<number | "all">("all");
   const [videoReviewFilter, setVideoReviewFilter] = useState<
     "all" | "unreviewed"
   >("all");
-  const [sheetIdOverride, setSheetIdOverride] = useState<
-    string | null | undefined
-  >(undefined);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-user-purchases", id],
-    queryFn: () => userService.getPurchases(id!),
-    enabled: !!id,
-  });
-
-  const hasActiveCoaching =
-    data?.purchases.some(
-      (p) => p.kind === "coaching_subscription" && p.status === "ACTIVE",
-    ) ?? false;
+  const subscriptionIdParam = searchParams.get("subscriptionId") ?? undefined;
 
   const {
-    data: intakeData,
-    isError: intakeMissing,
-    isLoading: intakeLoading,
-  } = useQuery({
-    queryKey: ["admin-user-info", id],
-    queryFn: () => userService.getUserInfo(id!),
-    enabled: !!id && !!data && hasActiveCoaching,
-    retry: false,
-  });
-
-  const effectiveSpreadsheetId =
-    sheetIdOverride !== undefined
-      ? sheetIdOverride
-      : (data?.user.spreadsheetId ?? null);
-
-  const purchases = useMemo(() => data?.purchases ?? [], [data?.purchases]);
-  const athleteUserId = data?.user.id;
-
-  const showSheetActivity = hasSheetCoachingContext(
+    user,
     purchases,
-    effectiveSpreadsheetId,
-  );
+    purchasesData,
+    purchasesLoading,
+    purchasesError,
+    intakeData,
+    intakeLoading,
+    intakeMissing,
+    coachingProgramData,
+    coachingProgramLoading,
+    hasActiveCoaching,
+    hasPersonalCoaching,
+    hasPaidPrograms,
+    primaryCoachingSub,
+    coachingSetupStatus,
+    showCoachingActivity,
+    pendingVideoCount,
+    purchaseStats,
+  } = useUserDetail(id, subscriptionIdParam);
 
-  const { data: allSheetVideos = [] } = useQuery({
-    queryKey: ["admin-user-sheets-set-videos-pending", athleteUserId],
-    queryFn: () => sheetsSetVideoService.listForUser(athleteUserId!),
-    enabled: !!athleteUserId && showSheetActivity,
-  });
+  const { scope, clearScope } = useUserActivityScope(purchases);
 
-  const pendingVideoCount = useMemo(
-    () => allSheetVideos.filter((v) => !v.coachComment?.trim()).length,
-    [allSheetVideos],
-  );
+  useEffect(() => {
+    if (
+      subscriptionIdParam &&
+      scope.mode === "all" &&
+      !purchasesLoading &&
+      purchases.length > 0
+    ) {
+      toast.error("Subscription not found — showing all activity");
+      clearScope();
+    }
+  }, [
+    subscriptionIdParam,
+    scope.mode,
+    purchasesLoading,
+    purchases.length,
+    clearScope,
+  ]);
+
+  const displayCoachingSub =
+    scope.mode === "subscription" ? scope.subscription : primaryCoachingSub;
 
   const activityTabs = useMemo(
     () =>
       buildAthleteActivityTabs({
         purchases,
-        spreadsheetId: effectiveSpreadsheetId,
         pendingVideoCount,
       }),
-    [purchases, effectiveSpreadsheetId, pendingVideoCount],
+    [purchases, pendingVideoCount],
   );
 
   const resolvedActivitySection = useMemo((): AthleteActivitySection => {
@@ -176,77 +186,16 @@ export function UserDetailPage() {
     (tab) => tab.key === resolvedActivitySection,
   );
 
-  const handleSheetIdChange = useCallback(
-    (spreadsheetId: string | null) => {
-      setSheetIdOverride(spreadsheetId);
-      if (!id) return;
-      queryClient.setQueryData<UserPurchasesResponse>(
-        ["admin-user-purchases", id],
-        (old) => (old ? { ...old, user: { ...old.user, spreadsheetId } } : old),
-      );
-    },
-    [id, queryClient],
-  );
+  const showCoachingTab = hasActiveCoaching;
 
-  const invalidateUserSheetQueries = useCallback(() => {
-    if (!id) return;
-    void queryClient.invalidateQueries({
-      queryKey: ["admin-user-purchases", id],
-    });
-    void queryClient.invalidateQueries({ queryKey: ["admin-coaching-setup"] });
-  }, [id, queryClient]);
+  const coachingTabNeedsAttention =
+    coachingSetupStatus === "needs_intake" ||
+    coachingSetupStatus === "awaiting_program";
 
-  const coachingSetupStatus = useMemo((): CoachingSetupStatus | null => {
-    if (!hasActiveCoaching || !data) return null;
-    if (intakeLoading) return null;
-    if (intakeMissing || !intakeData) return "needs_intake";
-    if (!effectiveSpreadsheetId?.trim()) return "awaiting_sheet";
-    return "ready";
-  }, [
-    hasActiveCoaching,
-    data,
-    intakeData,
-    intakeMissing,
-    intakeLoading,
-    effectiveSpreadsheetId,
-  ]);
+  const activeTab =
+    mainTab === "coaching" && !showCoachingTab ? "activity" : mainTab;
 
-  const resolvedMainTab = useMemo((): MainTab => {
-    if (
-      coachingSetupStatus === "awaiting_sheet" ||
-      coachingSetupStatus === "needs_intake"
-    ) {
-      return "setup";
-    }
-    return mainTab;
-  }, [coachingSetupStatus, mainTab]);
-
-  const stats = useMemo(() => {
-    if (!data) return null;
-    const coaching = data.purchases.filter(
-      (p) => p.kind === "coaching_subscription",
-    );
-    const programs = data.purchases.filter(
-      (p) => p.kind === "program_purchase",
-    );
-    const books = data.purchases.filter((p) => p.kind === "book_purchase");
-    const totalSpent = data.purchases.reduce((sum, p) => {
-      if (p.kind === "coaching_subscription") return sum + p.totalAmount;
-      if (p.kind === "program_purchase" && p.status === "PAID")
-        return sum + p.amount;
-      if (p.kind === "book_purchase" && p.status === "PAID")
-        return sum + p.amount;
-      return sum;
-    }, 0);
-    return {
-      coachingCount: coaching.length,
-      programCount: programs.length,
-      bookCount: books.length,
-      totalSpent,
-    };
-  }, [data]);
-
-  if (isLoading) {
+  if (purchasesLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner />
@@ -254,12 +203,13 @@ export function UserDetailPage() {
     );
   }
 
-  if (isError || !data) {
+  if (purchasesError || !purchasesData || !user) {
     return <ErrorAlert message="Failed to load user details." />;
   }
 
-  const { user } = data;
-  const chatEnabled = data.chatEnabled ?? false;
+  const chatEnabled = purchasesData.chatEnabled ?? false;
+  const formCheckEnabled = purchasesData.formCheckEnabled ?? false;
+  const formCheckQuota = purchasesData.formCheckQuota;
 
   const isPurchaser =
     purchases.some(
@@ -269,12 +219,52 @@ export function UserDetailPage() {
       (p) => p.kind === "coaching_subscription" && p.totalAmount > 0,
     );
 
+  const mainTabs: {
+    key: UserDetailTab;
+    label: string;
+    icon: React.ReactNode;
+    badge?: number | string;
+    hidden?: boolean;
+  }[] = [
+    {
+      key: "activity",
+      label: "Activity",
+      icon: <Activity className="h-3.5 w-3.5" />,
+      badge: pendingVideoCount > 0 ? pendingVideoCount : undefined,
+    },
+    {
+      key: "coaching",
+      label: "Coaching",
+      icon: <Settings2 className="h-3.5 w-3.5" />,
+      badge: coachingTabNeedsAttention ? "!" : undefined,
+      hidden: !showCoachingTab,
+    },
+    {
+      key: "purchases",
+      label: "Purchases",
+      icon: <ShoppingBag className="h-3.5 w-3.5" />,
+      badge: purchases.length || undefined,
+    },
+  ];
+
+  const invalidatePurchases = () =>
+    void queryClient.invalidateQueries({
+      queryKey: ["admin-user-purchases", user.id],
+    });
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-wrap items-start gap-4">
+      <div className="flex flex-wrap items-start gap-3">
         <button
-          onClick={() => navigate("/users")}
+          type="button"
+          onClick={() =>
+            navigate(
+              scope.mode === "subscription"
+                ? `/plans/${scope.subscription.planId}`
+                : "/users",
+            )
+          }
           className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
@@ -286,6 +276,11 @@ export function UserDetailPage() {
             </h1>
             {coachingSetupStatus && (
               <CoachingSetupStatusBadge status={coachingSetupStatus} />
+            )}
+            {displayCoachingSub && (
+              <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                {displayCoachingSub.planName}
+              </span>
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
@@ -307,99 +302,86 @@ export function UserDetailPage() {
             )}
           </div>
         </div>
-        {chatEnabled && (
-          <Link
-            to={`/chat?userId=${user.id}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Open chat
-          </Link>
-        )}
-        <DeleteUserButton
-          userId={user.id}
-          userName={user.name}
-          userEmail={user.email}
-          role={user.role}
-        />
-      </div>
-
-      {/* Stats — compact strip */}
-      {stats && (
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <StatCard
-            icon={<CreditCard className="h-4 w-4" />}
-            label="Coaching"
-            value={String(stats.coachingCount)}
-            compact
-          />
-          <StatCard
-            icon={<ShoppingBag className="h-4 w-4" />}
-            label="Programs"
-            value={String(stats.programCount)}
-            compact
-          />
-          <StatCard
-            icon={<BookOpen className="h-4 w-4" />}
-            label="Books"
-            value={String(stats.bookCount)}
-            compact
-          />
-          <StatCard
-            icon={<CreditCard className="h-4 w-4" />}
-            label="Total spent"
-            value={formatINR(stats.totalSpent)}
-            compact
+        <div className="flex flex-wrap items-center gap-2">
+          {coachingSetupStatus === "ready" && hasPersonalCoaching && (
+            <Button
+              size="sm"
+              onClick={() =>
+                navigate(
+                  `/coaching/${user.id}/editor${
+                    subscriptionIdParam
+                      ? `?subscriptionId=${subscriptionIdParam}`
+                      : ""
+                  }`,
+                )
+              }
+            >
+              <Pencil className="mr-1 h-3.5 w-3.5" />
+              Program editor
+            </Button>
+          )}
+          {coachingTabNeedsAttention && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setMainTab("coaching")}
+            >
+              Complete setup
+            </Button>
+          )}
+          {chatEnabled && (
+            <Link
+              to={`/chat?userId=${user.id}`}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Chat
+            </Link>
+          )}
+          <DeleteUserButton
+            userId={user.id}
+            userName={user.name}
+            userEmail={user.email}
+            role={user.role}
           />
         </div>
-      )}
-
-      {/* Main tabs */}
-      <div className="flex gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
-        {(
-          [
-            {
-              key: "setup" as const,
-              label: "Coaching setup",
-              icon: <Settings2 className="h-3.5 w-3.5" />,
-            },
-            {
-              key: "activity" as const,
-              label: "Athlete activity",
-              icon: <Activity className="h-3.5 w-3.5" />,
-            },
-            {
-              key: "purchases" as const,
-              label: "Purchases",
-              icon: <ShoppingBag className="h-3.5 w-3.5" />,
-              count: purchases.length,
-            },
-          ] as const
-        ).map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setMainTab(t.key)}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              resolvedMainTab === t.key
-                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
-            )}
-          >
-            {t.icon}
-            {t.label}
-            {"count" in t && t.count !== undefined && (
-              <span className="rounded-full bg-gray-200/80 px-1.5 py-0.5 text-xs dark:bg-gray-600/50">
-                {t.count}
-              </span>
-            )}
-          </button>
-        ))}
       </div>
 
-      {/* Tab panels */}
-      {resolvedMainTab === "setup" && (
+      {/* Tabs */}
+      <div className="flex gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+        {mainTabs
+          .filter((t) => !t.hidden)
+          .map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setMainTab(t.key)}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                activeTab === t.key
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+              )}
+            >
+              {t.icon}
+              {t.label}
+              {t.badge != null && (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-xs font-semibold",
+                    t.badge === "!"
+                      ? "bg-amber-500 text-white"
+                      : "bg-gray-200/80 dark:bg-gray-600/50",
+                  )}
+                >
+                  {t.badge}
+                </span>
+              )}
+            </button>
+          ))}
+      </div>
+
+      {activeTab === "coaching" && showCoachingTab && (
         <div className="space-y-4">
           {hasActiveCoaching && (
             <CoachingIntakePanel
@@ -409,42 +391,39 @@ export function UserDetailPage() {
               isMissing={intakeMissing}
             />
           )}
-          <CoachingPaymentCalendar purchases={purchases} userId={user.id} />
-          <CoachingFeeAdjustmentsPanel
-            userId={user.id}
-            purchases={purchases}
-            onUpdated={() =>
-              void queryClient.invalidateQueries({
-                queryKey: ["admin-user-purchases", user.id],
-              })
-            }
-          />
-          <ProgramGrantPanel
-            userId={user.id}
-            purchases={purchases}
-            onUpdated={() =>
-              void queryClient.invalidateQueries({
-                queryKey: ["admin-user-purchases", user.id],
-              })
-            }
-          />
-          <ProvisionSheetSection
-            userId={user.id}
-            userEmail={user.email}
-            currentSpreadsheetId={effectiveSpreadsheetId}
-            sheetContentRevision={user.sheetContentRevision ?? 0}
-            coachingSetupStatus={coachingSetupStatus}
-            onSheetIdChange={handleSheetIdChange}
-            onInvalidateUser={invalidateUserSheetQueries}
-          />
+
+          {hasPersonalCoaching && (
+            <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <UserAthleteProgramPanel
+                userId={user.id}
+                userName={user.name ?? user.email}
+                purchases={purchases}
+                coachingData={coachingProgramData}
+                coachingLoading={coachingProgramLoading}
+              />
+            </section>
+          )}
+
           <CoachingEntitlementsSection
             userId={user.id}
             enabled={user.workoutSetVideosEnabled !== false}
             adminFlag={user.workoutSetVideosEnabled}
-            formCheckEnabled={data.formCheckEnabled ?? false}
+            formCheckEnabled={formCheckEnabled}
             chatEnabled={chatEnabled}
-            formCheckQuota={data.formCheckQuota}
+            formCheckQuota={formCheckQuota}
             purchases={purchases}
+          />
+
+          <CoachingPaymentCalendar purchases={purchases} userId={user.id} />
+          <CoachingFeeAdjustmentsPanel
+            userId={user.id}
+            purchases={purchases}
+            onUpdated={invalidatePurchases}
+          />
+          <ProgramGrantPanel
+            userId={user.id}
+            purchases={purchases}
+            onUpdated={invalidatePurchases}
           />
           {isAdmin && isPurchaser && (
             <AthleteAssignmentSection athleteId={user.id} />
@@ -453,107 +432,187 @@ export function UserDetailPage() {
         </div>
       )}
 
-      {resolvedMainTab === "activity" && (
+      {activeTab === "activity" && (
         <div className="space-y-4">
-          {showSheetActivity ? (
+          {scope.mode === "subscription" && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 dark:border-indigo-800/60 dark:bg-indigo-900/20">
+              <p className="text-sm text-indigo-900 dark:text-indigo-100">
+                Viewing activity for{" "}
+                <span className="font-semibold">
+                  {scope.subscription.planName}
+                </span>{" "}
+                · {formatDate(scope.subscription.startDate)} –{" "}
+                {formatDate(scope.subscription.expiresAt)}
+              </p>
+              <button
+                type="button"
+                onClick={clearScope}
+                className="text-xs font-semibold text-indigo-700 underline hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-indigo-100"
+              >
+                View all activity
+              </button>
+            </div>
+          )}
+
+          {showCoachingActivity ? (
             <UserAthleteActivityQueue
               pendingVideoCount={pendingVideoCount}
-              formCheckQuota={data.formCheckQuota}
+              formCheckQuota={formCheckQuota}
               onReviewClick={() => {
                 setActivitySection("videos");
                 setVideoReviewFilter("unreviewed");
               }}
             />
-          ) : null}
-
-          <div className="flex gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-            {activityTabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActivitySection(tab.key)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-                    resolvedActivitySection === tab.key
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200",
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                  {tab.badge != null ? (
-                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                      {tab.badge}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-
-          {activeActivityTab ? (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {activeActivityTab.description}
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No coaching activity for this user yet.
             </p>
-          ) : null}
+          )}
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
-            {resolvedActivitySection === "sheet" && (
-              <UserSheetProgramPanel userId={user.id} />
-            )}
-            {resolvedActivitySection === "videos" && (
-              <UserSheetsWorkoutVideosPanel
-                userId={user.id}
-                formCheckQuota={data.formCheckQuota}
-                weekFilter={videoWeekFilter}
-                onWeekFilterChange={setVideoWeekFilter}
-                reviewFilter={videoReviewFilter}
-                onReviewFilterChange={setVideoReviewFilter}
-              />
-            )}
-            {resolvedActivitySection === "logs" && (
-              <UserWorkoutLogsPanel userId={user.id} purchases={purchases} />
-            )}
-            {resolvedActivitySection === "notes" && (
-              <UserSheetsExerciseNotesPanel
-                userId={user.id}
-                onOpenVideos={({ weekNumber, reviewFilter }) => {
-                  setVideoWeekFilter(weekNumber);
-                  setVideoReviewFilter(reviewFilter);
-                  setActivitySection("videos");
-                }}
-              />
-            )}
-            {resolvedActivitySection === "summaries" && (
-              <UserWeeklySummariesPanel userId={user.id} />
-            )}
-            {resolvedActivitySection === "checkins" && (
-              <UserCheckInsPanel userId={user.id} />
-            )}
-          </div>
+          {activityTabs.length > 0 && (
+            <>
+              <div className="flex gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+                {activityTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActivitySection(tab.key)}
+                      className={cn(
+                        "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                        resolvedActivitySection === tab.key
+                          ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                          : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200",
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {tab.label}
+                      {tab.badge != null ? (
+                        <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          {tab.badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {activeActivityTab ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {activeActivityTab.description}
+                </p>
+              ) : null}
+
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
+                {resolvedActivitySection === "sheet" && (
+                  <p className="text-sm text-gray-500">
+                    Edit program structure in the{" "}
+                    <button
+                      type="button"
+                      className="font-medium text-primary-600 hover:underline"
+                      onClick={() => setMainTab("coaching")}
+                    >
+                      Coaching
+                    </button>{" "}
+                    tab → Athlete program.
+                  </p>
+                )}
+                {resolvedActivitySection === "videos" && (
+                  <UserSheetsWorkoutVideosPanel
+                    userId={user.id}
+                    formCheckQuota={formCheckQuota}
+                    activityScope={scope}
+                    weekFilter={videoWeekFilter}
+                    onWeekFilterChange={setVideoWeekFilter}
+                    reviewFilter={videoReviewFilter}
+                    onReviewFilterChange={setVideoReviewFilter}
+                  />
+                )}
+                {resolvedActivitySection === "logs" && (
+                  <UserWorkoutLogsPanel
+                    userId={user.id}
+                    purchases={purchases}
+                    activityScope={scope}
+                  />
+                )}
+                {resolvedActivitySection === "notes" && (
+                  <UserSheetsExerciseNotesPanel
+                    userId={user.id}
+                    activityScope={scope}
+                    onOpenVideos={({ weekNumber, reviewFilter }) => {
+                      setVideoWeekFilter(weekNumber);
+                      setVideoReviewFilter(reviewFilter);
+                      setActivitySection("videos");
+                    }}
+                  />
+                )}
+                {resolvedActivitySection === "summaries" && (
+                  <UserWeeklySummariesPanel
+                    userId={user.id}
+                    activityScope={scope}
+                  />
+                )}
+                {resolvedActivitySection === "checkins" && (
+                  <UserCheckInsPanel userId={user.id} activityScope={scope} />
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {resolvedMainTab === "purchases" && (
-        <div>
-          <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-            Purchase history
-          </h2>
-          {purchases.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                No purchases yet.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {purchases.map((purchase) => (
-                <PurchaseCard key={purchase.id} purchase={purchase} />
-              ))}
+      {activeTab === "purchases" && (
+        <div className="space-y-4">
+          {purchaseStats && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <StatCard
+                icon={<CreditCard className="h-4 w-4" />}
+                label="Coaching"
+                value={String(purchaseStats.coachingCount)}
+                compact
+              />
+              <StatCard
+                icon={<ShoppingBag className="h-4 w-4" />}
+                label="Programs"
+                value={String(purchaseStats.programCount)}
+                compact
+              />
+              <StatCard
+                icon={<BookOpen className="h-4 w-4" />}
+                label="Books"
+                value={String(purchaseStats.bookCount)}
+                compact
+              />
+              <StatCard
+                icon={<CreditCard className="h-4 w-4" />}
+                label="Total spent"
+                value={formatINR(purchaseStats.totalSpent)}
+                compact
+              />
             </div>
           )}
+
+          {hasPaidPrograms && <UserRetailProgramPanel purchases={purchases} />}
+
+          <div>
+            <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">
+              Purchase history
+            </h2>
+            {purchases.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No purchases yet.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {purchases.map((purchase) => (
+                  <PurchaseCard key={purchase.id} purchase={purchase} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -662,20 +721,6 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
     </div>
   );
 }
-
-/* ─── Provision Sheet Section ──────────────────────────────────────────── */
-
-const linkSchema = z.object({
-  sheetId: z
-    .string()
-    .min(1, "Sheet ID or URL is required")
-    .refine(
-      (v) => /^[a-zA-Z0-9_\-/:.?=&]+$/.test(v),
-      "Must be a valid Sheets file ID or URL",
-    ),
-});
-
-type LinkFormData = z.infer<typeof linkSchema>;
 
 interface CoachingEntitlementsSectionProps {
   userId: string;
@@ -839,299 +884,6 @@ function CoachingEntitlementsSection({
           )}
         </label>
       </div>
-    </div>
-  );
-}
-
-interface ProvisionSheetSectionProps {
-  userId: string;
-  userEmail: string;
-  currentSpreadsheetId?: string | null;
-  sheetContentRevision?: number;
-  coachingSetupStatus?: CoachingSetupStatus | null;
-  onSheetIdChange?: (spreadsheetId: string | null) => void;
-  onInvalidateUser?: () => void;
-}
-
-function ProvisionSheetSection({
-  userId,
-  userEmail,
-  currentSpreadsheetId,
-  sheetContentRevision = 0,
-  coachingSetupStatus,
-  onSheetIdChange,
-  onInvalidateUser,
-}: ProvisionSheetSectionProps) {
-  const linkedId = currentSpreadsheetId?.trim() || null;
-  const [showGuide, setShowGuide] = useState(false);
-  const [linking, setLinking] = useState(false);
-
-  const sheetUrl = linkedId
-    ? `https://docs.google.com/spreadsheets/d/${linkedId}/edit`
-    : null;
-
-  const {
-    register: regLink,
-    handleSubmit: handleLink,
-    formState: { errors: linkErrors },
-    reset: resetLink,
-  } = useForm<LinkFormData>({
-    resolver: zodResolver(linkSchema),
-    defaultValues: { sheetId: "" },
-  });
-
-  const linkMutation = useMutation({
-    mutationFn: (data: LinkFormData) => {
-      const raw = data.sheetId.trim();
-      const id = raw.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1] ?? raw;
-      return userService.patchSpreadsheetId(userId, id);
-    },
-    onSuccess: (res) => {
-      toast.success("Sheet linked!");
-      onSheetIdChange?.(res.spreadsheetId);
-      onInvalidateUser?.();
-      setLinking(false);
-      resetLink();
-    },
-    onError: () => toast.error("Failed to link sheet."),
-  });
-
-  const unlinkMutation = useMutation({
-    mutationFn: () => userService.patchSpreadsheetId(userId, null),
-    onSuccess: () => {
-      toast.success("Sheet unlinked.");
-      onSheetIdChange?.(null);
-      setLinking(false);
-      onInvalidateUser?.();
-    },
-    onError: () => toast.error("Failed to unlink sheet."),
-  });
-
-  const notifySheetMutation = useMutation({
-    mutationFn: () => sheetsService.notifySheetUpdated(userId),
-    onSuccess: (res) => {
-      onInvalidateUser?.();
-      toast.success(
-        `Athlete notified to refresh sheet (revision ${res.sheetContentRevision}).`,
-      );
-    },
-    onError: () =>
-      toast.error("Failed to notify athlete. Check sheet is linked."),
-  });
-
-  return (
-    <div className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/10">
-      {/* Header */}
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
-            <Sheet className="h-4 w-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-green-900 dark:text-green-200">
-              Athlete Google Sheet
-            </h3>
-            <p className="text-xs text-green-700 dark:text-green-400">
-              Personal coaching spreadsheet for this athlete.
-            </p>
-            {coachingSetupStatus && (
-              <div className="mt-1.5">
-                <CoachingSetupStatusBadge status={coachingSetupStatus} />
-              </div>
-            )}
-          </div>
-        </div>
-        <button
-          onClick={() => setShowGuide((v) => !v)}
-          className="shrink-0 rounded-md border border-green-300 bg-white px-2.5 py-1 text-xs font-medium text-green-700 hover:bg-green-50 dark:border-green-700 dark:bg-transparent dark:text-green-400"
-        >
-          {showGuide ? "Hide Guide" : "How it works?"}
-        </button>
-      </div>
-
-      {coachingSetupStatus === "awaiting_sheet" && !linkedId && (
-        <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
-          <strong>Action needed:</strong> Intake is complete — paste the
-          athlete&apos;s Google Sheet ID below to unlock their program in the
-          app.
-        </div>
-      )}
-
-      {coachingSetupStatus === "needs_intake" && (
-        <div className="mb-3 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2.5 text-xs text-orange-900 dark:border-orange-700 dark:bg-orange-900/20 dark:text-orange-200">
-          Athlete hasn&apos;t submitted the coaching intake form yet. You can
-          still prepare their sheet in advance.
-        </div>
-      )}
-
-      {/* Coach Guide */}
-      {showGuide && (
-        <div className="mb-4 rounded-lg border border-green-200 bg-white/80 p-4 dark:border-green-700 dark:bg-green-900/20">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-green-800 dark:text-green-300">
-            Setup Guide for Coach
-          </p>
-          <ol className="space-y-2.5 text-xs text-green-800 dark:text-green-300">
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-[10px] font-bold text-white">
-                1
-              </span>
-              <span>
-                Open the master template sheet →{" "}
-                <strong>File → Make a copy</strong> → rename it to athlete's
-                name.
-              </span>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-[10px] font-bold text-white">
-                2
-              </span>
-              <span>
-                Share the copied sheet with the athlete's email{" "}
-                <code className="rounded bg-green-100 px-1 dark:bg-green-900">
-                  {userEmail}
-                </code>{" "}
-                as <strong>Viewer</strong> (or Editor if they log weights).
-              </span>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-[10px] font-bold text-white">
-                3
-              </span>
-              <span>
-                Share the same sheet with the service account{" "}
-                <code className="rounded bg-green-100 px-1 dark:bg-green-900">
-                  grindkaroadmin@grindkaro.iam.gserviceaccount.com
-                </code>{" "}
-                as <strong>Viewer</strong>.
-              </span>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-[10px] font-bold text-white">
-                4
-              </span>
-              <span>
-                Copy the sheet URL or ID from the browser address bar and paste
-                it below.
-              </span>
-            </li>
-          </ol>
-          <div className="mt-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700 dark:border-green-700 dark:bg-green-900/10 dark:text-green-400">
-            <strong>After linking:</strong> Athlete opens the app → goes to "My
-            Program" → sees their personalised workout. Movement selections on
-            the "Athlete dashboard" tab update exercises across all program tabs
-            automatically via formulas.
-          </div>
-        </div>
-      )}
-
-      {/* Currently linked */}
-      {linkedId && !linking && (
-        <div className="mb-3 rounded-lg border border-green-300 bg-white/70 p-3 dark:border-green-700 dark:bg-green-900/20">
-          <div className="mb-1.5 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
-            <span className="text-sm font-medium text-green-800 dark:text-green-300">
-              Sheet linked
-            </span>
-          </div>
-          <code className="mb-2 block break-all font-mono text-xs text-green-700 dark:text-green-400">
-            {linkedId}
-          </code>
-          <p className="mb-2 text-xs text-green-700 dark:text-green-400">
-            Sheet revision: {sheetContentRevision} — bump via Notify refresh
-            after coach edits the workbook.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <a
-              href={sheetUrl!}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Open Sheet
-            </a>
-            <button
-              onClick={() => setLinking(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-800 hover:bg-green-50 dark:border-green-700 dark:bg-transparent dark:text-green-300"
-            >
-              Change Sheet
-            </button>
-            <button
-              type="button"
-              onClick={() => notifySheetMutation.mutate()}
-              disabled={notifySheetMutation.isPending}
-              title="Use after editing the Google Sheet so the athlete's app reloads layout"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-800 hover:bg-green-50 disabled:opacity-50 dark:border-green-700 dark:bg-transparent dark:text-green-300"
-            >
-              {notifySheetMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
-              )}
-              Notify refresh
-            </button>
-            <button
-              onClick={() => unlinkMutation.mutate()}
-              disabled={unlinkMutation.isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400"
-            >
-              {unlinkMutation.isPending && (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              )}
-              Unlink
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Link form — shown when no sheet OR changing */}
-      {(!linkedId || linking) && (
-        <form
-          onSubmit={handleLink((d) => linkMutation.mutate(d))}
-          className="space-y-2"
-        >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <Input
-                id="manual-sheet-id"
-                label="Spreadsheet ID or URL"
-                placeholder="Paste sheet URL or ID here"
-                className="font-mono text-xs"
-                error={linkErrors.sheetId?.message}
-                {...regLink("sheetId")}
-              />
-            </div>
-            <div className="flex shrink-0 gap-2 pb-0.5">
-              <Button
-                type="submit"
-                size="sm"
-                className="bg-green-600 hover:bg-green-700"
-                isLoading={linkMutation.isPending}
-              >
-                <Link2 className="h-3.5 w-3.5" />
-                Link Sheet
-              </Button>
-              {linking && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    setLinking(false);
-                    resetLink();
-                  }}
-                >
-                  Cancel
-                </Button>
-              )}
-            </div>
-          </div>
-          <p className="text-xs text-green-700 dark:text-green-400">
-            Copy the URL from Google Sheets — we'll extract the ID
-            automatically.
-          </p>
-        </form>
-      )}
     </div>
   );
 }

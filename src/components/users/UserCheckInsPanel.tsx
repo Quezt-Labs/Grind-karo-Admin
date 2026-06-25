@@ -2,14 +2,19 @@ import { useState } from "react";
 import { cn } from "@/utils/cn";
 import { UserProgressPanel } from "@/components/users/UserProgressPanel";
 import { UserBigLiftPrPanel } from "@/components/users/UserBigLiftPrPanel";
+import type { UserActivityScope } from "@/utils/userActivityScope";
 
 type CheckInSection = "progress" | "bigLiftPr";
 
 interface UserCheckInsPanelProps {
   userId: string;
+  activityScope?: UserActivityScope;
 }
 
-export function UserCheckInsPanel({ userId }: UserCheckInsPanelProps) {
+export function UserCheckInsPanel({
+  userId,
+  activityScope = { mode: "all" },
+}: UserCheckInsPanelProps) {
   const [section, setSection] = useState<CheckInSection>("progress");
 
   return (
@@ -38,9 +43,17 @@ export function UserCheckInsPanel({ userId }: UserCheckInsPanelProps) {
       </div>
 
       {section === "progress" ? (
-        <UserProgressPanel userId={userId} compactHeader />
+        <UserProgressPanel
+          userId={userId}
+          compactHeader
+          activityScope={activityScope}
+        />
       ) : (
-        <UserBigLiftPrPanel userId={userId} compactHeader />
+        <UserBigLiftPrPanel
+          userId={userId}
+          compactHeader
+          activityScope={activityScope}
+        />
       )}
     </div>
   );

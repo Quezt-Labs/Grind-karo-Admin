@@ -15,10 +15,20 @@ interface WeekNodeProps {
   toggleDay: (id: string) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onClone: () => void;
   onAddDay: () => void;
   onEditDay: (day: Day) => void;
   onDeleteDay: (day: Day) => void;
-  onEditExercise: (row: ExerciseRow) => void;
+  onEditExercise: (
+    row: ExerciseRow,
+    dayId: string,
+    dayExercises: ExerciseRow[],
+  ) => void;
+  onAddExercise: (
+    dayId: string,
+    dayExercises: ExerciseRow[],
+    nextSortOrder: number,
+  ) => void;
   onDeleteExercise: (row: ExerciseRow) => void;
   onRefresh: () => void;
 }
@@ -32,10 +42,12 @@ export const WeekNode = memo(function WeekNode({
   toggleDay,
   onEdit,
   onDelete,
+  onClone,
   onAddDay,
   onEditDay,
   onDeleteDay,
   onEditExercise,
+  onAddExercise,
   onDeleteExercise,
   onRefresh,
 }: WeekNodeProps) {
@@ -45,12 +57,12 @@ export const WeekNode = memo(function WeekNode({
   );
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-50/50 dark:border-gray-600 dark:bg-gray-750">
+    <div className="flex w-72 min-w-72 shrink-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50/50 dark:border-gray-600 dark:bg-gray-750">
       {/* Week header */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2 dark:border-gray-600">
+      <div className="flex flex-col gap-1 border-b border-gray-200 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-gray-600">
         <button
           onClick={onToggle}
-          className="flex items-center gap-2 text-left"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
           {expanded ? (
             <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
@@ -58,16 +70,18 @@ export const WeekNode = memo(function WeekNode({
             <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
           )}
           <Calendar className="h-4 w-4 text-orange-500" />
-          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-200">
             {week.title}
           </span>
-          <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-600 dark:text-gray-300">
+          <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-600 dark:text-gray-300">
             {week.days.length} days · {totalExercises} exercises
           </span>
         </button>
         <TreeNodeActions
           onAdd={onAddDay}
           addTitle="Add Day"
+          onClone={onClone}
+          cloneTitle="Clone Week"
           onEdit={onEdit}
           editTitle="Edit Week"
           onDelete={onDelete}
@@ -76,7 +90,7 @@ export const WeekNode = memo(function WeekNode({
       </div>
 
       {expanded && (
-        <div className="space-y-2 p-2">
+        <div className="flex gap-2 overflow-x-auto p-2">
           {week.days.length === 0 ? (
             <div className="py-3 text-center">
               <p className="text-xs text-gray-400">No days yet</p>
@@ -100,6 +114,7 @@ export const WeekNode = memo(function WeekNode({
                   onEdit={() => onEditDay(day)}
                   onDelete={() => onDeleteDay(day)}
                   onEditExercise={onEditExercise}
+                  onAddExercise={onAddExercise}
                   onDeleteExercise={onDeleteExercise}
                   onRefresh={onRefresh}
                 />

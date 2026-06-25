@@ -1,10 +1,10 @@
-import { useForm, useWatch, type Resolver } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { FormModal } from "@/components/ui/FormModal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { movementSlotService } from "@/services/movementSlotService";
@@ -61,8 +61,6 @@ export function SlotFormModal({
       : { slotKey: "", label: "", category: "SQUAT", sortOrder: 0 },
   });
 
-  const category = useWatch({ control, name: "category" });
-
   const createMut = useMutation({
     mutationFn: (d: FormData) => movementSlotService.createSlot(programId, d),
     onSuccess: () => {
@@ -93,61 +91,59 @@ export function SlotFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {isEdit ? "Edit Movement Slot" : "Create Movement Slot"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
+    <FormModal
+      title={isEdit ? "Edit Movement Slot" : "Create Movement Slot"}
+      onClose={onClose}
+      contentClassName="max-w-md"
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Input
+          id="slot-key"
+          label="Slot Key"
+          placeholder="squat_primary"
+          error={errors.slotKey?.message}
+          disabled={isEdit}
+          {...register("slotKey")}
+        />
+        <Input
+          id="slot-label"
+          label="Label"
+          placeholder="Primary Squat Movement"
+          error={errors.label?.message}
+          {...register("label")}
+        />
+        <Controller
+          control={control}
+          name="category"
+          render={({ field }) => (
+            <Select
+              id="slot-category"
+              label="Category"
+              options={SLOT_CATEGORY_OPTIONS}
+              value={field.value}
+              onValueChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.category?.message}
+            />
+          )}
+        />
+        <Input
+          id="slot-order"
+          label="Sort Order"
+          type="number"
+          min={0}
+          error={errors.sortOrder?.message}
+          {...register("sortOrder")}
+        />
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="secondary" type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" isLoading={isSaving}>
+            {isEdit ? "Update" : "Create"}
+          </Button>
         </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input
-            id="slot-key"
-            label="Slot Key"
-            placeholder="squat_primary"
-            error={errors.slotKey?.message}
-            disabled={isEdit}
-            {...register("slotKey")}
-          />
-          <Input
-            id="slot-label"
-            label="Label"
-            placeholder="Primary Squat Movement"
-            error={errors.label?.message}
-            {...register("label")}
-          />
-          <Select
-            id="slot-category"
-            label="Category"
-            options={SLOT_CATEGORY_OPTIONS}
-            error={errors.category?.message}
-            value={category}
-            {...register("category")}
-          />
-          <Input
-            id="slot-order"
-            label="Sort Order"
-            type="number"
-            min={0}
-            error={errors.sortOrder?.message}
-            {...register("sortOrder")}
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isSaving}>
-              {isEdit ? "Update" : "Create"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </FormModal>
   );
 }

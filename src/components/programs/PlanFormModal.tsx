@@ -1,6 +1,9 @@
+import { useState, useEffect } from "react";
 import {
   useForm,
   useFieldArray,
+  useWatch,
+  Controller,
   type Resolver,
   type UseFormRegister,
 } from "react-hook-form";
@@ -10,12 +13,14 @@ import { useMutation } from "@tanstack/react-query";
 import { X, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { BADGE_OPTIONS } from "@/components/ui/badgeOptions";
 import { planService } from "@/services/planService";
 import type { CoachingPlan } from "@/types/program";
+import { toSlug } from "@/utils/toSlug";
 
 const planSchema = z.object({
   slug: z
@@ -53,6 +58,7 @@ export function PlanFormModal({
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<PlanFormData>({
     resolver: zodResolver(planSchema) as Resolver<PlanFormData>,
@@ -91,6 +97,13 @@ export function PlanFormModal({
 
   const includedArray = useFieldArray({ control, name: "includedFeatures" });
   const excludedArray = useFieldArray({ control, name: "excludedFeatures" });
+  const watchedName = useWatch({ control, name: "name" });
+  const [slugTouched, setSlugTouched] = useState(isEdit);
+
+  useEffect(() => {
+    if (isEdit || slugTouched) return;
+    setValue("slug", toSlug(watchedName ?? ""), { shouldValidate: true });
+  }, [watchedName, isEdit, slugTouched, setValue]);
 
   const createMutation = useMutation({
     mutationFn: planService.create,
@@ -159,7 +172,7 @@ export function PlanFormModal({
               label="Slug"
               placeholder="mega"
               error={errors.slug?.message}
-              {...register("slug")}
+              {...register("slug", { onChange: () => setSlugTouched(true) })}
             />
             <Input
               id="plan-name"
@@ -216,11 +229,19 @@ export function PlanFormModal({
             />
           </div>
 
-          <Select
-            id="plan-badge"
-            label="Badge (optional)"
-            options={BADGE_OPTIONS}
-            {...register("badge")}
+          <Controller
+            control={control}
+            name="badge"
+            render={({ field }) => (
+              <Select
+                id="plan-badge"
+                label="Badge (optional)"
+                options={BADGE_OPTIONS}
+                value={field.value ?? ""}
+                onValueChange={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
           />
 
           {/* Included Features */}
@@ -243,16 +264,18 @@ export function PlanFormModal({
             prefix="excludedFeatures"
           />
 
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              {...register("isActive")}
-            />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Active
-            </span>
-          </label>
+          <Controller
+            control={control}
+            name="isActive"
+            render={({ field }) => (
+              <CheckboxField
+                id="plan-active"
+                label="Active"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
+          />
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={onClose}>

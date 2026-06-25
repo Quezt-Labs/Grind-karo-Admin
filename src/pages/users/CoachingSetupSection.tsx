@@ -1,6 +1,6 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardList, Eye, Link2 } from "lucide-react";
+import { ClipboardList, Dumbbell, Eye } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { coachingSetupColumns } from "./coachingSetupColumns";
@@ -15,6 +15,10 @@ import {
 import type { CoachingSetupStatusFilter } from "@/types/user";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indianStates";
 
+function coachingEditorPath(row: CoachingSetupRow) {
+  return `/coaching/${row.id}/editor`;
+}
+
 type Props = {
   rows: CoachingSetupRow[];
   isLoading: boolean;
@@ -25,7 +29,7 @@ type Props = {
   onStateFilterChange: (value: string) => void;
   counts?: {
     needsIntake: number;
-    awaitingSheet: number;
+    awaitingProgram: number;
     ready: number;
   };
 };
@@ -42,28 +46,62 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
 }: Props) {
   const navigate = useNavigate();
 
-  const actionsColumn = {
-    key: "id" as keyof CoachingSetupRow & string,
-    header: "Actions",
-    render: (
-      _value: CoachingSetupRow[keyof CoachingSetupRow],
-      row: CoachingSetupRow,
-    ) => (
-      <div className="flex items-center gap-1">
+  const columns = useMemo(() => {
+    const nameColumn = {
+      key: "name" as keyof CoachingSetupRow & string,
+      header: "Name",
+      sortable: true,
+      render: (
+        value: CoachingSetupRow[keyof CoachingSetupRow],
+        row: CoachingSetupRow,
+      ) => (
         <button
-          onClick={() => navigate(`/users/${row.id}`)}
-          className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-          title="Open user — link sheet"
+          type="button"
+          onClick={() => navigate(coachingEditorPath(row))}
+          className="font-medium text-primary-600 hover:underline dark:text-primary-400"
+          title={
+            row.setupStatus === "ready"
+              ? "Open built program"
+              : "Open coaching editor"
+          }
         >
-          {row.setupStatus === "awaiting_sheet" ? (
-            <Link2 className="h-4 w-4 text-amber-600" />
-          ) : (
-            <Eye className="h-4 w-4" />
-          )}
+          {String(value)}
         </button>
-      </div>
-    ),
-  };
+      ),
+    };
+
+    const actionsColumn = {
+      key: "id" as keyof CoachingSetupRow & string,
+      header: "Actions",
+      render: (
+        _value: CoachingSetupRow[keyof CoachingSetupRow],
+        row: CoachingSetupRow,
+      ) => (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => navigate(coachingEditorPath(row))}
+            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            title={
+              row.setupStatus === "ready"
+                ? "Open built program"
+                : "Set up program"
+            }
+          >
+            {row.setupStatus === "ready" ? (
+              <Dumbbell className="h-4 w-4 text-primary-600" />
+            ) : row.setupStatus === "awaiting_program" ? (
+              <ClipboardList className="h-4 w-4 text-amber-600" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      ),
+    };
+
+    const base = coachingSetupColumns.filter((col) => col.key !== "name");
+    return [nameColumn, ...base, actionsColumn];
+  }, [navigate]);
 
   if (isError) {
     return (
@@ -86,8 +124,8 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
             No athletes in this queue
           </h3>
           <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
-            {statusFilter === "awaiting_sheet"
-              ? "Everyone with active coaching has a linked sheet — nice work."
+            {statusFilter === "awaiting_program"
+              ? "Everyone with active coaching has a program — nice work."
               : "Try a different status filter or check back after a new subscription."}
           </p>
         </div>
@@ -100,7 +138,7 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
       {counts && (
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-            Awaiting sheet: {counts.awaitingSheet}
+            Awaiting program: {counts.awaitingProgram}
           </span>
           <span className="rounded-full bg-orange-100 px-2.5 py-1 font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
             Needs intake: {counts.needsIntake}
@@ -114,11 +152,7 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
         <StateFilter value={stateFilter} onChange={onStateFilterChange} />
         <StatusFilter value={statusFilter} onChange={onStatusFilterChange} />
       </div>
-      <DataTable
-        data={rows}
-        columns={[...coachingSetupColumns, actionsColumn]}
-        isLoading={isLoading}
-      />
+      <DataTable data={rows} columns={columns} isLoading={isLoading} />
     </div>
   );
 });
@@ -166,7 +200,7 @@ function StatusFilter({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="awaiting_sheet">Awaiting sheet</SelectItem>
+        <SelectItem value="awaiting_program">Awaiting program</SelectItem>
         <SelectItem value="needs_intake">Needs intake</SelectItem>
         <SelectItem value="ready">Ready</SelectItem>
         <SelectItem value="all">All active coaching</SelectItem>

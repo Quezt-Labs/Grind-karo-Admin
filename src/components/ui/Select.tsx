@@ -1,4 +1,6 @@
 import { cn } from "@/utils/cn";
+import type { FocusEventHandler } from "react";
+import { FieldInfoIcon } from "@/components/ui/FieldInfoIcon";
 import {
   Select as ShadSelect,
   SelectContent,
@@ -7,28 +9,38 @@ import {
   SelectValue,
 } from "@/components/ui/ShadSelect";
 
+const EMPTY_SENTINEL = "__empty__";
+
+export interface SelectOption {
+  value: string;
+  label: string;
+  info?: string;
+}
+
 interface SelectProps {
   label?: string;
+  labelInfo?: string;
   error?: string;
-  options: { value: string; label: string }[];
+  options: SelectOption[];
   value?: string;
+  onValueChange?: (value: string) => void;
+  /** @deprecated Prefer onValueChange — kept for legacy callers */
   onChange?: (e: { target: { value: string; name: string } }) => void;
-  onBlur?: (e: { target: { value: string; name: string } }) => void;
+  onBlur?: FocusEventHandler<HTMLButtonElement>;
   name?: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
   id?: string;
-  ref?: React.Ref<HTMLButtonElement>;
 }
-
-const EMPTY_SENTINEL = "__empty__";
 
 export function Select({
   label,
+  labelInfo,
   error,
   options,
   value,
+  onValueChange,
   onChange,
   onBlur,
   name,
@@ -36,40 +48,40 @@ export function Select({
   disabled,
   className,
   id,
-  ref,
 }: SelectProps) {
-  // Radix Select does not allow empty string values, so map them
   const mappedOptions = options.map((o) =>
     o.value === "" ? { ...o, value: EMPTY_SENTINEL } : o,
   );
   const mappedValue = value === "" ? EMPTY_SENTINEL : value;
 
+  function handleValueChange(next: string) {
+    const resolved = next === EMPTY_SENTINEL ? "" : next;
+    onValueChange?.(resolved);
+    onChange?.({ target: { value: resolved, name: name ?? "" } });
+  }
+
   return (
     <div className="w-full">
       {label && (
-        <label
-          htmlFor={id}
-          className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          {label}
-        </label>
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <label
+            htmlFor={id}
+            className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            {label}
+          </label>
+          {labelInfo && <FieldInfoIcon title={labelInfo} />}
+        </div>
       )}
       <ShadSelect
         value={mappedValue || undefined}
-        onValueChange={(v) =>
-          onChange?.({
-            target: { value: v === EMPTY_SENTINEL ? "" : v, name: name ?? "" },
-          })
-        }
+        onValueChange={handleValueChange}
         disabled={disabled}
+        name={name}
       >
         <SelectTrigger
-          ref={ref}
           id={id}
-          name={name}
-          onBlur={() =>
-            onBlur?.({ target: { value: mappedValue ?? "", name: name ?? "" } })
-          }
+          onBlur={onBlur}
           className={cn(
             error &&
               "border-red-500 focus:border-red-500 focus:ring-red-500/20",
@@ -81,7 +93,10 @@ export function Select({
         <SelectContent>
           {mappedOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              {option.label}
+              <span className="flex w-full items-center justify-between gap-3 pr-1">
+                <span>{option.label}</span>
+                {option.info && <FieldInfoIcon title={option.info} />}
+              </span>
             </SelectItem>
           ))}
         </SelectContent>
