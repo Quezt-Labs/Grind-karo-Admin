@@ -120,6 +120,14 @@ const COACH_NAV_SECTIONS: NavSection[] = [
       { path: "/chat", label: "Chat", icon: MessageCircle },
     ],
   },
+  {
+    key: "programs",
+    title: "Programs",
+    items: [
+      { path: "/programs", label: "Programs", icon: BookOpen },
+      { path: "/exercises", label: "Exercises", icon: Dumbbell },
+    ],
+  },
 ];
 
 const COLLAPSED_STORAGE_KEY = "grind-karo-sidebar-collapsed";

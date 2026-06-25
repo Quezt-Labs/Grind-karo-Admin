@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ClipboardList,
+  Dumbbell,
   MapPin,
   MessageCircle,
   Video,
@@ -13,15 +14,19 @@ import { Spinner } from "@/components/ui/Spinner";
 import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
+import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { cn } from "@/utils/cn";
 import { formatAthleteLocation } from "@/lib/indianStates";
 
-type CoachActivityTab = "videos" | "logs" | "chat";
+type CoachActivityTab = "program" | "videos" | "logs" | "chat";
 
 export function CoachAthleteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<CoachActivityTab>("videos");
+  const [tabState, setTabState] = useState<{
+    athleteId: string;
+    tab: CoachActivityTab;
+  } | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["coach-athlete-summary", id],
@@ -29,14 +34,26 @@ export function CoachAthleteDetailPage() {
     enabled: !!id,
   });
 
+  const assignment = data?.assignment;
+  const athlete = data?.athlete;
+
+  const defaultTab = useMemo((): CoachActivityTab => {
+    if (assignment?.personalCoachingEnabled) return "program";
+    if (assignment?.formCheckEnabled) return "videos";
+    return "chat";
+  }, [assignment?.personalCoachingEnabled, assignment?.formCheckEnabled]);
+
+  const tab = id && tabState?.athleteId === id ? tabState.tab : defaultTab;
+  const setTab = (next: CoachActivityTab) => {
+    if (!id) return;
+    setTabState({ athleteId: id, tab: next });
+  };
+
   const { data: purchaseData } = useQuery({
     queryKey: ["coach-athlete-purchases", id],
     queryFn: () => athleteAssignmentService.getCoachAthletePurchases(id!),
-    enabled: !!id && !!data?.assignment?.personalCoachingEnabled,
+    enabled: !!id && !!assignment?.personalCoachingEnabled,
   });
-
-  const assignment = data?.assignment;
-  const athlete = data?.athlete;
 
   const tabs = useMemo(() => {
     const items: {
@@ -52,6 +69,11 @@ export function CoachAthleteDetailPage() {
       });
     }
     if (assignment?.personalCoachingEnabled) {
+      items.push({
+        key: "program",
+        label: "Program",
+        icon: <Dumbbell className="h-3.5 w-3.5" />,
+      });
       items.push({
         key: "logs",
         label: "Workout logs",
@@ -139,6 +161,14 @@ export function CoachAthleteDetailPage() {
             </button>
           ))}
         </div>
+      )}
+
+      {tab === "program" && assignment?.personalCoachingEnabled && id && (
+        <UserAthleteProgramPanel
+          userId={id}
+          userName={athlete.name || athlete.email}
+          purchases={purchaseData?.purchases ?? []}
+        />
       )}
 
       {tab === "videos" && assignment?.formCheckEnabled && id && (

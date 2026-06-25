@@ -10,6 +10,7 @@ import { Toaster } from "react-hot-toast";
 import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { AdminOnlyRoute } from "@/components/shared/AdminOnlyRoute";
+import { StaffRoute } from "@/components/shared/StaffRoute";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { PageLoader } from "@/components/shared/PageLoader";
 import { LoginPage } from "@/pages/LoginPage";
@@ -101,6 +102,12 @@ export default function App() {
                   element={<LegacyCoachingEditorRedirect />}
                 />
 
+                <Route element={<StaffRoute />}>
+                  <Route path="/programs" element={<ProgramsPage />} />
+                  <Route path="/programs/:id" element={<ProgramDetailPage />} />
+                  <Route path="/exercises" element={<ExercisesPage />} />
+                </Route>
+
                 <Route element={<AdminOnlyRoute />}>
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/plans" element={<PlansPage />} />
@@ -117,14 +124,11 @@ export default function App() {
                     element={<AssistantCoachesPage />}
                   />
                   <Route path="/reviews" element={<ReviewsPage />} />
-                  <Route path="/programs" element={<ProgramsPage />} />
                   <Route
                     path="/program-addons"
                     element={<ProgramAddonsPage />}
                   />
-                  <Route path="/programs/:id" element={<ProgramDetailPage />} />
                   <Route path="/program-books" element={<ProgramBooksPage />} />
-                  <Route path="/exercises" element={<ExercisesPage />} />
                   <Route
                     path="/program-purchases"
                     element={<ProgramPurchasesPage />}
