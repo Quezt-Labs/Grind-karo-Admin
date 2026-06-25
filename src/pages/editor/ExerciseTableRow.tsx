@@ -1,8 +1,11 @@
 import { memo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 import { TableCell, TableRow } from "@/components/ui/ShadTable";
-import type { ExerciseRow } from "@/types/programs";
+import { programService } from "@/services/programService";
+import type { ExerciseRow, UpdateExerciseRowPayload } from "@/types/programs";
 import {
   CATEGORY_COLORS,
   CATEGORY_BORDER,
@@ -10,6 +13,13 @@ import {
 } from "./programConstants";
 import { ExerciseSetsPanel } from "./ExerciseSetsPanel";
 import { useProgramPreview } from "./useProgramPreview";
+import { InlineMetricCell } from "./InlineMetricCell";
+import {
+  parseLoadInput,
+  parsePercentInput,
+  parseSetsInput,
+  percentBasisToInput,
+} from "./inlineRowFieldParsers";
 
 interface ExerciseTableRowProps {
   programId: string;
@@ -38,6 +48,17 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   const hasSets = (row.exerciseSets?.length ?? 0) > 0;
   const [expanded, setExpanded] = useState(hasSets);
 
+  const updateMut = useMutation({
+    mutationFn: (payload: UpdateExerciseRowPayload) =>
+      programService.updateExerciseRow(programId, row.id, payload),
+    onSuccess: () => onRefresh(),
+    onError: () => toast.error("Failed to update exercise row"),
+  });
+
+  function patchRow(payload: UpdateExerciseRowPayload) {
+    updateMut.mutate(payload);
+  }
+
   const previewRow = preview?.enabled
     ? preview.getPreviewRow(dayExercises, row.id)
     : null;
@@ -53,6 +74,12 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   const displayRepScheme = previewRow?.repScheme ?? row.repScheme;
   const displayTargetRpe = previewRow?.targetRpe ?? row.targetRpe;
   const displayPercentOneRm = previewRow?.percentOneRm ?? row.percentOneRm;
+  const setsInput = row.sets != null ? String(row.sets) : "";
+  const repSchemeInput = row.repScheme ?? "";
+  const targetRpeInput = row.targetRpe ?? "";
+  const percentInput = percentBasisToInput(row.percentOneRm);
+  const loadInput = row.loadKg != null ? String(row.loadKg) : "";
+  const isSaving = updateMut.isPending;
   const hasNotes =
     (previewRow?.loadNote ?? row.loadNote) || (previewRow?.notes ?? row.notes);
   const isAccessory = row.category === "ACCESSORY" || row.category === "OTHER";
@@ -128,77 +155,125 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             </span>
           </TableCell>
         )}
-        <TableCell
-          className={cn(
-            cellPy,
-            "text-center font-mono",
-            compact ? "text-xs" : "text-sm",
-            isAccessory
-              ? "text-gray-500 dark:text-gray-400"
-              : "text-gray-800 dark:text-gray-200",
-          )}
-        >
-          {displaySets ?? (
-            <span className="text-gray-300 dark:text-gray-600">–</span>
-          )}
+        <TableCell className={cn(cellPy, "px-1")}>
+          <InlineMetricCell
+            value={setsInput}
+            isSaving={isSaving}
+            onCommit={(raw) => {
+              const parsed = parseSetsInput(raw);
+              if (parsed === undefined) {
+                toast.error("Sets must be a whole number");
+                return;
+              }
+              patchRow({ sets: parsed });
+            }}
+            display={
+              displaySets != null ? (
+                <span
+                  className={cn(
+                    "font-mono text-sm",
+                    isAccessory
+                      ? "text-gray-500 dark:text-gray-400"
+                      : "text-gray-800 dark:text-gray-200",
+                  )}
+                >
+                  {displaySets}
+                </span>
+              ) : undefined
+            }
+          />
         </TableCell>
-        <TableCell className={cn(cellPy, "text-center")}>
-          {displayRepScheme ? (
-            <span
-              className={cn(
-                "font-mono text-sm",
-                isAccessory
-                  ? "text-gray-500 dark:text-gray-400"
-                  : "text-gray-800 dark:text-gray-200",
-              )}
-            >
-              {displayRepScheme}
-            </span>
-          ) : (
-            <span className="text-gray-300 dark:text-gray-600">–</span>
-          )}
+        <TableCell className={cn(cellPy, "px-1")}>
+          <InlineMetricCell
+            value={repSchemeInput}
+            isSaving={isSaving}
+            onCommit={(raw) => patchRow({ repScheme: raw.trim() || null })}
+            display={
+              displayRepScheme ? (
+                <span
+                  className={cn(
+                    "font-mono text-sm",
+                    isAccessory
+                      ? "text-gray-500 dark:text-gray-400"
+                      : "text-gray-800 dark:text-gray-200",
+                  )}
+                >
+                  {displayRepScheme}
+                </span>
+              ) : undefined
+            }
+          />
         </TableCell>
-        <TableCell className={cn(cellPy, "text-center")}>
-          {displayTargetRpe ? (
-            <span
-              className={cn(
-                "inline-block rounded-md px-2 py-1 font-mono text-xs font-semibold",
-                !isAccessory &&
-                  "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-                isAccessory && "text-gray-500 dark:text-gray-400",
-              )}
-            >
-              {displayTargetRpe}
-            </span>
-          ) : (
-            <span className="text-gray-300 dark:text-gray-600">–</span>
-          )}
+        <TableCell className={cn(cellPy, "px-1")}>
+          <InlineMetricCell
+            value={targetRpeInput}
+            isSaving={isSaving}
+            onCommit={(raw) => patchRow({ targetRpe: raw.trim() || null })}
+            display={
+              displayTargetRpe ? (
+                <span
+                  className={cn(
+                    "inline-block rounded-md px-2 py-0.5 font-mono text-xs font-semibold",
+                    !isAccessory &&
+                      "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
+                    isAccessory && "text-gray-500 dark:text-gray-400",
+                  )}
+                >
+                  {displayTargetRpe}
+                </span>
+              ) : undefined
+            }
+          />
         </TableCell>
-        <TableCell className={cn(cellPy, "text-center")}>
-          {displayPercentOneRm ? (
-            <span className="inline-block rounded-md bg-indigo-50 px-2 py-1 font-mono text-xs font-semibold text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400">
-              {formatPercent(displayPercentOneRm)}
-            </span>
-          ) : (
-            <span className="text-gray-300 dark:text-gray-600">–</span>
-          )}
+        <TableCell className={cn(cellPy, "px-1")}>
+          <InlineMetricCell
+            value={percentInput}
+            isSaving={isSaving}
+            onCommit={(raw) => {
+              const parsed = parsePercentInput(raw);
+              if (raw.trim() && parsed === null) {
+                toast.error("Enter a valid percent (e.g. 53 or 53%)");
+                return;
+              }
+              patchRow({ percentOneRm: parsed });
+            }}
+            display={
+              displayPercentOneRm ? (
+                <span className="inline-block rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-xs font-semibold text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400">
+                  {formatPercent(displayPercentOneRm)}
+                </span>
+              ) : undefined
+            }
+          />
         </TableCell>
-        <TableCell className={cn(cellPy, "text-center")}>
-          {displayLoad != null ? (
-            <span
-              className={cn(
-                "font-mono font-bold text-emerald-700 dark:text-emerald-400",
-                compact ? "text-xs" : "text-base",
-              )}
-            >
-              {displayLoad}
-              <span className="ml-0.5 text-xs font-normal text-emerald-600/70 dark:text-emerald-400/70">
-                kg
-              </span>
-            </span>
-          ) : (
-            <span className="text-gray-300 dark:text-gray-600">–</span>
-          )}
+        <TableCell className={cn(cellPy, "px-1")}>
+          <InlineMetricCell
+            value={loadInput}
+            isSaving={isSaving}
+            onCommit={(raw) => {
+              const parsed = parseLoadInput(raw);
+              if (parsed === undefined) {
+                toast.error("Load must be a number (kg)");
+                return;
+              }
+              patchRow({ loadKg: parsed });
+            }}
+            display={
+              displayLoad != null ? (
+                <span
+                  className={cn(
+                    "font-mono font-bold text-emerald-700 dark:text-emerald-400",
+                    compact ? "text-xs" : "text-sm",
+                  )}
+                >
+                  {displayLoad}
+                  <span className="ml-0.5 text-[10px] font-normal text-emerald-600/70 dark:text-emerald-400/70">
+                    kg
+                  </span>
+                </span>
+              ) : undefined
+            }
+          />
         </TableCell>
         <TableCell className={cellPy}>
           <div className="flex items-center justify-center gap-0.5">
