@@ -124,6 +124,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     key: "programs",
     title: "Programs",
     items: [
+      { path: "/plans", label: "Coaching Plans", icon: CreditCard },
       { path: "/programs", label: "Programs", icon: BookOpen },
       { path: "/exercises", label: "Exercises", icon: Dumbbell },
     ],

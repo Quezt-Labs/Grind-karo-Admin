@@ -34,6 +34,7 @@ import type { Column } from "@/types/dashboard";
 import type { CoachingAddon, PublicAddon } from "@/types/program";
 import type { PlanUserStatusFilter } from "@/types/user";
 import { requiresPersonalCoachingProgram } from "@/utils/coachingCapabilities";
+import { useIsAdmin } from "@/hooks/useRole";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -67,6 +68,7 @@ const STATUS_TABS: { label: string; value: PlanUserStatusFilter }[] = [
 export function PlanDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [unlinkTarget, setUnlinkTarget] = useState<PublicAddon | null>(null);
@@ -85,19 +87,24 @@ export function PlanDetailPage() {
   });
 
   const { data: subscribersData, isLoading: subscribersLoading } = useQuery({
-    queryKey: ["plan-users", id, subscriberStatus, subscriberOffset],
+    queryKey: ["plan-users", id, subscriberStatus, subscriberOffset, isAdmin],
     queryFn: () =>
-      planService.getUsersByPlan(id!, {
-        status: subscriberStatus,
-        limit: PAGE_SIZE,
-        offset: subscriberOffset,
-      }),
+      planService.getUsersByPlan(
+        id!,
+        {
+          status: subscriberStatus,
+          limit: PAGE_SIZE,
+          offset: subscriberOffset,
+        },
+        { coachScoped: !isAdmin },
+      ),
     enabled: !!id,
   });
 
   const { data: allAddons } = useQuery({
     queryKey: ["coaching-addons"],
     queryFn: addonService.getAll,
+    enabled: !!id && isAdmin,
   });
 
   const linkedAddonIds = useMemo(
@@ -256,44 +263,45 @@ export function PlanDetailPage() {
         </div>
       </div>
 
-      {/* Linked Add-ons */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Linked Add-ons
-          </h2>
-          <Button
-            size="sm"
-            onClick={() => setShowLinkModal(true)}
-            disabled={unlinkableAddons.length === 0}
-          >
-            <Plus className="h-4 w-4" />
-            Link Add-on
-          </Button>
-        </div>
-
-        {addonRows.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center dark:border-gray-600 dark:bg-gray-800">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No add-ons linked to this plan yet.
-            </p>
+      {/* Linked Add-ons (admin catalog management) */}
+      {isAdmin && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Linked Add-ons
+            </h2>
+            <Button
+              size="sm"
+              onClick={() => setShowLinkModal(true)}
+              disabled={unlinkableAddons.length === 0}
+            >
+              <Plus className="h-4 w-4" />
+              Link Add-on
+            </Button>
           </div>
-        ) : (
-          <DataTable
-            data={addonRows}
-            columns={[...addonColumns, actionsColumn]}
-            isLoading={false}
-          />
-        )}
-      </div>
 
-      {/* Link Modal */}
+          {addonRows.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center dark:border-gray-600 dark:bg-gray-800">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No add-ons linked to this plan yet.
+              </p>
+            </div>
+          ) : (
+            <DataTable
+              data={addonRows}
+              columns={[...addonColumns, actionsColumn]}
+              isLoading={false}
+            />
+          )}
+        </div>
+      )}
+
       {/* Subscribers */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Subscribers
+            {isAdmin ? "Subscribers" : "Your athletes on this plan"}
           </h2>
           {subscribersData && (
             <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
@@ -367,7 +375,9 @@ export function PlanDetailPage() {
                         key={subscription.id}
                         onClick={() =>
                           navigate(
-                            `/users/${user.id}?subscriptionId=${subscription.id}`,
+                            isAdmin
+                              ? `/users/${user.id}?subscriptionId=${subscription.id}`
+                              : `/coach/athletes/${user.id}`,
                           )
                         }
                         className="cursor-pointer"
@@ -460,7 +470,7 @@ export function PlanDetailPage() {
         )}
       </div>
 
-      {showLinkModal && (
+      {isAdmin && showLinkModal && (
         <LinkAddonModal
           availableAddons={unlinkableAddons}
           isLoading={linkMutation.isPending}
@@ -471,17 +481,20 @@ export function PlanDetailPage() {
         />
       )}
 
-      {/* Unlink Confirm */}
-      <ConfirmModal
-        open={!!unlinkTarget}
-        title="Unlink Add-on"
-        message={`Remove "${unlinkTarget?.name}" from this plan?`}
-        confirmLabel="Unlink"
-        variant="danger"
-        isLoading={unlinkMutation.isPending}
-        onConfirm={() => unlinkTarget && unlinkMutation.mutate(unlinkTarget.id)}
-        onCancel={() => setUnlinkTarget(null)}
-      />
+      {isAdmin && (
+        <ConfirmModal
+          open={!!unlinkTarget}
+          title="Unlink Add-on"
+          message={`Remove "${unlinkTarget?.name}" from this plan?`}
+          confirmLabel="Unlink"
+          variant="danger"
+          isLoading={unlinkMutation.isPending}
+          onConfirm={() =>
+            unlinkTarget && unlinkMutation.mutate(unlinkTarget.id)
+          }
+          onCancel={() => setUnlinkTarget(null)}
+        />
+      )}
     </div>
   );
 }

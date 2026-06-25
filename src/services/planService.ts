@@ -80,10 +80,12 @@ export const planService = {
       limit?: number;
       offset?: number;
     },
+    options?: { coachScoped?: boolean },
   ): Promise<ListPlanUsersResponse> {
-    const { data } = await api.get(`/admin/users/by-plan/${planId}`, {
-      params,
-    });
+    const path = options?.coachScoped
+      ? `/coach/plans/${planId}/subscribers`
+      : `/admin/users/by-plan/${planId}`;
+    const { data } = await api.get(path, { params });
     return data.data ?? data;
   },
 };

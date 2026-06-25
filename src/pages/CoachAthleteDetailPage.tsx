@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ClipboardList,
+  CreditCard,
   Dumbbell,
   MapPin,
   MessageCircle,
@@ -15,14 +16,16 @@ import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
+import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
 import { cn } from "@/utils/cn";
 import { formatAthleteLocation } from "@/lib/indianStates";
 
-type CoachActivityTab = "program" | "videos" | "logs" | "chat";
+type CoachActivityTab = "plan" | "program" | "videos" | "logs" | "chat";
 
 export function CoachAthleteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [tabState, setTabState] = useState<{
     athleteId: string;
     tab: CoachActivityTab;
@@ -36,12 +39,14 @@ export function CoachAthleteDetailPage() {
 
   const assignment = data?.assignment;
   const athlete = data?.athlete;
+  const isAssigned =
+    !!assignment &&
+    (assignment.personalCoachingEnabled || assignment.formCheckEnabled);
 
   const defaultTab = useMemo((): CoachActivityTab => {
-    if (assignment?.personalCoachingEnabled) return "program";
-    if (assignment?.formCheckEnabled) return "videos";
+    if (isAssigned) return "plan";
     return "chat";
-  }, [assignment?.personalCoachingEnabled, assignment?.formCheckEnabled]);
+  }, [isAssigned]);
 
   const tab = id && tabState?.athleteId === id ? tabState.tab : defaultTab;
   const setTab = (next: CoachActivityTab) => {
@@ -52,7 +57,7 @@ export function CoachAthleteDetailPage() {
   const { data: purchaseData } = useQuery({
     queryKey: ["coach-athlete-purchases", id],
     queryFn: () => athleteAssignmentService.getCoachAthletePurchases(id!),
-    enabled: !!id && !!assignment?.personalCoachingEnabled,
+    enabled: !!id && isAssigned,
   });
 
   const tabs = useMemo(() => {
@@ -61,6 +66,13 @@ export function CoachAthleteDetailPage() {
       label: string;
       icon: React.ReactNode;
     }[] = [];
+    if (isAssigned) {
+      items.push({
+        key: "plan",
+        label: "Coaching plan",
+        icon: <CreditCard className="h-3.5 w-3.5" />,
+      });
+    }
     if (assignment?.formCheckEnabled) {
       items.push({
         key: "videos",
@@ -80,7 +92,7 @@ export function CoachAthleteDetailPage() {
         icon: <ClipboardList className="h-3.5 w-3.5" />,
       });
     }
-    if (assignment?.personalCoachingEnabled || assignment?.formCheckEnabled) {
+    if (isAssigned) {
       items.push({
         key: "chat",
         label: "Chat",
@@ -88,7 +100,13 @@ export function CoachAthleteDetailPage() {
       });
     }
     return items;
-  }, [assignment]);
+  }, [assignment, isAssigned]);
+
+  const refreshPurchases = () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["coach-athlete-purchases", id],
+    });
+  };
 
   if (isLoading) {
     return (
@@ -163,6 +181,14 @@ export function CoachAthleteDetailPage() {
         </div>
       )}
 
+      {tab === "plan" && isAssigned && id && (
+        <CoachingFeeAdjustmentsPanel
+          userId={id}
+          purchases={purchaseData?.purchases ?? []}
+          onUpdated={refreshPurchases}
+        />
+      )}
+
       {tab === "program" && assignment?.personalCoachingEnabled && id && (
         <UserAthleteProgramPanel
           userId={id}
@@ -183,21 +209,19 @@ export function CoachAthleteDetailPage() {
         />
       )}
 
-      {tab === "chat" &&
-        (assignment?.personalCoachingEnabled ||
-          assignment?.formCheckEnabled) && (
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Open the chat thread with this athlete in the coach inbox.
-            </p>
-            <Link
-              to={`/chat?userId=${athlete.id}`}
-              className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-            >
-              Open chat
-            </Link>
-          </div>
-        )}
+      {tab === "chat" && isAssigned && (
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Open the chat thread with this athlete in the coach inbox.
+          </p>
+          <Link
+            to={`/chat?userId=${athlete.id}`}
+            className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            Open chat
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

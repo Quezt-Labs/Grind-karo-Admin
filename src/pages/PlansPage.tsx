@@ -16,6 +16,7 @@ import { planService } from "@/services/planService";
 import type { Column } from "@/types/dashboard";
 import type { CoachingPlan } from "@/types/program";
 import { PlanFormModal } from "@/components/programs/PlanFormModal";
+import { useIsAdmin } from "@/hooks/useRole";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -67,6 +68,7 @@ type StatusFilter = "all" | "active" | "inactive";
 
 export function PlansPage() {
   const navigate = useNavigate();
+  const isAdmin = useIsAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deleteTarget, setDeleteTarget] = useState<CoachingPlan | null>(null);
@@ -162,20 +164,24 @@ export function PlansPage() {
           >
             <Eye className="h-4 w-4" />
           </button>
-          <button
-            onClick={() => setEditTarget(plan)}
-            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-            title="Edit"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setDeleteTarget(plan)}
-            className="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => setEditTarget(plan)}
+                className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                title="Edit"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setDeleteTarget(plan)}
+                className="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
       );
     },
@@ -186,12 +192,18 @@ export function PlansPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           title="Coaching Plans"
-          description="Manage coaching plans and pricing"
+          description={
+            isAdmin
+              ? "Manage coaching plans and pricing"
+              : "View plans and grant subscriptions to your assigned athletes"
+          }
         />
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4" />
-          Create Plan
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" />
+            Create Plan
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -253,12 +265,16 @@ export function PlansPage() {
             No plans yet
           </h3>
           <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
-            Create coaching plans so users can subscribe.
+            {isAdmin
+              ? "Create coaching plans so users can subscribe."
+              : "No coaching plans are available yet."}
           </p>
-          <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4" />
-            Create Your First Plan
-          </Button>
+          {isAdmin && (
+            <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4" />
+              Create Your First Plan
+            </Button>
+          )}
         </div>
       ) : (
         <DataTable
@@ -278,7 +294,7 @@ export function PlansPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {(showCreateModal || editTarget) && (
+      {isAdmin && (showCreateModal || editTarget) && (
         <PlanFormModal
           plan={editTarget}
           onClose={() => {

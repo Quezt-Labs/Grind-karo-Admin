@@ -106,12 +106,12 @@ export default function App() {
                   <Route path="/programs" element={<ProgramsPage />} />
                   <Route path="/programs/:id" element={<ProgramDetailPage />} />
                   <Route path="/exercises" element={<ExercisesPage />} />
+                  <Route path="/plans" element={<PlansPage />} />
+                  <Route path="/plans/:id" element={<PlanDetailPage />} />
                 </Route>
 
                 <Route element={<AdminOnlyRoute />}>
                   <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/plans" element={<PlansPage />} />
-                  <Route path="/plans/:id" element={<PlanDetailPage />} />
                   <Route path="/addons" element={<AddonsPage />} />
                   <Route
                     path="/subscriptions"
