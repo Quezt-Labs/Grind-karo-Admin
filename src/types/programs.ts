@@ -120,6 +120,8 @@ export interface Week {
   weekNumber: number;
   title: string;
   notes: string | null;
+  weekStart: string | null;
+  weekEnd: string | null;
   createdAt: string;
   updatedAt: string;
   days: Day[];
@@ -129,6 +131,8 @@ export interface CreateWeekPayload {
   weekNumber: number;
   title: string;
   notes?: string | null;
+  weekStart?: string | null;
+  weekEnd?: string | null;
 }
 
 export type UpdateWeekPayload = Partial<CreateWeekPayload>;

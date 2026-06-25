@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Calendar } from "lucide-react";
 import type { ProgramTree, Day, ExerciseRow } from "@/types/programs";
 import { TreeNodeActions } from "./TreeNodeActions";
 import { DayNode } from "./DayNode";
+import { formatWeekDateRange } from "@/utils/weekDates";
 
 type WeekTree = ProgramTree["blocks"][number]["weeks"][number];
 
@@ -55,6 +56,7 @@ export const WeekNode = memo(function WeekNode({
     (acc, d) => acc + d.exercises.length,
     0,
   );
+  const dateRange = formatWeekDateRange(week.weekStart, week.weekEnd);
 
   return (
     <div className="flex w-72 min-w-72 shrink-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50/50 dark:border-gray-600 dark:bg-gray-750">
@@ -73,6 +75,11 @@ export const WeekNode = memo(function WeekNode({
           <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-200">
             {week.title}
           </span>
+          {dateRange && (
+            <span className="shrink-0 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+              {dateRange}
+            </span>
+          )}
           <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-600 dark:text-gray-300">
             {week.days.length} days · {totalExercises} exercises
           </span>

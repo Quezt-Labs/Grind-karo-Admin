@@ -9,12 +9,24 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { programService } from "@/services/programService";
 import type { Week } from "@/types/programs";
+import {
+  defaultWeekEnd,
+  suggestNextWeekNumber,
+  suggestNextWeekStart,
+} from "@/utils/weekDates";
 
-const schema = z.object({
-  weekNumber: z.coerce.number().min(1),
-  title: z.string().min(1),
-  notes: z.string().optional(),
-});
+const schema = z
+  .object({
+    weekNumber: z.coerce.number().min(1),
+    title: z.string().min(1),
+    notes: z.string().optional(),
+    weekStart: z.string().min(1, "Start date is required"),
+    weekEnd: z.string().min(1, "End date is required"),
+  })
+  .refine((d) => d.weekEnd >= d.weekStart, {
+    message: "End date must be on or after start date",
+    path: ["weekEnd"],
+  });
 
 type FormData = z.infer<typeof schema>;
 
@@ -22,6 +34,7 @@ interface WeekFormModalProps {
   programId: string;
   blockId?: string;
   week?: Week;
+  siblingWeeks?: Week[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -30,13 +43,21 @@ export function WeekFormModal({
   programId,
   blockId,
   week,
+  siblingWeeks = [],
   onClose,
   onSuccess,
 }: WeekFormModalProps) {
   const isEdit = !!week;
+  const suggestedStart = suggestNextWeekStart(siblingWeeks);
+  const suggestedNumber = suggestNextWeekNumber(siblingWeeks);
+  const initialStart = week?.weekStart ?? suggestedStart ?? "";
+  const initialEnd =
+    week?.weekEnd ?? (initialStart ? defaultWeekEnd(initialStart) : "");
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
@@ -45,8 +66,16 @@ export function WeekFormModal({
           weekNumber: week.weekNumber,
           title: week.title,
           notes: week.notes || "",
+          weekStart: week.weekStart ?? "",
+          weekEnd: week.weekEnd ?? "",
         }
-      : { weekNumber: 1, title: "WEEK 1", notes: "" },
+      : {
+          weekNumber: suggestedNumber,
+          title: `WEEK ${suggestedNumber}`,
+          notes: "",
+          weekStart: initialStart,
+          weekEnd: initialEnd,
+        },
   });
 
   const createMut = useMutation({
@@ -54,6 +83,8 @@ export function WeekFormModal({
       programService.createWeek(programId, blockId!, {
         ...d,
         notes: d.notes || null,
+        weekStart: d.weekStart,
+        weekEnd: d.weekEnd,
       }),
     onSuccess: () => {
       toast.success("Week created");
@@ -65,6 +96,8 @@ export function WeekFormModal({
       programService.updateWeek(programId, week!.id, {
         ...d,
         notes: d.notes || null,
+        weekStart: d.weekStart,
+        weekEnd: d.weekEnd,
       }),
     onSuccess: () => {
       toast.success("Week updated");
@@ -77,6 +110,13 @@ export function WeekFormModal({
   function onSubmit(data: FormData) {
     if (isEdit) updateMut.mutate(data);
     else createMut.mutate(data);
+  }
+
+  function handleWeekStartChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const start = e.target.value;
+    if (start) {
+      setValue("weekEnd", defaultWeekEnd(start), { shouldValidate: true });
+    }
   }
 
   return (
@@ -101,6 +141,22 @@ export function WeekFormModal({
             placeholder="WEEK 1"
             error={errors.title?.message}
             {...register("title")}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            id="week-start"
+            label="Week start"
+            type="date"
+            error={errors.weekStart?.message}
+            {...register("weekStart", { onChange: handleWeekStartChange })}
+          />
+          <Input
+            id="week-end"
+            label="Week end"
+            type="date"
+            error={errors.weekEnd?.message}
+            {...register("weekEnd")}
           />
         </div>
         <Textarea

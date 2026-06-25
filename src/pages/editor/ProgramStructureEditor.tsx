@@ -20,6 +20,7 @@ import { EmptySection } from "./ProgramShared";
 import { TreeNodeActions } from "./TreeNodeActions";
 import { ExerciseTable } from "./ExerciseTable";
 import { Button } from "@/components/ui/Button";
+import { computeBlockDateRange, formatWeekDateRange } from "@/utils/weekDates";
 
 type BlockTree = ProgramTree["blocks"][number];
 type WeekTree = BlockTree["weeks"][number];
@@ -172,6 +173,10 @@ const StructureSidebar = memo(function StructureSidebar({
               const weeks = [...block.weeks].sort(
                 (a, b) => a.weekNumber - b.weekNumber,
               );
+              const blockRange = computeBlockDateRange(weeks);
+              const blockRangeLabel = blockRange
+                ? formatWeekDateRange(blockRange.weekStart, blockRange.weekEnd)
+                : null;
 
               return (
                 <li key={block.id}>
@@ -188,9 +193,16 @@ const StructureSidebar = memo(function StructureSidebar({
                       )}
                     </button>
                     <Layers className="h-3.5 w-3.5 shrink-0 text-primary-500" />
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-800 dark:text-gray-200">
-                      {block.name}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        {block.name}
+                      </span>
+                      {blockRangeLabel && (
+                        <span className="block truncate text-[10px] text-gray-500 dark:text-gray-400">
+                          {blockRangeLabel}
+                        </span>
+                      )}
+                    </div>
                     <span
                       className={cn(
                         "hidden shrink-0 rounded px-1 py-0.5 text-[9px] font-bold uppercase group-hover:inline",
@@ -232,6 +244,10 @@ const StructureSidebar = memo(function StructureSidebar({
                           const days = [...week.days].sort(
                             (a, b) => a.dayNumber - b.dayNumber,
                           );
+                          const weekRange = formatWeekDateRange(
+                            week.weekStart,
+                            week.weekEnd,
+                          );
 
                           return (
                             <li key={week.id}>
@@ -248,9 +264,16 @@ const StructureSidebar = memo(function StructureSidebar({
                                   )}
                                 </button>
                                 <Calendar className="h-3 w-3 shrink-0 text-orange-500" />
-                                <span className="min-w-0 flex-1 truncate text-xs font-medium text-gray-700 dark:text-gray-300">
-                                  {week.title}
-                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-medium text-gray-700 dark:text-gray-300">
+                                    {week.title}
+                                  </span>
+                                  {weekRange && (
+                                    <span className="block truncate text-[10px] text-gray-400">
+                                      {weekRange}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="opacity-0 group-hover:opacity-100">
                                   <TreeNodeActions
                                     onAdd={() => onAddDay(week.id)}
@@ -373,6 +396,10 @@ export function ProgramStructureEditor({
       ? Math.max(...selection.day.exercises.map((e) => e.sortOrder)) + 1
       : 0;
 
+  const weekRangeLabel = selection
+    ? formatWeekDateRange(selection.week.weekStart, selection.week.weekEnd)
+    : null;
+
   return (
     <div className="flex min-h-[min(70vh,36rem)] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <StructureSidebar
@@ -410,6 +437,7 @@ export function ProgramStructureEditor({
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
                   {selection.block.name} · {selection.week.title}
+                  {weekRangeLabel ? ` · ${weekRangeLabel}` : ""}
                 </p>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                   {selection.day.title}

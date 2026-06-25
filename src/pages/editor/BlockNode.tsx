@@ -6,6 +6,7 @@ import { BLOCK_TYPE_COLORS } from "./programConstants";
 import { EmptySection } from "./ProgramShared";
 import { TreeNodeActions } from "./TreeNodeActions";
 import { WeekNode } from "./WeekNode";
+import { computeBlockDateRange, formatWeekDateRange } from "@/utils/weekDates";
 
 type BlockTree = ProgramTree["blocks"][number];
 
@@ -70,6 +71,10 @@ export const BlockNode = memo(function BlockNode({
     (acc, w) => acc + w.days.reduce((da, d) => da + d.exercises.length, 0),
     0,
   );
+  const blockRange = computeBlockDateRange(block.weeks);
+  const blockRangeLabel = blockRange
+    ? formatWeekDateRange(blockRange.weekStart, blockRange.weekEnd)
+    : null;
 
   return (
     <div className="flex h-full w-[min(100%,28rem)] min-w-72 shrink-0 flex-col overflow-hidden rounded-xl border-2 border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -115,6 +120,9 @@ export const BlockNode = memo(function BlockNode({
             </div>
             <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               {block.weeks.length} weeks · {totalExercises} exercises
+              {blockRangeLabel && (
+                <span className="text-gray-400"> · {blockRangeLabel}</span>
+              )}
             </p>
           </div>
         </button>

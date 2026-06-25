@@ -406,6 +406,15 @@ export function ProgramEditorPage() {
             programId={programId!}
             blockId={weekModal.blockId}
             week={weekModal.week}
+            siblingWeeks={
+              weekModal.blockId
+                ? tree?.blocks.find((b) => b.id === weekModal.blockId)?.weeks
+                : weekModal.week
+                  ? tree?.blocks
+                      .find((b) => b.id === weekModal.week!.blockId)
+                      ?.weeks.filter((w) => w.id !== weekModal.week!.id)
+                  : undefined
+            }
             onClose={() => setWeekModal({ open: false })}
             onSuccess={() => {
               setWeekModal({ open: false });
