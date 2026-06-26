@@ -406,7 +406,7 @@ export function UserDetailPage() {
 
           <CoachingEntitlementsSection
             userId={user.id}
-            enabled={user.workoutSetVideosEnabled !== false}
+            enabled={user.workoutSetVideosEnabled ?? true}
             adminFlag={user.workoutSetVideosEnabled}
             formCheckEnabled={formCheckEnabled}
             chatEnabled={chatEnabled}

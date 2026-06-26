@@ -22,6 +22,7 @@ import {
 import { PreviewInputsBar } from "./editor/PreviewInputsBar";
 import { ProgramPreviewProvider } from "./editor/ProgramPreviewContext";
 import { useProgramEditorRoute } from "@/hooks/useProgramEditorRoute";
+import { ProgramComparePanel } from "./editor/ProgramComparePanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
 import { userService } from "@/services/userService";
@@ -313,18 +314,18 @@ export function ProgramEditorPage() {
 
   return (
     <ProgramPreviewProvider slots={movementSlots} enabled={previewEnabled}>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-start gap-2 sm:gap-3">
           <button
             onClick={() => navigate(backHref)}
-            className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="shrink-0 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
           </button>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                 {scope === "coaching" && athleteLabel
                   ? athleteLabel
                   : tree.name}
@@ -339,8 +340,8 @@ export function ProgramEditorPage() {
             <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               {scope === "coaching" && athleteLabel ? (
                 <>
-                  {tree.name}
-                  <span className="mx-1.5">·</span>
+                  <span className="line-clamp-1">{tree.name}</span>
+                  <span className="mx-1.5 hidden sm:inline">·</span>
                 </>
               ) : null}
               <Link to={backHref} className="hover:underline text-primary-600">
@@ -349,7 +350,11 @@ export function ProgramEditorPage() {
             </p>
           </div>
           {activeTab === "structure" && (
-            <Button size="sm" onClick={() => setBlockModal({ open: true })}>
+            <Button
+              size="sm"
+              onClick={() => setBlockModal({ open: true })}
+              className="w-full shrink-0 sm:w-auto"
+            >
               <Plus className="h-3.5 w-3.5" /> Add Block
             </Button>
           )}
@@ -360,6 +365,8 @@ export function ProgramEditorPage() {
         {showPreviewBar && <PreviewInputsBar slots={movementSlots} />}
 
         {activeTab === "structure" && structureEditor}
+
+        {activeTab === "compare" && <ProgramComparePanel tree={tree} />}
 
         {activeTab === "movement-selection" && (
           <div className="space-y-6">
