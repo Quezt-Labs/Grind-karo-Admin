@@ -37,6 +37,9 @@ export function ProgramDayEditorPanel({
         programId={programId}
         dayId={day.id}
         exercises={day.exercises}
+        blockWeeks={selection.block.weeks}
+        currentWeekNumber={selection.week.weekNumber}
+        dayNumber={selection.day.dayNumber}
         onAddExercise={() =>
           onAddExercise(day.id, day.exercises, nextSortOrder)
         }

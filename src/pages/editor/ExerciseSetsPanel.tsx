@@ -17,6 +17,7 @@ interface ExerciseSetsProps {
   exerciseRowId: string;
   sets: ExerciseSet[];
   onRefresh: () => void;
+  colSpan?: number;
 }
 
 interface SetRowState {
@@ -280,6 +281,7 @@ export function ExerciseSetsPanel({
   exerciseRowId,
   sets,
   onRefresh,
+  colSpan = 9,
 }: ExerciseSetsProps) {
   const qc = useQueryClient();
   const [newRow, setNewRow] = useState<SetRowState>(emptyRow());
@@ -314,7 +316,7 @@ export function ExerciseSetsPanel({
 
   return (
     <TableRow className="bg-gray-50/70 hover:bg-gray-50/70 dark:bg-gray-700/30 dark:hover:bg-gray-700/30">
-      <TableCell colSpan={9} className="px-4 py-2">
+      <TableCell colSpan={colSpan} className="px-4 py-2">
         <div className="space-y-1">
           <div
             className={`${GRID_CLS} px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400`}

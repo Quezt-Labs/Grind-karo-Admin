@@ -18,6 +18,14 @@ export const CATEGORY_BORDER: Record<ExerciseCategory, string> = {
   OTHER: "border-l-gray-300",
 };
 
+export const CATEGORY_LETTER: Record<ExerciseCategory, string> = {
+  SQUAT: "S",
+  BENCH: "B",
+  DEADLIFT: "D",
+  ACCESSORY: "A",
+  OTHER: "O",
+};
+
 export const BLOCK_TYPE_COLORS: Record<string, string> = {
   MAIN: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   DELOAD:

@@ -9,9 +9,16 @@ import type { ExerciseRow, UpdateExerciseRowPayload } from "@/types/programs";
 import {
   CATEGORY_COLORS,
   CATEGORY_BORDER,
+  CATEGORY_LETTER,
   formatPercent,
 } from "./programConstants";
 import { ExerciseSetsPanel } from "./ExerciseSetsPanel";
+import { PriorWeekCell } from "./PriorWeekCell";
+import {
+  getPriorWeekExercise,
+  type PriorWeekColumn,
+} from "./programWeekHistory";
+import type { WeekTree } from "./programStructureUtils";
 import { useProgramPreview } from "./useProgramPreview";
 import { InlineMetricCell } from "./InlineMetricCell";
 import {
@@ -28,6 +35,10 @@ interface ExerciseTableRowProps {
   index: number;
   compact?: boolean;
   cellPy?: string;
+  blockWeeks?: WeekTree[];
+  dayNumber?: number;
+  priorWeekColumns?: PriorWeekColumn[];
+  tableColSpan?: number;
   onEdit: () => void;
   onDelete: () => void;
   onRefresh: () => void;
@@ -40,6 +51,10 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   index,
   compact = false,
   cellPy = "py-4",
+  blockWeeks,
+  dayNumber,
+  priorWeekColumns,
+  tableColSpan = 9,
   onEdit,
   onDelete,
   onRefresh,
@@ -145,19 +160,46 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             </p>
           )}
         </TableCell>
+        {priorWeekColumns?.map((col, colIndex) => (
+          <PriorWeekCell
+            key={col.weekNumber}
+            weekLabel={col.label}
+            row={
+              blockWeeks && dayNumber != null
+                ? getPriorWeekExercise(
+                    blockWeeks,
+                    col.weekNumber,
+                    dayNumber,
+                    index,
+                  )
+                : null
+            }
+            currentRow={row}
+            isLastInGroup={colIndex === priorWeekColumns.length - 1}
+            cellPy={cellPy}
+          />
+        ))}
         {!compact && (
-          <TableCell className="py-2.5">
+          <TableCell className="py-2.5 text-center">
             <span
               className={cn(
-                "inline-block rounded-md px-2 py-1 text-xs font-semibold",
+                "inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold",
                 CATEGORY_COLORS[row.category] || CATEGORY_COLORS.OTHER,
               )}
+              title={row.category}
             >
-              {row.category}
+              {CATEGORY_LETTER[row.category] || CATEGORY_LETTER.OTHER}
             </span>
           </TableCell>
         )}
-        <TableCell className={cn(cellPy, "px-1")}>
+        <TableCell
+          className={cn(
+            cellPy,
+            "px-1",
+            priorWeekColumns?.length &&
+              "border-l-2 border-l-primary-200 dark:border-l-primary-800",
+          )}
+        >
           <InlineMetricCell
             value={setsInput}
             isSaving={isSaving}
@@ -320,6 +362,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
           exerciseRowId={row.id}
           sets={row.exerciseSets ?? []}
           onRefresh={onRefresh}
+          colSpan={tableColSpan}
         />
       )}
     </>

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Dumbbell, Plus } from "lucide-react";
 import { cn } from "@/utils/cn";
 import {
@@ -11,12 +11,17 @@ import {
 } from "@/components/ui/ShadTable";
 import type { ExerciseRow } from "@/types/programs";
 import { ExerciseTableRow } from "./ExerciseTableRow";
+import { buildPriorWeekColumns } from "./programWeekHistory";
+import type { WeekTree } from "./programStructureUtils";
 
 interface ExerciseTableProps {
   programId: string;
   dayId: string;
   exercises: ExerciseRow[];
   compact?: boolean;
+  blockWeeks?: WeekTree[];
+  currentWeekNumber?: number;
+  dayNumber?: number;
   onAddExercise: () => void;
   onEditExercise: (
     row: ExerciseRow,
@@ -32,6 +37,9 @@ export const ExerciseTable = memo(function ExerciseTable({
   dayId,
   exercises,
   compact = false,
+  blockWeeks,
+  currentWeekNumber,
+  dayNumber,
   onAddExercise,
   onEditExercise,
   onDeleteExercise,
@@ -40,95 +48,205 @@ export const ExerciseTable = memo(function ExerciseTable({
   const cellPy = compact ? "py-1.5" : "py-3";
   const headPy = compact ? "py-1.5" : "py-3";
   const textSize = compact ? "text-xs" : "text-sm";
-  const colSpan = compact ? 8 : 9;
+
+  const priorWeekColumns = useMemo(() => {
+    if (!blockWeeks?.length || currentWeekNumber == null) return [];
+    return buildPriorWeekColumns(blockWeeks, currentWeekNumber);
+  }, [blockWeeks, currentWeekNumber]);
+
+  const showWeekHistory =
+    priorWeekColumns.length > 0 && dayNumber != null && !compact;
+  const baseColSpan = compact ? 8 : 9;
+  const colSpan = baseColSpan + (showWeekHistory ? priorWeekColumns.length : 0);
+  const minTableWidth = showWeekHistory
+    ? `${42 + priorWeekColumns.length * 4.5}rem`
+    : "40rem";
+
+  const historyHeadClass =
+    "bg-slate-100/90 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400";
+  const currentHeadClass =
+    "border-l-2 border-l-primary-200 bg-white/80 dark:border-l-primary-800 dark:bg-gray-800/80";
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700">
       <div className="overflow-x-auto">
-        <Table className={cn(textSize, "min-w-[40rem]")}>
+        <Table className={cn(textSize)} style={{ minWidth: minTableWidth }}>
           <TableHeader>
-            <TableRow className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 backdrop-blur-sm hover:bg-gray-50/95 dark:border-gray-600 dark:bg-gray-800/95 dark:hover:bg-gray-800/95">
-              <TableHead
-                className={cn(
-                  "h-auto w-8 border-b-0 pl-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
-                  headPy,
-                )}
-              >
-                #
-              </TableHead>
-              <TableHead
-                className={cn(
-                  "h-auto min-w-36 border-b-0 pl-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
-                  headPy,
-                )}
-              >
-                Exercise
-              </TableHead>
-              {!compact && (
+            {showWeekHistory ? (
+              <>
+                <TableRow className="sticky top-0 z-10 border-b-0 bg-gray-50/95 backdrop-blur-sm dark:bg-gray-800/95">
+                  <TableHead
+                    rowSpan={2}
+                    className={cn(
+                      "h-auto w-8 border-b border-gray-200 pl-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-400",
+                      headPy,
+                    )}
+                  >
+                    #
+                  </TableHead>
+                  <TableHead
+                    rowSpan={2}
+                    className={cn(
+                      "h-auto min-w-36 border-b border-gray-200 pl-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-400",
+                      headPy,
+                    )}
+                  >
+                    Exercise
+                  </TableHead>
+                  <TableHead
+                    colSpan={priorWeekColumns.length}
+                    className={cn(
+                      "h-auto border-b border-gray-200 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide",
+                      historyHeadClass,
+                      "border-gray-200 dark:border-gray-600",
+                    )}
+                  >
+                    Prior weeks
+                  </TableHead>
+                  <TableHead
+                    rowSpan={2}
+                    className={cn(
+                      "h-auto w-8 border-b border-gray-200 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-400",
+                      headPy,
+                    )}
+                    title="Category"
+                  >
+                    C
+                  </TableHead>
+                  <TableHead
+                    colSpan={5}
+                    className={cn(
+                      "h-auto border-b border-l-2 border-gray-200 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-primary-700 dark:border-gray-600 dark:text-primary-400",
+                      currentHeadClass,
+                    )}
+                  >
+                    This week
+                  </TableHead>
+                  <TableHead
+                    rowSpan={2}
+                    className={cn(
+                      "h-auto w-14 border-b border-gray-200 text-center dark:border-gray-600",
+                      headPy,
+                    )}
+                  />
+                </TableRow>
+                <TableRow className="sticky top-[2.125rem] z-10 border-b border-gray-200 bg-gray-50/95 backdrop-blur-sm dark:border-gray-600 dark:bg-gray-800/95">
+                  {priorWeekColumns.map((col, i) => (
+                    <TableHead
+                      key={col.weekNumber}
+                      className={cn(
+                        "h-auto w-[4.25rem] min-w-[4.25rem] border-b-0 px-1 py-1.5 text-center text-[10px] font-bold tabular-nums",
+                        historyHeadClass,
+                        i === priorWeekColumns.length - 1 &&
+                          "border-r-2 border-r-slate-200 dark:border-r-slate-600",
+                      )}
+                      title={`Week ${col.weekNumber} · same day, slot ${dayNumber}`}
+                    >
+                      {col.label}
+                    </TableHead>
+                  ))}
+                  {(["Sets", "Reps", "RPE", "%", "Load"] as const).map(
+                    (label, i) => (
+                      <TableHead
+                        key={label}
+                        className={cn(
+                          "h-auto border-b-0 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide",
+                          i === 0 && currentHeadClass,
+                          label === "Load"
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-gray-500 dark:text-gray-400",
+                          label === "Sets" && "w-12",
+                          label === "Reps" && "w-16",
+                        )}
+                      >
+                        {label}
+                      </TableHead>
+                    ),
+                  )}
+                </TableRow>
+              </>
+            ) : (
+              <TableRow className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 backdrop-blur-sm hover:bg-gray-50/95 dark:border-gray-600 dark:bg-gray-800/95 dark:hover:bg-gray-800/95">
                 <TableHead
                   className={cn(
-                    "h-auto w-28 border-b-0 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
+                    "h-auto w-8 border-b-0 pl-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                     headPy,
                   )}
                 >
-                  Category
+                  #
                 </TableHead>
-              )}
-              <TableHead
-                className={cn(
-                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
-                  headPy,
+                <TableHead
+                  className={cn(
+                    "h-auto min-w-36 border-b-0 pl-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
+                    headPy,
+                  )}
+                >
+                  Exercise
+                </TableHead>
+                {!compact && (
+                  <TableHead
+                    className={cn(
+                      "h-auto w-8 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
+                      headPy,
+                    )}
+                    title="Category"
+                  >
+                    C
+                  </TableHead>
                 )}
-              >
-                Sets
-              </TableHead>
-              <TableHead
-                className={cn(
-                  "h-auto w-16 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
-                  headPy,
-                )}
-              >
-                Reps
-              </TableHead>
-              <TableHead
-                className={cn(
-                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
-                  headPy,
-                )}
-              >
-                RPE
-              </TableHead>
-              <TableHead
-                className={cn(
-                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
-                  headPy,
-                )}
-              >
-                %
-              </TableHead>
-              <TableHead
-                className={cn(
-                  "h-auto w-16 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400",
-                  headPy,
-                )}
-              >
-                Load
-              </TableHead>
-              <TableHead
-                className={cn(
-                  "h-auto w-14 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
-                  headPy,
-                )}
-              />
-            </TableRow>
+                <TableHead
+                  className={cn(
+                    "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
+                    headPy,
+                  )}
+                >
+                  Sets
+                </TableHead>
+                <TableHead
+                  className={cn(
+                    "h-auto w-16 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
+                    headPy,
+                  )}
+                >
+                  Reps
+                </TableHead>
+                <TableHead
+                  className={cn(
+                    "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
+                    headPy,
+                  )}
+                >
+                  RPE
+                </TableHead>
+                <TableHead
+                  className={cn(
+                    "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
+                    headPy,
+                  )}
+                >
+                  %
+                </TableHead>
+                <TableHead
+                  className={cn(
+                    "h-auto w-16 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400",
+                    headPy,
+                  )}
+                >
+                  Load
+                </TableHead>
+                <TableHead
+                  className={cn(
+                    "h-auto w-14 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
+                    headPy,
+                  )}
+                />
+              </TableRow>
+            )}
           </TableHeader>
           <TableBody>
             {exercises.length === 0 && (
               <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
-                <TableCell
-                  colSpan={compact ? 8 : 9}
-                  className="py-4 text-center"
-                >
+                <TableCell colSpan={colSpan} className="py-4 text-center">
                   <div className="flex flex-col items-center gap-1">
                     <Dumbbell className="h-5 w-5 text-gray-300 dark:text-gray-600" />
                     <p className="text-[10px] text-gray-400">No exercises</p>
@@ -147,6 +265,12 @@ export const ExerciseTable = memo(function ExerciseTable({
                   index={i}
                   compact={compact}
                   cellPy={cellPy}
+                  blockWeeks={showWeekHistory ? blockWeeks : undefined}
+                  dayNumber={showWeekHistory ? dayNumber : undefined}
+                  priorWeekColumns={
+                    showWeekHistory ? priorWeekColumns : undefined
+                  }
+                  tableColSpan={colSpan}
                   onEdit={() => onEditExercise(row, dayId, exercises)}
                   onDelete={() => onDeleteExercise(row)}
                   onRefresh={onRefresh}
