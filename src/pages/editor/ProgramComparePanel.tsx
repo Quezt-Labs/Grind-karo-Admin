@@ -24,7 +24,7 @@ export function ProgramComparePanel({ tree }: ProgramComparePanelProps) {
         <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
           Compare program structure
         </h2>
-        <p className="mt-0.5 text-xs text-gray-500">
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           Side-by-side view to spot differences between weeks or blocks.
         </p>
         <div className="mt-3 flex gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-600 dark:bg-gray-900/40">

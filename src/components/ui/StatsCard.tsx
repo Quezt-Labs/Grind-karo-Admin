@@ -46,7 +46,7 @@ export function StatsCard({
   const showChange = change !== undefined;
 
   return (
-    <div className="rounded-xl border bg-white p-4 shadow-sm dark:bg-gray-800 sm:p-6">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">

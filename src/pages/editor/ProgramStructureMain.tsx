@@ -149,7 +149,7 @@ export function ProgramStructureMain({
 
       {!selection ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Add a week and day to start programming exercises.
           </p>
           <Button

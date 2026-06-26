@@ -182,7 +182,7 @@ export function MovementSelectionPanel({
             Bootstrap default slots
           </Button>
           {isEmpty && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               No movement slots yet — bootstrap creates Squat / Bench / Deadlift
               primary, secondary, tertiary slots.
             </p>
@@ -247,12 +247,12 @@ export function MovementSelectionPanel({
                         <span className="font-medium text-gray-900 dark:text-white">
                           {entry.slot.label}
                         </span>
-                        <span className="ml-2 text-xs text-gray-500">
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
                           ({entry.options.length} option
                           {entry.options.length === 1 ? "" : "s"})
                         </span>
                         {entry.options.length > 0 && (
-                          <p className="mt-1 truncate text-xs text-gray-500">
+                          <p className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">
                             {entry.options
                               .slice(0, 3)
                               .map((o) => o.exerciseName)
@@ -330,7 +330,7 @@ export function MovementSelectionPanel({
             Reset selections
           </Button>
           {!allFilled && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               Fill all slots before saving.
             </span>
           )}

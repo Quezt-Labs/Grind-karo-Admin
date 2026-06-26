@@ -34,7 +34,7 @@ export const ProgramBlockSidebar = memo(function ProgramBlockSidebar({
   return (
     <aside className="flex h-full w-full flex-col border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 lg:w-56 lg:shrink-0 lg:border-r">
       <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2.5 dark:border-gray-700">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Blocks
         </span>
         <Button
@@ -42,7 +42,7 @@ export const ProgramBlockSidebar = memo(function ProgramBlockSidebar({
           variant="ghost"
           size="sm"
           onClick={onAddBlock}
-          className="h-8 w-8 p-0 text-gray-500 hover:text-primary-600"
+          className="h-8 w-8 p-0 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
           title="Add block"
         >
           <Plus className="h-4 w-4" />
@@ -51,7 +51,7 @@ export const ProgramBlockSidebar = memo(function ProgramBlockSidebar({
 
       <nav className="flex-1 overflow-y-auto p-2">
         {blocks.length === 0 ? (
-          <p className="px-2 py-4 text-center text-xs text-gray-500">
+          <p className="px-2 py-4 text-center text-xs text-gray-500 dark:text-gray-400">
             No blocks yet
           </p>
         ) : (
@@ -91,7 +91,9 @@ export const ProgramBlockSidebar = memo(function ProgramBlockSidebar({
                     <Layers
                       className={cn(
                         "mt-0.5 h-4 w-4 shrink-0",
-                        selected ? "text-primary-500" : "text-gray-400",
+                        selected
+                          ? "text-primary-500"
+                          : "text-gray-400 dark:text-gray-500",
                       )}
                     />
                     <div className="min-w-0 flex-1 pr-6">
@@ -119,7 +121,7 @@ export const ProgramBlockSidebar = memo(function ProgramBlockSidebar({
                         {exerciseCount} exercises
                       </p>
                       {blockRangeLabel && (
-                        <p className="mt-0.5 truncate text-[10px] text-gray-400">
+                        <p className="mt-0.5 truncate text-[10px] text-gray-400 dark:text-gray-500">
                           {blockRangeLabel}
                         </p>
                       )}

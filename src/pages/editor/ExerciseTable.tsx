@@ -43,14 +43,14 @@ export const ExerciseTable = memo(function ExerciseTable({
   const colSpan = compact ? 8 : 9;
 
   return (
-    <div className="border-t border-[#e0e0e0] dark:border-gray-700">
+    <div className="border-t border-gray-200 dark:border-gray-700">
       <div className="overflow-x-auto">
         <Table className={cn(textSize, "min-w-[40rem]")}>
           <TableHeader>
-            <TableRow className="sticky top-0 z-10 border-b border-[#e0e0e0] bg-[#f8f9fa]/95 backdrop-blur-sm hover:bg-[#f8f9fa]/95 dark:border-gray-600 dark:bg-gray-800/95 dark:hover:bg-gray-800/95">
+            <TableRow className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 backdrop-blur-sm hover:bg-gray-50/95 dark:border-gray-600 dark:bg-gray-800/95 dark:hover:bg-gray-800/95">
               <TableHead
                 className={cn(
-                  "h-auto w-8 border-b-0 pl-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500",
+                  "h-auto w-8 border-b-0 pl-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                   headPy,
                 )}
               >
@@ -58,7 +58,7 @@ export const ExerciseTable = memo(function ExerciseTable({
               </TableHead>
               <TableHead
                 className={cn(
-                  "h-auto min-w-36 border-b-0 pl-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500",
+                  "h-auto min-w-36 border-b-0 pl-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                   headPy,
                 )}
               >
@@ -67,7 +67,7 @@ export const ExerciseTable = memo(function ExerciseTable({
               {!compact && (
                 <TableHead
                   className={cn(
-                    "h-auto w-28 border-b-0 text-[10px] font-semibold uppercase tracking-wide text-gray-500",
+                    "h-auto w-28 border-b-0 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                     headPy,
                   )}
                 >
@@ -76,7 +76,7 @@ export const ExerciseTable = memo(function ExerciseTable({
               )}
               <TableHead
                 className={cn(
-                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500",
+                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                   headPy,
                 )}
               >
@@ -84,7 +84,7 @@ export const ExerciseTable = memo(function ExerciseTable({
               </TableHead>
               <TableHead
                 className={cn(
-                  "h-auto w-16 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500",
+                  "h-auto w-16 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                   headPy,
                 )}
               >
@@ -92,7 +92,7 @@ export const ExerciseTable = memo(function ExerciseTable({
               </TableHead>
               <TableHead
                 className={cn(
-                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500",
+                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                   headPy,
                 )}
               >
@@ -100,7 +100,7 @@ export const ExerciseTable = memo(function ExerciseTable({
               </TableHead>
               <TableHead
                 className={cn(
-                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500",
+                  "h-auto w-12 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                   headPy,
                 )}
               >
@@ -116,7 +116,7 @@ export const ExerciseTable = memo(function ExerciseTable({
               </TableHead>
               <TableHead
                 className={cn(
-                  "h-auto w-14 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500",
+                  "h-auto w-14 border-b-0 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400",
                   headPy,
                 )}
               />

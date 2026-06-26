@@ -32,7 +32,9 @@ export function ProgramWeekStrip({
   if (sorted.length === 0) {
     return (
       <div className="flex items-center gap-2 px-4 py-3">
-        <p className="text-sm text-gray-500">No weeks in this block yet.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No weeks in this block yet.
+        </p>
         <Button
           type="button"
           variant="ghost"
@@ -49,7 +51,7 @@ export function ProgramWeekStrip({
   return (
     <div className="bg-gray-50/80 dark:bg-gray-800/40">
       <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           Weeks
         </span>
         <div className="h-px min-w-0 flex-1 bg-gray-200 dark:bg-gray-700" />
@@ -58,7 +60,7 @@ export function ProgramWeekStrip({
           variant="ghost"
           size="sm"
           onClick={onAddWeek}
-          className="shrink-0 text-xs text-gray-500 hover:text-primary-600"
+          className="shrink-0 text-xs text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
         >
           <Plus className="h-3.5 w-3.5" />
           Week
@@ -92,7 +94,7 @@ export function ProgramWeekStrip({
                 "group relative flex w-44 min-w-44 shrink-0 cursor-pointer snap-start flex-col rounded-lg border px-3 py-2.5 text-left transition-all sm:w-48 sm:min-w-48",
                 selected
                   ? "border-primary-400 bg-white shadow-sm ring-1 ring-primary-400/30 dark:border-primary-500 dark:bg-gray-800 dark:ring-primary-500/20"
-                  : "border-gray-200 bg-white/60 hover:border-gray-300 hover:bg-white dark:border-gray-600 dark:bg-gray-800/60 dark:hover:border-gray-500",
+                  : "border-gray-200 bg-white/60 hover:border-gray-300 hover:bg-white dark:border-gray-600 dark:bg-gray-800/60 dark:hover:border-gray-500 dark:hover:bg-gray-800",
               )}
             >
               <div

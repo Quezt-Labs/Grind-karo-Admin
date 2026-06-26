@@ -165,10 +165,10 @@ export default function App() {
       <Toaster
         position="top-right"
         toastOptions={{
-          className: "text-sm",
+          className: "text-sm !border !border-[var(--toast-border)]",
           style: {
-            background: "var(--toast-bg, #fff)",
-            color: "var(--toast-color, #1f2937)",
+            background: "var(--toast-bg)",
+            color: "var(--toast-color)",
           },
         }}
       />

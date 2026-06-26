@@ -98,9 +98,9 @@ export const BlockNode = memo(function BlockNode({
           className="flex items-center gap-3 text-left"
         >
           {expanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-gray-500" />
+            <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           )}
           <Layers className="h-5 w-5 text-primary-500" />
           <div>

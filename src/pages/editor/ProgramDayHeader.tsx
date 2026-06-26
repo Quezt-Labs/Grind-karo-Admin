@@ -30,7 +30,7 @@ export function ProgramDayHeader({
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:px-4">
       <div className="min-w-0 w-full flex-1 sm:w-auto">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
           {week.title}
           {weekRangeLabel ? ` · ${weekRangeLabel}` : ""}
         </p>
@@ -38,7 +38,9 @@ export function ProgramDayHeader({
           {day.title}
         </h3>
         {day.focus && (
-          <p className="mt-0.5 text-sm text-gray-500">{day.focus}</p>
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            {day.focus}
+          </p>
         )}
       </div>
       <TreeNodeActions

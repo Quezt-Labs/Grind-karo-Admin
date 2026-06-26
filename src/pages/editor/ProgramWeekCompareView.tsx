@@ -51,13 +51,15 @@ export function ProgramWeekCompareView({ tree }: ProgramWeekCompareViewProps) {
 
   if (blocks.length === 0) {
     return (
-      <p className="text-sm text-gray-500">Add blocks to compare weeks.</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Add blocks to compare weeks.
+      </p>
     );
   }
 
   if (weeks.length < 2) {
     return (
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
         Need at least two weeks in this block to compare.
       </p>
     );
@@ -147,9 +149,13 @@ function WeekSummaryCard({
       <p className="text-sm font-semibold text-gray-900 dark:text-white">
         {weekLabel(week as Parameters<typeof weekLabel>[0])}
       </p>
-      {dateRange && <p className="mt-0.5 text-xs text-gray-500">{dateRange}</p>}
+      {dateRange && (
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          {dateRange}
+        </p>
+      )}
       {stats && (
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           {stats.days} days · {stats.exercises} exercises
         </p>
       )}
@@ -180,7 +186,7 @@ function DayCompareSection({
   return (
     <section className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800/60">
-        <GitCompare className="h-4 w-4 text-gray-400" />
+        <GitCompare className="h-4 w-4 text-gray-400 dark:text-gray-500" />
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Day {dayNumber}
         </h3>
@@ -208,7 +214,9 @@ function DayCompareSection({
               />
             ))
           ) : (
-            <p className="px-3 py-4 text-xs text-gray-400">No day in Week A</p>
+            <p className="px-3 py-4 text-xs text-gray-400 dark:text-gray-500">
+              No day in Week A
+            </p>
           )}
         </DayColumn>
         <DayColumn title={rightTitle ?? "—"} side="right" missing={!right}>
@@ -222,7 +230,9 @@ function DayCompareSection({
               />
             ))
           ) : (
-            <p className="px-3 py-4 text-xs text-gray-400">No day in Week B</p>
+            <p className="px-3 py-4 text-xs text-gray-400 dark:text-gray-500">
+              No day in Week B
+            </p>
           )}
         </DayColumn>
       </div>
@@ -274,7 +284,7 @@ function ExerciseCompareRow({
     return (
       <div
         className={cn(
-          "px-3 py-2.5 text-xs italic text-gray-400",
+          "px-3 py-2.5 text-xs italic text-gray-400 dark:text-gray-500",
           differs && "bg-amber-50/60 dark:bg-amber-950/20",
         )}
       >
@@ -297,7 +307,7 @@ function ExerciseCompareRow({
       <p className="text-sm font-medium text-gray-900 dark:text-white">
         {exerciseDisplayName(row)}
       </p>
-      <p className="mt-0.5 text-xs text-gray-500">
+      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
         {exercisePrescription(row)}
       </p>
     </div>

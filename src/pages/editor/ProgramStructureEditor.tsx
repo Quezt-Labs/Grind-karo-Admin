@@ -129,7 +129,9 @@ export function ProgramStructureEditor({
       >
         {!selectedBlock ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-            <p className="text-sm text-gray-500">Select a block to begin.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Select a block to begin.
+            </p>
             <Button size="sm" variant="secondary" onClick={onAddBlock}>
               Add block
             </Button>

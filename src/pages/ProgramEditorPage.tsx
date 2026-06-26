@@ -372,7 +372,7 @@ export function ProgramEditorPage() {
           <div className="space-y-6">
             <MovementSelectionPanel programId={programId!} mode="configure" />
             {coachingUserId && (
-              <div className="rounded-xl border border-dashed border-gray-300 p-4 dark:border-gray-600">
+              <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-4 dark:border-gray-600 dark:bg-gray-800/40">
                 <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">
                   Athlete selections
                 </h3>

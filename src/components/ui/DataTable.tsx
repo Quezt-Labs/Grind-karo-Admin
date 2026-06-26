@@ -82,7 +82,7 @@ export function DataTable<T extends { id: string }>({
 
   if (isLoading) {
     return (
-      <div className="overflow-hidden rounded-xl border bg-white dark:bg-gray-800">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <div className="animate-pulse">
           <div className="h-12 bg-gray-100 dark:bg-gray-700" />
           {Array.from({ length: 5 }).map((_, i) => (
@@ -104,7 +104,7 @@ export function DataTable<T extends { id: string }>({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-white dark:bg-gray-800">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <Table className="text-left text-sm">
         <TableHeader className="bg-gray-50 dark:bg-gray-700/50">
           <TableRow className="border-b hover:bg-transparent dark:hover:bg-transparent">

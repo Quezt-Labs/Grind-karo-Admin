@@ -41,7 +41,7 @@ export function ProgramBlockCompareView({
 
   if (blocks.length < 2) {
     return (
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
         Need at least two blocks to compare.
       </p>
     );
@@ -86,13 +86,13 @@ export function ProgramBlockCompareView({
         <table className="w-full min-w-[32rem] text-left text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/60">
-              <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Week
               </th>
-              <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 {leftBlock?.name ?? "Block A"}
               </th>
-              <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 {rightBlock?.name ?? "Block B"}
               </th>
             </tr>
@@ -170,10 +170,12 @@ function BlockSummaryCard({
         </span>
       </div>
       {rangeLabel && (
-        <p className="mt-0.5 text-xs text-gray-500">{rangeLabel}</p>
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          {rangeLabel}
+        </p>
       )}
       {stats && (
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           {stats.weeks} weeks · {stats.days} days · {stats.exercises} exercises
         </p>
       )}
@@ -189,7 +191,9 @@ function WeekCell({
   stats: { days: number; exercises: number } | null;
 }) {
   if (!week) {
-    return <span className="text-xs italic text-gray-400">—</span>;
+    return (
+      <span className="text-xs italic text-gray-400 dark:text-gray-500">—</span>
+    );
   }
 
   const dateRange = formatWeekDateRange(week.weekStart, week.weekEnd);
@@ -203,15 +207,17 @@ function WeekCell({
       <p className="text-sm text-gray-900 dark:text-white">
         {week.title || `Week ${week.weekNumber}`}
       </p>
-      {dateRange && <p className="text-xs text-gray-500">{dateRange}</p>}
+      {dateRange && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">{dateRange}</p>
+      )}
       {stats && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           {stats.days} days · {stats.exercises} exercises
         </p>
       )}
       {dayTitles && (
         <p
-          className="text-[11px] text-gray-400 truncate max-w-xs"
+          className="text-[11px] text-gray-400 truncate max-w-xs dark:text-gray-500"
           title={dayTitles}
         >
           {dayTitles}

@@ -92,15 +92,17 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
           CATEGORY_BORDER[row.category] || CATEGORY_BORDER.OTHER,
           isAccessory
             ? "bg-white hover:bg-gray-50/80 dark:bg-gray-800 dark:hover:bg-gray-750"
-            : "hover:bg-blue-50/30 dark:hover:bg-gray-750",
-          "border-t border-[#e8eaed] dark:border-gray-700/60",
+            : "hover:bg-blue-50/30 dark:bg-gray-800/40 dark:hover:bg-gray-750",
+          "border-t border-gray-200 dark:border-gray-700/60",
         )}
       >
         <TableCell className={cn(cellPy, "pl-2")}>
           <span
             className={cn(
               "font-mono text-xs",
-              isAccessory ? "text-gray-400" : "text-gray-500",
+              isAccessory
+                ? "text-gray-400 dark:text-gray-500"
+                : "text-gray-500 dark:text-gray-400",
             )}
           >
             {index + 1}

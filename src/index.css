@@ -21,6 +21,18 @@
   --color-sidebar-active: #991b1b;
 }
 
+:root {
+  --toast-bg: #ffffff;
+  --toast-color: #1f2937;
+  --toast-border: #e5e7eb;
+}
+
+.dark {
+  --toast-bg: #1f2937;
+  --toast-color: #f3f4f6;
+  --toast-border: #374151;
+}
+
 html {
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
@@ -72,6 +84,37 @@ button:disabled,
 .admin-page-scroll::-webkit-scrollbar-thumb {
   border-radius: 9999px;
   background: rgb(156 163 175 / 0.45);
+}
+
+.dark .admin-page-scroll {
+  scrollbar-color: rgb(75 85 99 / 0.6) transparent;
+}
+
+.dark .admin-page-scroll::-webkit-scrollbar-thumb {
+  background: rgb(75 85 99 / 0.55);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(156 163 175 / 0.5) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgb(156 163 175 / 0.45);
+}
+
+.dark .scrollbar-thin {
+  scrollbar-color: rgb(75 85 99 / 0.6) transparent;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgb(75 85 99 / 0.55);
 }
 
 /* Program editor — Google Sheets–style pan canvas */

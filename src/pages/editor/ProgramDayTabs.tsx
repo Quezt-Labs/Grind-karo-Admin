@@ -23,7 +23,9 @@ export function ProgramDayTabs({
   if (sorted.length === 0) {
     return (
       <div className="flex items-center gap-3 px-4 py-2.5">
-        <p className="text-sm text-gray-500">No days in this week.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No days in this week.
+        </p>
         <Button
           variant="ghost"
           size="sm"
@@ -38,7 +40,7 @@ export function ProgramDayTabs({
 
   return (
     <div className="flex items-center gap-1 overflow-x-auto px-3 py-2 scrollbar-thin sm:px-4">
-      <span className="mr-1 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+      <span className="mr-1 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
         Days
       </span>
       {sorted.map((day) => {
@@ -60,7 +62,9 @@ export function ProgramDayTabs({
             <Sun
               className={cn(
                 "h-3.5 w-3.5",
-                selected ? "text-amber-500" : "text-gray-400",
+                selected
+                  ? "text-amber-500"
+                  : "text-gray-400 dark:text-gray-500",
               )}
             />
             <span>{day.title}</span>
@@ -82,7 +86,7 @@ export function ProgramDayTabs({
         variant="ghost"
         size="sm"
         onClick={onAddDay}
-        className="shrink-0 text-gray-500 hover:text-primary-600"
+        className="shrink-0 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
         title="Add day"
       >
         <Plus className="h-3.5 w-3.5" />

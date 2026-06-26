@@ -10,7 +10,7 @@ export function Navbar() {
   const { isDark, toggle: toggleDark } = useDarkMode();
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-white px-3 dark:bg-gray-800 sm:h-16 sm:px-4 lg:px-6">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-800 sm:h-16 sm:px-4 lg:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"

@@ -137,7 +137,9 @@ export function MovementSlotsPanel({
       {slots.length === 0 && (
         <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center dark:border-gray-600">
           <Settings2 className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
-          <p className="text-sm text-gray-500">No movement slots yet</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            No movement slots yet
+          </p>
           <p className="text-xs text-gray-400">
             Create a slot to allow athletes to choose between exercises
           </p>

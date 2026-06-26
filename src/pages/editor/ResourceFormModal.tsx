@@ -96,7 +96,7 @@ export function ResourceFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+      <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {isEdit ? "Edit Resource" : "Add Resource"}
@@ -105,7 +105,7 @@ export function ResourceFormModal({
             onClick={onClose}
             className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

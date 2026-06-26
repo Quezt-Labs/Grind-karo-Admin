@@ -143,14 +143,14 @@ export function OverrideEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 flex max-h-[90vh] w-full max-w-5xl flex-col rounded-xl bg-white shadow-xl dark:bg-gray-800">
+      <div className="mx-4 flex max-h-[90vh] w-full max-w-5xl flex-col rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               Overrides for: {option.exerciseName}
             </h2>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Leave blank to inherit base row values. Set sets to 0 to hide the
               row.
             </p>
@@ -159,7 +159,7 @@ export function OverrideEditor({
             onClick={onClose}
             className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 

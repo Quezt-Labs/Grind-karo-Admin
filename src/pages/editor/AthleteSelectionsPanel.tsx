@@ -132,7 +132,7 @@ export function AthleteSelectionsPanel({
     return (
       <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center dark:border-gray-600">
         <Users className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           No movement slots defined for this program
         </p>
         <p className="text-xs text-gray-400">
@@ -146,7 +146,9 @@ export function AthleteSelectionsPanel({
     return (
       <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center dark:border-gray-600">
         <Users className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
-        <p className="text-sm text-gray-500">No athlete profiles yet</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No athlete profiles yet
+        </p>
         <p className="text-xs text-gray-400">
           Athletes who purchase this program will appear here after they set up
           their profile
