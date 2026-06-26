@@ -166,12 +166,14 @@ function NavItemLink({
   active,
   onNavigate,
   compact = false,
+  collapsed = false,
   badgeCount,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate: () => void;
   compact?: boolean;
+  collapsed?: boolean;
   badgeCount?: number;
 }) {
   const Icon = item.icon;
@@ -180,29 +182,49 @@ function NavItemLink({
     <NavLink
       to={item.path}
       onClick={onNavigate}
+      title={collapsed ? item.label : undefined}
+      aria-label={collapsed ? item.label : undefined}
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg font-medium transition-all duration-200",
-        compact ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-sm",
+        "group relative flex items-center rounded-lg font-medium transition-all duration-200",
+        collapsed
+          ? "justify-center px-2 py-2.5"
+          : cn(
+              "gap-3",
+              compact ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-sm",
+            ),
         active
           ? "bg-sidebar-active/90 text-white shadow-sm shadow-black/20"
           : "text-gray-400 hover:bg-white/5 hover:text-white",
       )}
     >
-      {active && (
+      {active && !collapsed && (
         <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary-300" />
       )}
-      <Icon
-        className={cn(
-          "shrink-0",
-          compact ? "h-3.5 w-3.5" : "h-4 w-4",
-          active ? "text-white" : "text-gray-500 group-hover:text-white",
+      {active && collapsed && (
+        <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-primary-300" />
+      )}
+      <span className="relative shrink-0">
+        <Icon
+          className={cn(
+            collapsed ? "h-5 w-5" : compact ? "h-3.5 w-3.5" : "h-4 w-4",
+            active ? "text-white" : "text-gray-500 group-hover:text-white",
+          )}
+        />
+        {collapsed && badgeCount != null && badgeCount > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[8px] font-bold text-white">
+            {badgeCount > 9 ? "9+" : badgeCount}
+          </span>
         )}
-      />
-      <span className="truncate">{item.label}</span>
-      {badgeCount != null && badgeCount > 0 && (
-        <span className="ml-auto shrink-0 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
-          {badgeCount > 99 ? "99+" : badgeCount}
-        </span>
+      </span>
+      {!collapsed && (
+        <>
+          <span className="truncate">{item.label}</span>
+          {badgeCount != null && badgeCount > 0 && (
+            <span className="ml-auto shrink-0 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          )}
+        </>
       )}
     </NavLink>
   );
@@ -320,7 +342,7 @@ function CollapsibleNavSection({
 }
 
 export function Sidebar() {
-  const { isMobileOpen, setMobileOpen } = useSidebarStore();
+  const { isMobileOpen, setMobileOpen, isCollapsed } = useSidebarStore();
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -368,6 +390,7 @@ export function Sidebar() {
   );
 
   const closeMobile = useCallback(() => setMobileOpen(false), [setMobileOpen]);
+  const showRail = isCollapsed && !isMobileOpen;
   const { data: formCheckPending = 0 } = useFormCheckPendingCount();
   const badgeByPath = useMemo((): Record<string, number> | undefined => {
     return formCheckPending > 0
@@ -419,118 +442,193 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-full w-64 shrink-0 flex-col bg-sidebar text-white transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
+          "fixed left-0 top-0 z-50 flex h-full shrink-0 flex-col bg-sidebar text-white transition-[width,transform] duration-300 lg:static lg:z-auto lg:translate-x-0",
+          showRail ? "w-[4.25rem]" : "w-64",
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-3 sm:h-16 sm:px-4">
-          <div className="flex min-w-0 items-center gap-2">
+        <div
+          className={cn(
+            "flex h-14 shrink-0 items-center border-b border-white/10 sm:h-16",
+            showRail
+              ? "justify-center px-2"
+              : "justify-between px-3 sm:justify-start sm:px-4",
+          )}
+        >
+          <div
+            className={cn(
+              "flex min-w-0 items-center",
+              showRail ? "justify-center" : "gap-2",
+            )}
+          >
             <img
               src="/grind-karo-logo.png"
               alt={APP_NAME}
               className="h-9 w-9 shrink-0 rounded-md"
             />
-            <span className="truncate text-lg font-bold">{APP_NAME}</span>
+            {!showRail && (
+              <span className="truncate text-lg font-bold">{APP_NAME}</span>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            className="rounded-lg p-1 hover:bg-sidebar-hover lg:hidden"
-            aria-label="Close menu"
+          <div
+            className={cn(
+              "flex items-center gap-1 lg:hidden",
+              showRail && "hidden",
+            )}
           >
-            <X className="h-5 w-5" />
-          </button>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg p-1 hover:bg-sidebar-hover"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <nav className="scrollbar-none min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-3">
-          <div className="space-y-2">
-            {navSections.map((section) => {
-              if (section.items.length === 1) {
-                const item = section.items[0]!;
-                const active = isNavActive(location.pathname, item.path);
-                return (
+          <div className={cn("space-y-2", showRail && "space-y-0.5")}>
+            {showRail
+              ? navSections.map((section, sectionIndex) => (
                   <div key={section.key}>
-                    <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
-                      {section.title}
-                    </p>
-                    <NavItemLink
-                      item={item}
-                      active={active}
-                      onNavigate={closeMobile}
-                      badgeCount={badgeByPath?.[item.path]}
-                    />
+                    {sectionIndex > 0 && (
+                      <div
+                        className="my-2 border-t border-white/5"
+                        aria-hidden
+                      />
+                    )}
+                    <ul className="space-y-0.5">
+                      {section.items.map((item) => (
+                        <li key={item.path}>
+                          <NavItemLink
+                            item={item}
+                            active={isNavActive(location.pathname, item.path)}
+                            onNavigate={closeMobile}
+                            collapsed
+                            badgeCount={badgeByPath?.[item.path]}
+                          />
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                );
-              }
+                ))
+              : navSections.map((section) => {
+                  if (section.items.length === 1) {
+                    const item = section.items[0]!;
+                    const active = isNavActive(location.pathname, item.path);
+                    return (
+                      <div key={section.key}>
+                        <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
+                          {section.title}
+                        </p>
+                        <NavItemLink
+                          item={item}
+                          active={active}
+                          onNavigate={closeMobile}
+                          badgeCount={badgeByPath?.[item.path]}
+                        />
+                      </div>
+                    );
+                  }
 
-              const expanded = collapsedSections[section.key] !== true;
-              const activeInSection = sectionIsActive(
-                location.pathname,
-                section,
-              );
-              const activeItem = activeItemInSection(
-                location.pathname,
-                section,
-              );
+                  const expanded = collapsedSections[section.key] !== true;
+                  const activeInSection = sectionIsActive(
+                    location.pathname,
+                    section,
+                  );
+                  const activeItem = activeItemInSection(
+                    location.pathname,
+                    section,
+                  );
 
-              return (
-                <CollapsibleNavSection
-                  key={section.key}
-                  section={section}
-                  expanded={expanded}
-                  activeInSection={activeInSection}
-                  activeItem={activeItem}
-                  onToggle={() => toggleSection(section.key)}
-                  onNavigate={closeMobile}
-                  pathname={location.pathname}
-                  badgeByPath={badgeByPath}
-                />
-              );
-            })}
+                  return (
+                    <CollapsibleNavSection
+                      key={section.key}
+                      section={section}
+                      expanded={expanded}
+                      activeInSection={activeInSection}
+                      activeItem={activeItem}
+                      onToggle={() => toggleSection(section.key)}
+                      onNavigate={closeMobile}
+                      pathname={location.pathname}
+                      badgeByPath={badgeByPath}
+                    />
+                  );
+                })}
           </div>
 
-          <div className="mt-4 flex items-center justify-center gap-1 border-t border-white/5 pt-3">
-            <button
-              type="button"
-              onClick={expandAll}
-              disabled={!anyCollapsed}
-              className="rounded-md px-2 py-1 text-[10px] font-medium text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300 disabled:opacity-40"
-            >
-              Expand all
-            </button>
-            <span className="text-gray-700">·</span>
-            <button
-              type="button"
-              onClick={collapseAll}
-              disabled={allCollapsed}
-              className="rounded-md px-2 py-1 text-[10px] font-medium text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300 disabled:opacity-40"
-            >
-              Collapse all
-            </button>
-          </div>
+          {!showRail && (
+            <div className="mt-4 flex items-center justify-center gap-1 border-t border-white/5 pt-3">
+              <button
+                type="button"
+                onClick={expandAll}
+                disabled={!anyCollapsed}
+                className="rounded-md px-2 py-1 text-[10px] font-medium text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300 disabled:opacity-40"
+              >
+                Expand all
+              </button>
+              <span className="text-gray-700">·</span>
+              <button
+                type="button"
+                onClick={collapseAll}
+                disabled={allCollapsed}
+                className="rounded-md px-2 py-1 text-[10px] font-medium text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300 disabled:opacity-40"
+              >
+                Collapse all
+              </button>
+            </div>
+          )}
         </nav>
 
         <div className="shrink-0 border-t border-gray-700/50 p-3">
           {user && (
-            <div className="flex items-center gap-3 rounded-xl bg-white/5 p-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-primary-500 to-primary-700 text-sm font-semibold text-white ring-2 ring-white/10">
-                {(user.name || user.email || "?").charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">
-                  {user.name ?? user.email}
-                </p>
-                <p className="truncate text-xs text-gray-400">{user.role}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowLogoutModal(true)}
-                className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                title="Logout"
+            <>
+              <div
+                className={cn(
+                  "flex items-center rounded-xl bg-white/5",
+                  showRail ? "justify-center p-2" : "gap-3 p-2.5",
+                )}
               >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-primary-500 to-primary-700 text-sm font-semibold text-white ring-2 ring-white/10"
+                  title={showRail ? (user.name ?? user.email) : undefined}
+                >
+                  {(user.name || user.email || "?").charAt(0).toUpperCase()}
+                </div>
+                {!showRail && (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-white">
+                        {user.name ?? user.email}
+                      </p>
+                      <p className="truncate text-xs text-gray-400">
+                        {user.role}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowLogoutModal(true)}
+                      className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                      title="Logout"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {showRail && (
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutModal(true)}
+                  className="mt-2 flex w-full justify-center rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                  title="Logout"
+                  aria-label="Logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              )}
+            </>
           )}
         </div>
       </aside>

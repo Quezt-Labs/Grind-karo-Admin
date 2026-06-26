@@ -1,4 +1,4 @@
-import { Menu, Sun, Moon } from "lucide-react";
+import { Menu, Sun, Moon, PanelLeftClose, PanelLeft } from "lucide-react";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import { NotificationBell } from "./NotificationBell";
@@ -6,7 +6,7 @@ import { ContactInboxBell } from "./ContactInboxBell";
 import { ChatBell } from "./ChatBell";
 
 export function Navbar() {
-  const { setMobileOpen } = useSidebarStore();
+  const { setMobileOpen, isCollapsed, toggleCollapsed } = useSidebarStore();
   const { isDark, toggle: toggleDark } = useDarkMode();
 
   return (
@@ -19,6 +19,19 @@ export function Navbar() {
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+        </button>
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          className="hidden rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:flex"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? (
+            <PanelLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          ) : (
+            <PanelLeftClose className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          )}
         </button>
       </div>
 
