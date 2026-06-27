@@ -49,4 +49,15 @@ export const programPurchaseService = {
     );
     return data.data ?? data;
   },
+
+  async patchStartDate(
+    id: string,
+    body: { startDate: string; reason: string },
+  ): Promise<ProgramPurchase> {
+    const { data } = await api.patch(
+      `/admin/program-purchases/${id}/start-date`,
+      body,
+    );
+    return data.data ?? data;
+  },
 };

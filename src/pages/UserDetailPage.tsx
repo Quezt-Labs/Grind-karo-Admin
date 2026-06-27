@@ -51,8 +51,9 @@ import { CoachingIntakePanel } from "@/components/users/CoachingIntakePanel";
 import { CoachingPaymentCalendar } from "@/components/users/CoachingPaymentCalendar";
 import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
 import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
+import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
-import { useIsAdmin } from "@/hooks/useRole";
+import { useIsAdmin, useIsStaff } from "@/hooks/useRole";
 import { useUserDetail, type UserDetailTab } from "@/hooks/useUserDetail";
 import { useUserActivityScope } from "@/hooks/useUserActivityScope";
 
@@ -95,6 +96,7 @@ export function UserDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const isAdmin = useIsAdmin();
+  const isStaff = useIsStaff();
 
   const mainTab = parseTab(searchParams.get("tab"));
   const setMainTab = useCallback(
@@ -414,7 +416,12 @@ export function UserDetailPage() {
             purchases={purchases}
           />
 
-          <CoachingPaymentCalendar purchases={purchases} userId={user.id} />
+          <CoachingPaymentCalendar
+            purchases={purchases}
+            userId={user.id}
+            showDateEditor={isStaff}
+            onUpdated={invalidatePurchases}
+          />
           <CoachingFeeAdjustmentsPanel
             userId={user.id}
             purchases={purchases}
@@ -608,7 +615,13 @@ export function UserDetailPage() {
             ) : (
               <div className="space-y-3">
                 {purchases.map((purchase) => (
-                  <PurchaseCard key={purchase.id} purchase={purchase} />
+                  <PurchaseCard
+                    key={purchase.id}
+                    purchase={purchase}
+                    userId={user.id}
+                    showDateEditor={isStaff}
+                    onUpdated={invalidatePurchases}
+                  />
                 ))}
               </div>
             )}
@@ -662,7 +675,17 @@ function StatCard({
   );
 }
 
-function PurchaseCard({ purchase }: { purchase: Purchase }) {
+function PurchaseCard({
+  purchase,
+  userId,
+  showDateEditor = false,
+  onUpdated,
+}: {
+  purchase: Purchase;
+  userId?: string;
+  showDateEditor?: boolean;
+  onUpdated?: () => void;
+}) {
   const isCoaching = purchase.kind === "coaching_subscription";
   const isBook = purchase.kind === "book_purchase";
   const label = isCoaching
@@ -708,6 +731,20 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
                 {formatDate(purchase.startDate)} →{" "}
                 {formatDate(purchase.expiresAt)}
               </p>
+            )}
+            {!isCoaching &&
+              purchase.kind === "program_purchase" &&
+              purchase.paidAt && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Started {formatDate(purchase.paidAt)}
+                </p>
+              )}
+            {showDateEditor && userId && (
+              <PurchaseDatesEditor
+                userId={userId}
+                purchase={purchase}
+                onUpdated={onUpdated}
+              />
             )}
           </div>
         </div>

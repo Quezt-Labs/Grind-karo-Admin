@@ -36,6 +36,7 @@ const TYPE_LABEL: Record<CoachingBillingAdjustment["type"], string> = {
   EXTEND: "Extended access",
   WAIVE: "Fee waived / hold",
   MANUAL_PAYMENT: "Manual payment",
+  DATE_CORRECTION: "Dates corrected",
 };
 
 type Props = {

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, CreditCard } from "lucide-react";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
 import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
+import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
 import type { Purchase } from "@/types/user";
 
 function formatINR(rupees: number): string {
@@ -46,6 +47,7 @@ const ADJUSTMENT_LABEL: Record<CoachingBillingAdjustment["type"], string> = {
   EXTEND: "Access extended (admin)",
   WAIVE: "Fee waived / hold",
   MANUAL_PAYMENT: "Manual payment recorded",
+  DATE_CORRECTION: "Dates corrected",
 };
 
 function coachingMilestones(
@@ -142,9 +144,16 @@ function dotClass(status: MilestoneStatus): string {
 type Props = {
   purchases: Purchase[];
   userId?: string;
+  showDateEditor?: boolean;
+  onUpdated?: () => void;
 };
 
-export function CoachingPaymentCalendar({ purchases, userId }: Props) {
+export function CoachingPaymentCalendar({
+  purchases,
+  userId,
+  showDateEditor = false,
+  onUpdated,
+}: Props) {
   const { data: adjustments = [] } = useQuery({
     queryKey: ["coaching-billing-adjustments", userId],
     queryFn: () =>
@@ -217,6 +226,13 @@ export function CoachingPaymentCalendar({ purchases, userId }: Props) {
                   </li>
                 ))}
               </ol>
+              {showDateEditor && userId && (
+                <PurchaseDatesEditor
+                  userId={userId}
+                  purchase={sub}
+                  onUpdated={onUpdated}
+                />
+              )}
             </section>
           );
         })}
@@ -233,15 +249,24 @@ export function CoachingPaymentCalendar({ purchases, userId }: Props) {
               {programPayments.map((p) => (
                 <li
                   key={p.id}
-                  className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                  className="flex flex-col gap-1 border-b border-gray-200 pb-2 last:border-0 last:pb-0 dark:border-gray-700"
                 >
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {p.programName}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {p.paidAt ? formatDate(p.paidAt) : "—"} ·{" "}
-                    {formatINR(p.amount)}
-                  </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {p.programName}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {p.paidAt ? formatDate(p.paidAt) : "—"} ·{" "}
+                      {formatINR(p.amount)}
+                    </span>
+                  </div>
+                  {showDateEditor && userId && (
+                    <PurchaseDatesEditor
+                      userId={userId}
+                      purchase={p}
+                      onUpdated={onUpdated}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
