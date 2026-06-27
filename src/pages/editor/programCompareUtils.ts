@@ -102,11 +102,45 @@ export function alignExercisesByIndex(
   left: ExerciseRow[],
   right: ExerciseRow[],
 ): AlignedExercisePair[] {
-  const max = Math.max(left.length, right.length);
+  const leftSorted = [...left].sort((a, b) => a.sortOrder - b.sortOrder);
+  const rightSorted = [...right].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const usesSlots =
+    leftSorted.some((r) => r.prescriptionSlotId) ||
+    rightSorted.some((r) => r.prescriptionSlotId);
+
+  if (usesSlots) {
+    const leftBySlot = new Map(
+      leftSorted
+        .filter((r) => r.prescriptionSlotId)
+        .map((r) => [r.prescriptionSlotId!, r]),
+    );
+    const rightBySlot = new Map(
+      rightSorted
+        .filter((r) => r.prescriptionSlotId)
+        .map((r) => [r.prescriptionSlotId!, r]),
+    );
+    const slotIds = new Set([...leftBySlot.keys(), ...rightBySlot.keys()]);
+    const orderedSlots = [...slotIds].sort((a, b) => {
+      const orderA =
+        leftBySlot.get(a)?.sortOrder ?? rightBySlot.get(a)?.sortOrder ?? 0;
+      const orderB =
+        leftBySlot.get(b)?.sortOrder ?? rightBySlot.get(b)?.sortOrder ?? 0;
+      return orderA - orderB;
+    });
+
+    return orderedSlots.map((slotId, index) => {
+      const l = leftBySlot.get(slotId) ?? null;
+      const r = rightBySlot.get(slotId) ?? null;
+      return { index, left: l, right: r, differs: exercisesDiffer(l, r) };
+    });
+  }
+
+  const max = Math.max(leftSorted.length, rightSorted.length);
   const pairs: AlignedExercisePair[] = [];
   for (let i = 0; i < max; i++) {
-    const l = left[i] ?? null;
-    const r = right[i] ?? null;
+    const l = leftSorted[i] ?? null;
+    const r = rightSorted[i] ?? null;
     pairs.push({ index: i, left: l, right: r, differs: exercisesDiffer(l, r) });
   }
   return pairs;

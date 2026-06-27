@@ -15,6 +15,8 @@ import {
   getDefaultValues,
   type ExerciseRowFormData,
 } from "./exerciseRowSchema";
+import { showPrescriptionPropagationToasts } from "./propagatePrescriptionToast";
+import { usePropagateForwardStore } from "@/store/propagateForwardStore";
 
 interface ExerciseRowFormModalProps {
   programId: string;
@@ -38,6 +40,7 @@ export function ExerciseRowFormModal({
   onSuccess,
 }: ExerciseRowFormModalProps) {
   const isEdit = !!row;
+  const propagateForward = usePropagateForwardStore((s) => s.enabled);
 
   const { data: groupedExercises } = useQuery({
     queryKey: ["exercises"],
@@ -73,9 +76,13 @@ export function ExerciseRowFormModal({
 
   const updateMut = useMutation({
     mutationFn: (d: ExerciseRowFormData) =>
-      programService.updateExerciseRow(programId, row!.id, toPayload(d)),
-    onSuccess: () => {
+      programService.updateExerciseRow(programId, row!.id, {
+        ...toPayload(d),
+        propagateForward,
+      }),
+    onSuccess: (result) => {
       toast.success("Exercise updated");
+      showPrescriptionPropagationToasts(result.propagated);
       onSuccess();
     },
   });

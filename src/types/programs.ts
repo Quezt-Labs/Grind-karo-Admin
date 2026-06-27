@@ -182,7 +182,30 @@ export interface CreateExerciseSetPayload {
   notes?: string | null;
 }
 
-export type UpdateExerciseSetPayload = Partial<CreateExerciseSetPayload>;
+export type UpdateExerciseSetPayload = Partial<CreateExerciseSetPayload> & {
+  /** Copy changed reps/RPE/% on this set to later weeks in the same block. */
+  propagateForward?: boolean;
+};
+
+export type PropagationSkipReason =
+  | "missing_day"
+  | "missing_slot"
+  | "different_exercise"
+  | "missing_set";
+
+export interface PrescriptionPropagationResult {
+  count: number;
+  weekNumbers: number[];
+  skipped?: Array<{
+    weekNumber: number;
+    reason: PropagationSkipReason;
+  }>;
+}
+
+export interface ExerciseSetUpdateResult {
+  set: ExerciseSet;
+  propagated?: PrescriptionPropagationResult;
+}
 
 // ---- Exercise Rows (program_exercises) ----------------------------------
 export type LoadComputation =
@@ -195,6 +218,8 @@ export interface ExerciseRow {
   id: string;
   dayId: string;
   sortOrder: number;
+  /** Stable slot identity across weeks in a block (propagation + history). */
+  prescriptionSlotId?: string;
   category: ExerciseCategory;
   exerciseId: string | null;
   exerciseNameOverride: string | null;
@@ -238,7 +263,15 @@ export interface CreateExerciseRowPayload {
   hasPlateCheck?: boolean;
 }
 
-export type UpdateExerciseRowPayload = Partial<CreateExerciseRowPayload>;
+export type UpdateExerciseRowPayload = Partial<CreateExerciseRowPayload> & {
+  /** Copy changed sets/reps/RPE/% to later weeks in the same block. */
+  propagateForward?: boolean;
+};
+
+export interface ExerciseRowUpdateResult {
+  row: ExerciseRow;
+  propagated?: PrescriptionPropagationResult;
+}
 
 // ---- Resources ----------------------------------------------------------
 export type ProgramResourceType = "markdown" | "pdf";

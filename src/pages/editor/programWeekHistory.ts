@@ -27,7 +27,7 @@ export function getPriorWeekExercise(
   blockWeeks: WeekTree[],
   weekNumber: number,
   dayNumber: number,
-  exerciseIndex: number,
+  slotOrIndex: string | number,
 ): ExerciseRow | null {
   const week = sortedWeeks(blockWeeks).find((w) => w.weekNumber === weekNumber);
   if (!week) return null;
@@ -35,10 +35,16 @@ export function getPriorWeekExercise(
   const day = sortedDays(week.days).find((d) => d.dayNumber === dayNumber);
   if (!day) return null;
 
+  if (typeof slotOrIndex === "string") {
+    return (
+      day.exercises.find((e) => e.prescriptionSlotId === slotOrIndex) ?? null
+    );
+  }
+
   const exercises = [...day.exercises].sort(
     (a, b) => a.sortOrder - b.sortOrder,
   );
-  return exercises[exerciseIndex] ?? null;
+  return exercises[slotOrIndex] ?? null;
 }
 
 /** Compact history cell split across two lines for readability */

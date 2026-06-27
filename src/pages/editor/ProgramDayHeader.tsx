@@ -1,6 +1,8 @@
 import { Plus } from "lucide-react";
 import type { Day } from "@/types/programs";
 import { Button } from "@/components/ui/Button";
+import { CheckboxField } from "@/components/ui/CheckboxField";
+import { usePropagateForwardStore } from "@/store/propagateForwardStore";
 import { TreeNodeActions } from "./TreeNodeActions";
 import type { ProgramDayLocation } from "./programStructureUtils";
 
@@ -26,6 +28,8 @@ export function ProgramDayHeader({
   onAddExercise,
 }: ProgramDayHeaderProps) {
   const { week, day } = selection;
+  const propagateForward = usePropagateForwardStore((s) => s.enabled);
+  const setPropagateForward = usePropagateForwardStore((s) => s.setEnabled);
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:px-4">
@@ -43,6 +47,15 @@ export function ProgramDayHeader({
           </p>
         )}
       </div>
+      <CheckboxField
+        id="propagate-forward"
+        label="Apply to later weeks"
+        description="Sets, reps, RPE, and % in this block"
+        checked={propagateForward}
+        onCheckedChange={setPropagateForward}
+        className="w-full shrink-0 sm:w-auto sm:max-w-[14rem]"
+        labelClassName="text-xs"
+      />
       <TreeNodeActions
         onEdit={() => onEditDay(day)}
         editTitle="Edit day"

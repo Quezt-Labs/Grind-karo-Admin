@@ -11,6 +11,8 @@ import type {
 } from "@/types/programs";
 import { InlineMetricCell } from "./InlineMetricCell";
 import { parseLoadInput, parsePercentInput } from "./inlineRowFieldParsers";
+import { showPrescriptionPropagationToasts } from "./propagatePrescriptionToast";
+import { usePropagateForwardStore } from "@/store/propagateForwardStore";
 
 interface ExerciseSetsProps {
   programId: string;
@@ -98,6 +100,7 @@ function ExerciseSetRow({
   onRefresh,
 }: ExerciseSetRowProps) {
   const qc = useQueryClient();
+  const propagateForward = usePropagateForwardStore((s) => s.enabled);
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["program-tree", programId] });
@@ -112,7 +115,12 @@ function ExerciseSetRow({
         set.id,
         payload,
       ),
-    onSuccess: () => refresh(),
+    onSuccess: (result) => {
+      showPrescriptionPropagationToasts(result.propagated, {
+        setNumber: set.setNumber,
+      });
+      refresh();
+    },
     onError: () => toast.error("Failed to update set"),
   });
 
@@ -130,6 +138,10 @@ function ExerciseSetRow({
 
   function patch(payload: UpdateExerciseSetPayload) {
     updateMut.mutate(payload);
+  }
+
+  function patchPrescription(payload: UpdateExerciseSetPayload) {
+    updateMut.mutate({ ...payload, propagateForward });
   }
 
   const percentInput = set.percentOneRm != null ? String(set.percentOneRm) : "";
@@ -157,7 +169,7 @@ function ExerciseSetRow({
             toast.error("Enter a valid percent (e.g. 82.5)");
             return;
           }
-          patch({ percentOneRm: parsed });
+          patchPrescription({ percentOneRm: parsed });
         }}
         display={
           set.percentOneRm != null ? (
@@ -173,7 +185,7 @@ function ExerciseSetRow({
         onCommit={(raw) => {
           const trimmed = raw.trim();
           if (!trimmed) {
-            patch({ reps: null });
+            patchPrescription({ reps: null });
             return;
           }
           const parsed = parseIntVal(trimmed);
@@ -181,7 +193,7 @@ function ExerciseSetRow({
             toast.error("Reps must be a whole number");
             return;
           }
-          patch({ reps: parsed });
+          patchPrescription({ reps: parsed });
         }}
         display={
           set.reps != null ? (
@@ -194,7 +206,7 @@ function ExerciseSetRow({
       <InlineMetricCell
         value={repSchemeInput}
         isSaving={isSaving}
-        onCommit={(raw) => patch({ repScheme: raw.trim() || null })}
+        onCommit={(raw) => patchPrescription({ repScheme: raw.trim() || null })}
         display={
           set.repScheme ? (
             <span className="font-mono text-xs text-gray-500 dark:text-gray-400">
@@ -209,7 +221,7 @@ function ExerciseSetRow({
         onCommit={(raw) => {
           const trimmed = raw.trim().replace(/^@/, "");
           if (!trimmed) {
-            patch({ targetRpe: null });
+            patchPrescription({ targetRpe: null });
             return;
           }
           const parsed = parseNum(trimmed);
@@ -217,7 +229,7 @@ function ExerciseSetRow({
             toast.error("RPE must be a number");
             return;
           }
-          patch({ targetRpe: parsed });
+          patchPrescription({ targetRpe: parsed });
         }}
         display={
           set.targetRpe != null ? (

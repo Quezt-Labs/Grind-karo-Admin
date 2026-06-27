@@ -27,6 +27,8 @@ import {
   parseSetsInput,
   percentBasisToInput,
 } from "./inlineRowFieldParsers";
+import { showPrescriptionPropagationToasts } from "./propagatePrescriptionToast";
+import { usePropagateForwardStore } from "@/store/propagateForwardStore";
 
 interface ExerciseTableRowProps {
   programId: string;
@@ -60,18 +62,22 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   onRefresh,
 }: ExerciseTableRowProps) {
   const preview = useProgramPreview();
+  const propagateForward = usePropagateForwardStore((s) => s.enabled);
   const hasSets = (row.exerciseSets?.length ?? 0) > 0;
   const [expanded, setExpanded] = useState(hasSets);
 
   const updateMut = useMutation({
     mutationFn: (payload: UpdateExerciseRowPayload) =>
       programService.updateExerciseRow(programId, row.id, payload),
-    onSuccess: () => onRefresh(),
+    onSuccess: (result) => {
+      showPrescriptionPropagationToasts(result.propagated);
+      onRefresh();
+    },
     onError: () => toast.error("Failed to update exercise row"),
   });
 
-  function patchRow(payload: UpdateExerciseRowPayload) {
-    updateMut.mutate(payload);
+  function patchPrescription(payload: UpdateExerciseRowPayload) {
+    updateMut.mutate({ ...payload, propagateForward });
   }
 
   const previewRow = preview?.enabled
@@ -170,7 +176,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
                     blockWeeks,
                     col.weekNumber,
                     dayNumber,
-                    index,
+                    row.prescriptionSlotId ?? index,
                   )
                 : null
             }
@@ -209,7 +215,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
                 toast.error("Sets must be a whole number");
                 return;
               }
-              patchRow({ sets: parsed });
+              patchPrescription({ sets: parsed });
             }}
             display={
               displaySets != null ? (
@@ -231,7 +237,9 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
           <InlineMetricCell
             value={repSchemeInput}
             isSaving={isSaving}
-            onCommit={(raw) => patchRow({ repScheme: raw.trim() || null })}
+            onCommit={(raw) =>
+              patchPrescription({ repScheme: raw.trim() || null })
+            }
             display={
               displayRepScheme ? (
                 <span
@@ -252,7 +260,9 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
           <InlineMetricCell
             value={targetRpeInput}
             isSaving={isSaving}
-            onCommit={(raw) => patchRow({ targetRpe: raw.trim() || null })}
+            onCommit={(raw) =>
+              patchPrescription({ targetRpe: raw.trim() || null })
+            }
             display={
               displayTargetRpe ? (
                 <span
@@ -279,7 +289,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
                 toast.error("Enter a valid percent (e.g. 53 or 53%)");
                 return;
               }
-              patchRow({ percentOneRm: parsed });
+              patchPrescription({ percentOneRm: parsed });
             }}
             display={
               displayPercentOneRm ? (
@@ -300,7 +310,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
                 toast.error("Load must be a number (kg)");
                 return;
               }
-              patchRow({ loadKg: parsed });
+              updateMut.mutate({ loadKg: parsed });
             }}
             display={
               displayLoad != null ? (

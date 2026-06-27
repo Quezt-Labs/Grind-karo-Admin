@@ -16,9 +16,11 @@ import type {
   ExerciseRow,
   CreateExerciseRowPayload,
   UpdateExerciseRowPayload,
+  ExerciseRowUpdateResult,
   ExerciseSet,
   CreateExerciseSetPayload,
   UpdateExerciseSetPayload,
+  ExerciseSetUpdateResult,
   ProgramResource,
   CreateResourcePayload,
   UpdateResourcePayload,
@@ -186,12 +188,16 @@ export const programService = {
     programId: string,
     rowId: string,
     payload: UpdateExerciseRowPayload,
-  ): Promise<ExerciseRow> {
+  ): Promise<ExerciseRowUpdateResult> {
     const { data } = await api.patch(
       `/admin/programs/${programId}/exercises/${rowId}`,
       payload,
     );
-    return data.data ?? data;
+    const raw = data.data ?? data;
+    if (raw && typeof raw === "object" && "row" in raw) {
+      return raw as ExerciseRowUpdateResult;
+    }
+    return { row: raw as ExerciseRow };
   },
 
   async removeExerciseRow(programId: string, rowId: string): Promise<void> {
@@ -226,12 +232,16 @@ export const programService = {
     rowId: string,
     setId: string,
     payload: UpdateExerciseSetPayload,
-  ): Promise<ExerciseSet> {
+  ): Promise<ExerciseSetUpdateResult> {
     const { data } = await api.patch(
       `/admin/programs/${programId}/exercises/${rowId}/sets/${setId}`,
       payload,
     );
-    return data.data ?? data;
+    const raw = data.data ?? data;
+    if (raw && typeof raw === "object" && "set" in raw) {
+      return raw as ExerciseSetUpdateResult;
+    }
+    return { set: raw as ExerciseSet };
   },
 
   async removeExerciseSet(
