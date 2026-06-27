@@ -124,8 +124,8 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       onClose();
       return;
     }
-    if (n.type === "CLIENT_UPLOAD_FAILED" && userId) {
-      navigate(`/users/${userId}`);
+    if (n.type === "CLIENT_UPLOAD_FAILED") {
+      navigate("/upload-failures");
       onClose();
       return;
     }

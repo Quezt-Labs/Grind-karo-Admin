@@ -20,6 +20,7 @@ import {
   FileText,
   Inbox,
   Bug,
+  Upload,
   ChevronDown,
   UserCog,
   MapPin,
@@ -63,6 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
       { path: "/form-checks", label: "Form checks", icon: Video },
       { path: "/chat", label: "Chat", icon: MessageCircle },
       { path: "/client-errors", label: "Client errors", icon: Bug },
+      { path: "/upload-failures", label: "Upload failures", icon: Upload },
     ],
   },
   {

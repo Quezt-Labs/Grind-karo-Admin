@@ -25,6 +25,7 @@ import {
   ChatPage,
   ContactSubmissionsPage,
   ClientErrorsPage,
+  UploadFailuresPage,
   CouponDetailPage,
   CouponsPage,
   DashboardPage,
@@ -144,6 +145,10 @@ export default function App() {
                   />
                   <Route path="/contact" element={<ContactSubmissionsPage />} />
                   <Route path="/client-errors" element={<ClientErrorsPage />} />
+                  <Route
+                    path="/upload-failures"
+                    element={<UploadFailuresPage />}
+                  />
                   <Route path="/coupons" element={<CouponsPage />} />
                   <Route path="/coupons/:id" element={<CouponDetailPage />} />
                   <Route path="/big-lift-pr" element={<BigLiftPrPage />} />
