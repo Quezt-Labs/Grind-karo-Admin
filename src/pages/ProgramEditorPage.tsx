@@ -366,7 +366,12 @@ export function ProgramEditorPage() {
 
         <ProgramEditorTabs active={activeTab} onChange={setActiveTab} />
 
-        {showPreviewBar && <PreviewInputsBar slots={movementSlots} />}
+        {showPreviewBar && (
+          <PreviewInputsBar
+            slots={movementSlots}
+            variant={activeTab === "preview" ? "preview" : "structure"}
+          />
+        )}
 
         {activeTab === "structure" && structureEditor}
 
