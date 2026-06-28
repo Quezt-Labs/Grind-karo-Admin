@@ -80,13 +80,54 @@ export function computeBlockDateRange(
 }
 
 export function suggestNextWeekStart(
-  weeks: Array<{ weekNumber: number; weekEnd?: string | null }>,
+  weeks: Array<{
+    weekNumber: number;
+    weekStart?: string | null;
+    weekEnd?: string | null;
+  }>,
 ): string | null {
   if (!weeks.length) return null;
   const sorted = [...weeks].sort((a, b) => a.weekNumber - b.weekNumber);
-  const last = sorted[sorted.length - 1];
-  if (last.weekEnd) return addDays(last.weekEnd, 1);
+
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const w = sorted[i];
+    if (w.weekEnd) return addDays(w.weekEnd, 1);
+    if (w.weekStart) return addDays(w.weekStart, 7);
+  }
+
   return null;
+}
+
+export function suggestNextWeekDates(
+  weeks: Array<{
+    weekNumber: number;
+    weekStart?: string | null;
+    weekEnd?: string | null;
+  }>,
+): { weekStart: string; weekEnd: string } | null {
+  const weekStart = suggestNextWeekStart(weeks);
+  if (!weekStart) return null;
+  return { weekStart, weekEnd: defaultWeekEnd(weekStart) };
+}
+
+/** Default calendar range for the first week in a block (today → +6 days). */
+export function suggestFirstWeekDates(): {
+  weekStart: string;
+  weekEnd: string;
+} {
+  const d = new Date();
+  const weekStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { weekStart, weekEnd: defaultWeekEnd(weekStart) };
+}
+
+export function shiftWeekDatesBySevenDays(
+  weekStart: string | null | undefined,
+  weekEnd: string | null | undefined,
+): { weekStart: string; weekEnd: string } | null {
+  if (!weekStart) return null;
+  const nextStart = addDays(weekStart, 7);
+  const endBase = weekEnd ?? defaultWeekEnd(weekStart);
+  return { weekStart: nextStart, weekEnd: addDays(endBase, 7) };
 }
 
 export function suggestNextWeekNumber(

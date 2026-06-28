@@ -433,6 +433,15 @@ export function ProgramEditorPage() {
         )}
         {weekModal.open && (
           <WeekFormModal
+            key={
+              weekModal.week?.id ??
+              `${weekModal.blockId ?? "block"}-${
+                weekModal.blockId
+                  ? (tree?.blocks.find((b) => b.id === weekModal.blockId)?.weeks
+                      .length ?? 0)
+                  : 0
+              }`
+            }
             programId={programId!}
             blockId={weekModal.blockId}
             week={weekModal.week}

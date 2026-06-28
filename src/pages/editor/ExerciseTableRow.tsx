@@ -31,6 +31,7 @@ import { showPrescriptionPropagationToasts } from "./propagatePrescriptionToast"
 import { usePropagateForwardStore } from "@/store/propagateForwardStore";
 import {
   getCascadeLoadPatches,
+  syncLoadComputationFromPercent,
   withAutoComputedLoad,
 } from "@/utils/programEditorLoadSync";
 
@@ -83,8 +84,9 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   function patchPrescription(payload: UpdateExerciseRowPayload) {
     void (async () => {
       try {
+        const syncedPayload = syncLoadComputationFromPercent(row, payload);
         let fullPayload: UpdateExerciseRowPayload = {
-          ...payload,
+          ...syncedPayload,
           propagateForward,
         };
         if (preview?.enabled) {
@@ -94,7 +96,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
               preview.slots,
               preview.inputs,
               row.id,
-              payload,
+              syncedPayload,
             ),
             propagateForward,
           };
@@ -108,7 +110,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             preview.slots,
             preview.inputs,
             row.id,
-            payload,
+            syncedPayload,
           );
           for (const [depId, patch] of cascade) {
             await programService.updateExerciseRow(programId, depId, patch);

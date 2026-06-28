@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +12,8 @@ import { programService } from "@/services/programService";
 import type { Week } from "@/types/programs";
 import {
   defaultWeekEnd,
+  suggestFirstWeekDates,
+  suggestNextWeekDates,
   suggestNextWeekNumber,
   suggestNextWeekStart,
 } from "@/utils/weekDates";
@@ -48,16 +51,25 @@ export function WeekFormModal({
   onSuccess,
 }: WeekFormModalProps) {
   const isEdit = !!week;
-  const suggestedStart = suggestNextWeekStart(siblingWeeks);
+  const suggestedDates =
+    suggestNextWeekDates(siblingWeeks) ??
+    (siblingWeeks.length === 0 ? suggestFirstWeekDates() : null);
+  const suggestedStart =
+    week?.weekStart ??
+    suggestedDates?.weekStart ??
+    suggestNextWeekStart(siblingWeeks) ??
+    "";
   const suggestedNumber = suggestNextWeekNumber(siblingWeeks);
-  const initialStart = week?.weekStart ?? suggestedStart ?? "";
   const initialEnd =
-    week?.weekEnd ?? (initialStart ? defaultWeekEnd(initialStart) : "");
+    week?.weekEnd ??
+    suggestedDates?.weekEnd ??
+    (suggestedStart ? defaultWeekEnd(suggestedStart) : "");
 
   const {
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
@@ -73,10 +85,34 @@ export function WeekFormModal({
           weekNumber: suggestedNumber,
           title: `WEEK ${suggestedNumber}`,
           notes: "",
-          weekStart: initialStart,
+          weekStart: suggestedStart,
           weekEnd: initialEnd,
         },
   });
+
+  const siblingScheduleKey = useMemo(() => {
+    const sorted = [...siblingWeeks].sort(
+      (a, b) => a.weekNumber - b.weekNumber,
+    );
+    const last = sorted[sorted.length - 1];
+    return `${sorted.length}:${last?.weekEnd ?? ""}:${last?.weekStart ?? ""}`;
+  }, [siblingWeeks]);
+
+  useEffect(() => {
+    if (isEdit) return;
+    const dates =
+      suggestNextWeekDates(siblingWeeks) ??
+      (siblingWeeks.length === 0 ? suggestFirstWeekDates() : null);
+    if (!dates) return;
+    const nextNumber = suggestNextWeekNumber(siblingWeeks);
+    reset({
+      weekNumber: nextNumber,
+      title: `WEEK ${nextNumber}`,
+      notes: "",
+      weekStart: dates.weekStart,
+      weekEnd: dates.weekEnd,
+    });
+  }, [isEdit, siblingScheduleKey, siblingWeeks, reset]);
 
   const createMut = useMutation({
     mutationFn: (d: FormData) =>

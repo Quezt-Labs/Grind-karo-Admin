@@ -175,7 +175,7 @@ export function computeDayPreview(
         case "RPE_CHART": {
           const calc = computeRowLoad(
             row.category,
-            null,
+            fields.percentOneRm,
             e1rms,
             roundTo,
             fields.targetRpe,

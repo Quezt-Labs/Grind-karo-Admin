@@ -23,6 +23,31 @@ function applyDraft(
   );
 }
 
+/** When %1RM is set, persist PERCENT_1RM instead of default RPE_CHART. */
+export function syncLoadComputationFromPercent(
+  row: ExerciseRow | undefined,
+  payload: UpdateExerciseRowPayload,
+): UpdateExerciseRowPayload {
+  if (!row) return payload;
+
+  const percentOneRm =
+    payload.percentOneRm !== undefined
+      ? payload.percentOneRm
+      : row.percentOneRm;
+  const loadComputation =
+    payload.loadComputation ?? row.loadComputation ?? "RPE_CHART";
+
+  if (
+    percentOneRm != null &&
+    percentOneRm > 0 &&
+    loadComputation === "RPE_CHART"
+  ) {
+    return { ...payload, loadComputation: "PERCENT_1RM" };
+  }
+
+  return payload;
+}
+
 /** Merge auto-computed template load into a prescription patch. */
 export function withAutoComputedLoad(
   dayExercises: ExerciseRow[],
@@ -31,12 +56,14 @@ export function withAutoComputedLoad(
   rowId: string,
   payload: UpdateExerciseRowPayload,
 ): UpdateExerciseRowPayload {
-  const draft = applyDraft(dayExercises, rowId, payload);
+  const row = dayExercises.find((r) => r.id === rowId);
+  const syncedPayload = syncLoadComputationFromPercent(row, payload);
+  const draft = applyDraft(dayExercises, rowId, syncedPayload);
   const rowIds = rowIdsNeedingLoadSync(draft, rowId);
   const patches = buildAutoLoadPatchesForDay(draft, slots, inputs, rowIds);
   const primary = patches.get(rowId);
-  if (!primary) return payload;
-  return { ...payload, ...primary };
+  if (!primary) return syncedPayload;
+  return { ...syncedPayload, ...primary };
 }
 
 /** Rows whose template load should refresh after a prescription edit (incl. PERCENT_OF_ROW deps). */

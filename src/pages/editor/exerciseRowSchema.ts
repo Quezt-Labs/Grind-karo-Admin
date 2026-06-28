@@ -59,6 +59,14 @@ export function toPayload(d: ExerciseRowFormData) {
   const pctBasisPoints = d.percentOneRmDisplay
     ? Math.round(d.percentOneRmDisplay * 100)
     : null;
+  let loadComputation = d.loadComputation || "RPE_CHART";
+  if (
+    pctBasisPoints != null &&
+    pctBasisPoints > 0 &&
+    loadComputation === "RPE_CHART"
+  ) {
+    loadComputation = "PERCENT_1RM";
+  }
   return {
     sortOrder: d.sortOrder,
     category: d.category,
@@ -72,7 +80,7 @@ export function toPayload(d: ExerciseRowFormData) {
     loadNote: d.loadNote || null,
     notes: d.notes || null,
     movementSlotId: d.movementSlotId || null,
-    loadComputation: d.loadComputation || "RPE_CHART",
+    loadComputation,
     loadRefFactor: d.loadRefFactor ?? null,
     loadRefExerciseId: d.loadRefExerciseId || null,
     hasPlateCheck: d.hasPlateCheck ?? false,
