@@ -257,8 +257,10 @@ export function ProgramEditorPage() {
   }
 
   const movementSlots = tree.movementSlots ?? [];
-  const previewEnabled = activeTab === "preview" || activeTab === "structure";
-  const showPreviewBar = activeTab === "preview" || activeTab === "structure";
+  const previewEnabled =
+    activeTab === "structure" ||
+    activeTab === "preview" ||
+    activeTab === "loads";
 
   const structureEditor = (
     <ProgramStructureEditor
@@ -366,16 +368,21 @@ export function ProgramEditorPage() {
 
         <ProgramEditorTabs active={activeTab} onChange={setActiveTab} />
 
-        {showPreviewBar && (
-          <PreviewInputsBar
-            slots={movementSlots}
-            variant={activeTab === "preview" ? "preview" : "structure"}
-          />
-        )}
-
         {activeTab === "structure" && structureEditor}
 
         {activeTab === "compare" && <ProgramComparePanel tree={tree} />}
+
+        {activeTab === "loads" && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Set reference 1RMs for template load calculations. Values are
+              saved per program. On the Structure tab, use{" "}
+              <strong>Recalculate loads</strong> on each day to persist template
+              weights for all rows.
+            </p>
+            <PreviewInputsBar slots={movementSlots} />
+          </div>
+        )}
 
         {activeTab === "movement-selection" && (
           <div className="space-y-6">
@@ -398,8 +405,15 @@ export function ProgramEditorPage() {
         {activeTab === "preview" && (
           <div className="space-y-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Expand days below to see computed loads for the preview athlete
-              inputs above.
+              Computed template loads use reference 1RMs from the{" "}
+              <button
+                type="button"
+                onClick={() => setActiveTab("loads")}
+                className="font-medium text-primary-600 underline-offset-2 hover:underline dark:text-primary-400"
+              >
+                Load settings
+              </button>{" "}
+              tab. Expand days below to review.
             </p>
             {structureEditor}
           </div>

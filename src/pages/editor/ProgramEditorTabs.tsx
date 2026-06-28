@@ -4,6 +4,7 @@ export type ProgramEditorTab =
   | "structure"
   | "compare"
   | "movement-selection"
+  | "loads"
   | "preview";
 
 const TABS: { id: ProgramEditorTab; label: string; shortLabel: string }[] = [
@@ -14,6 +15,7 @@ const TABS: { id: ProgramEditorTab; label: string; shortLabel: string }[] = [
     label: "Movement Selection",
     shortLabel: "Movement",
   },
+  { id: "loads", label: "Load settings", shortLabel: "Loads" },
   { id: "preview", label: "Preview", shortLabel: "Preview" },
 ];
 
