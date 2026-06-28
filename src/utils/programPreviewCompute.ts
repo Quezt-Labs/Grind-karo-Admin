@@ -6,6 +6,7 @@ import type {
 } from "@/types/programs";
 import {
   computeRowLoad,
+  effectiveFixedLoadKg,
   mround,
   type E1rmInputs,
 } from "@/utils/programFormulas";
@@ -155,8 +156,11 @@ export function computeDayPreview(
 
     if (loadOverrides[row.id] != null) {
       load = loadOverrides[row.id]!;
-    } else if (!options?.ignoreFixedLoad && row.loadKg != null) {
-      load = mround(row.loadKg, roundTo);
+    } else if (
+      !options?.ignoreFixedLoad &&
+      effectiveFixedLoadKg(row.loadKg) != null
+    ) {
+      load = mround(effectiveFixedLoadKg(row.loadKg)!, roundTo);
     } else {
       switch (fields.loadComputation) {
         case "PERCENT_1RM": {

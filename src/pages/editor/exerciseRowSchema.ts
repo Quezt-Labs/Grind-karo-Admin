@@ -76,7 +76,7 @@ export function toPayload(d: ExerciseRowFormData) {
     repScheme: d.repScheme || null,
     targetRpe: d.targetRpe || null,
     percentOneRm: pctBasisPoints,
-    loadKg: d.loadKg ?? null,
+    loadKg: d.loadKg != null && d.loadKg > 0 ? d.loadKg : null,
     loadNote: d.loadNote || null,
     notes: d.notes || null,
     movementSlotId: d.movementSlotId || null,

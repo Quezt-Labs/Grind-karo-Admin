@@ -130,7 +130,8 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   if (previewRow?.hidden) return null;
 
   const previewLoad = previewRow?.load ?? null;
-  const displayLoad = previewLoad ?? row.loadKg ?? row.computedLoadKg ?? null;
+  const fixedLoad = row.loadKg != null && row.loadKg > 0 ? row.loadKg : null;
+  const displayLoad = previewLoad ?? fixedLoad ?? row.computedLoadKg ?? null;
   const exerciseName =
     previewRow?.resolvedName ??
     (row.resolvedName || row.exerciseNameOverride || "—");
@@ -142,7 +143,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   const repSchemeInput = row.repScheme ?? "";
   const targetRpeInput = row.targetRpe ?? "";
   const percentInput = percentBasisToInput(row.percentOneRm);
-  const loadInput = row.loadKg != null ? String(row.loadKg) : "";
+  const loadInput = fixedLoad != null ? String(fixedLoad) : "";
   const isSaving = updateMut.isPending;
   const hasNotes =
     (previewRow?.loadNote ?? row.loadNote) || (previewRow?.notes ?? row.notes);

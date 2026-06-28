@@ -1,5 +1,13 @@
 import type { ExerciseCategory } from "@/types/programs";
 
+/** Coach-entered absolute load. Zero/negative means "compute from formula" (not a real fixed load). */
+export function effectiveFixedLoadKg(
+  loadKg: number | null | undefined,
+): number | null {
+  if (loadKg == null || loadKg <= 0) return null;
+  return loadKg;
+}
+
 // ---------------------------------------------------------------------------
 // RPE Chart – exact values from the 9-5 Powerbuilder sheet (e1rmsheet tab)
 // Rows = RPE (10 → 4), Columns = Reps (1 → 10)
