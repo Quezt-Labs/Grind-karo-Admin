@@ -254,6 +254,8 @@ export interface CreateExerciseRowPayload {
   targetRpe?: string | null;
   percentOneRm?: number | null;
   loadKg?: number | null;
+  computedLoadKg?: number | null;
+  loadSource?: "percent" | "rpe" | null;
   loadNote?: string | null;
   notes?: string | null;
   movementSlotId?: string | null;

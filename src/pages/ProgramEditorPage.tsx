@@ -258,7 +258,7 @@ export function ProgramEditorPage() {
 
   const movementSlots = tree.movementSlots ?? [];
   const previewEnabled = activeTab === "preview" || activeTab === "structure";
-  const showPreviewBar = activeTab === "preview";
+  const showPreviewBar = activeTab === "preview" || activeTab === "structure";
 
   const structureEditor = (
     <ProgramStructureEditor
@@ -313,7 +313,11 @@ export function ProgramEditorPage() {
   const athleteLabel = coachingAthlete?.name ?? coachingAthlete?.email ?? null;
 
   return (
-    <ProgramPreviewProvider slots={movementSlots} enabled={previewEnabled}>
+    <ProgramPreviewProvider
+      slots={movementSlots}
+      enabled={previewEnabled}
+      programId={programId}
+    >
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-start gap-2 sm:gap-3">

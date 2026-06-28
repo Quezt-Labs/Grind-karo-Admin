@@ -137,12 +137,14 @@ export function ProgramStructureMain({
 
         {selection && (
           <ProgramDayHeader
+            programId={programId}
             selection={selection}
             weekRangeLabel={weekRangeLabel}
             nextSortOrder={nextSortOrder}
             onEditDay={onEditDay}
             onDeleteDay={onDeleteDay}
             onAddExercise={onAddExercise}
+            onRefresh={onRefresh}
           />
         )}
       </div>

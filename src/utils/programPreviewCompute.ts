@@ -28,6 +28,7 @@ export interface PreviewRowState {
   notes: string | null;
   hidden: boolean;
   load: number | null;
+  loadSource: "percent" | "rpe" | null;
 }
 
 function plateIncrement(has125kgPlates: boolean): number {
@@ -128,6 +129,7 @@ export function computeDayPreview(
   slots: MovementSlot[],
   inputs: PreviewInputs,
   loadOverrides: Record<string, number> = {},
+  options?: { ignoreFixedLoad?: boolean },
 ): Map<string, PreviewRowState> {
   const e1rms: E1rmInputs = {
     squat: inputs.squat,
@@ -144,15 +146,16 @@ export function computeDayPreview(
     const fields = resolvePreviewFields(row, slots, inputs.movementSelections);
 
     if (fields.hidden) {
-      result.set(row.id, { ...fields, load: null });
+      result.set(row.id, { ...fields, load: null, loadSource: null });
       continue;
     }
 
     let load: number | null = null;
+    let loadSource: "percent" | "rpe" | null = null;
 
     if (loadOverrides[row.id] != null) {
       load = loadOverrides[row.id]!;
-    } else if (row.loadKg != null) {
+    } else if (!options?.ignoreFixedLoad && row.loadKg != null) {
       load = mround(row.loadKg, roundTo);
     } else {
       switch (fields.loadComputation) {
@@ -166,6 +169,7 @@ export function computeDayPreview(
             fields.repScheme,
           );
           load = calc?.load ?? null;
+          loadSource = calc?.source ?? null;
           break;
         }
         case "RPE_CHART": {
@@ -178,6 +182,7 @@ export function computeDayPreview(
             fields.repScheme,
           );
           load = calc?.load ?? null;
+          loadSource = calc?.source ?? null;
           break;
         }
         case "PERCENT_OF_ROW": {
@@ -187,6 +192,7 @@ export function computeDayPreview(
               computedById.get(fields.loadRefExerciseId);
             if (ref != null) {
               load = mround(ref * fields.loadRefFactor, roundTo);
+              loadSource = "percent";
             }
           }
           break;
@@ -197,7 +203,7 @@ export function computeDayPreview(
     }
 
     if (load != null) computedById.set(row.id, load);
-    result.set(row.id, { ...fields, load });
+    result.set(row.id, { ...fields, load, loadSource });
   }
 
   return result;

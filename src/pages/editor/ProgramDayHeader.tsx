@@ -1,12 +1,21 @@
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import type { Day } from "@/types/programs";
 import { Button } from "@/components/ui/Button";
 import { CheckboxField } from "@/components/ui/CheckboxField";
 import { usePropagateForwardStore } from "@/store/propagateForwardStore";
+import { programService } from "@/services/programService";
+import {
+  buildAutoLoadPatchesForEntireDay,
+  patchesNeedPersisting,
+} from "@/utils/programEditorLoadSync";
 import { TreeNodeActions } from "./TreeNodeActions";
 import type { ProgramDayLocation } from "./programStructureUtils";
+import { useProgramPreview } from "./useProgramPreview";
 
 export interface ProgramDayHeaderProps {
+  programId: string;
   selection: ProgramDayLocation;
   weekRangeLabel: string | null;
   nextSortOrder: number;
@@ -17,19 +26,54 @@ export interface ProgramDayHeaderProps {
     dayExercises: Day["exercises"],
     nextSortOrder: number,
   ) => void;
+  onRefresh: () => void;
 }
 
 export function ProgramDayHeader({
+  programId,
   selection,
   weekRangeLabel,
   nextSortOrder,
   onEditDay,
   onDeleteDay,
   onAddExercise,
+  onRefresh,
 }: ProgramDayHeaderProps) {
   const { week, day } = selection;
+  const preview = useProgramPreview();
   const propagateForward = usePropagateForwardStore((s) => s.enabled);
   const setPropagateForward = usePropagateForwardStore((s) => s.setEnabled);
+
+  const recalcMut = useMutation({
+    mutationFn: async () => {
+      if (!preview?.enabled) {
+        throw new Error("Load preview is not available on this tab");
+      }
+      const patches = buildAutoLoadPatchesForEntireDay(
+        day.exercises,
+        preview.slots,
+        preview.inputs,
+      );
+      const updates = patchesNeedPersisting(day.exercises, patches);
+      for (const { rowId, patch } of updates) {
+        await programService.updateExerciseRow(programId, rowId, patch);
+      }
+      return updates.length;
+    },
+    onSuccess: (count) => {
+      toast.success(
+        count > 0
+          ? `Recalculated template loads for ${count} exercise(s)`
+          : "Template loads are already up to date",
+      );
+      onRefresh();
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to recalculate loads",
+      );
+    },
+  });
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:px-4">
@@ -56,6 +100,20 @@ export function ProgramDayHeader({
         className="w-full shrink-0 sm:w-auto sm:max-w-[14rem]"
         labelClassName="text-xs"
       />
+      {preview?.enabled && day.exercises.length > 0 && (
+        <Button
+          size="sm"
+          variant="secondary"
+          className="w-full sm:w-auto"
+          disabled={recalcMut.isPending}
+          isLoading={recalcMut.isPending}
+          onClick={() => recalcMut.mutate()}
+          title="Save template loads for every row using reference 1RMs above"
+        >
+          {!recalcMut.isPending && <RefreshCw className="h-4 w-4" />}
+          Recalculate loads
+        </Button>
+      )}
       <TreeNodeActions
         onEdit={() => onEditDay(day)}
         editTitle="Edit day"

@@ -17,6 +17,8 @@ import {
 } from "./exerciseRowSchema";
 import { showPrescriptionPropagationToasts } from "./propagatePrescriptionToast";
 import { usePropagateForwardStore } from "@/store/propagateForwardStore";
+import { useProgramPreview } from "./useProgramPreview";
+import { autoLoadPatchForFormRow } from "@/utils/programEditorLoadSync";
 
 interface ExerciseRowFormModalProps {
   programId: string;
@@ -41,6 +43,20 @@ export function ExerciseRowFormModal({
 }: ExerciseRowFormModalProps) {
   const isEdit = !!row;
   const propagateForward = usePropagateForwardStore((s) => s.enabled);
+  const preview = useProgramPreview();
+
+  const buildPayload = (data: ExerciseRowFormData) => {
+    const base = toPayload(data);
+    if (!preview?.enabled) return base;
+    const autoLoad = autoLoadPatchForFormRow(
+      dayExercises,
+      preview.slots,
+      preview.inputs,
+      row?.id,
+      base,
+    );
+    return autoLoad ? { ...base, ...autoLoad } : base;
+  };
 
   const { data: groupedExercises } = useQuery({
     queryKey: ["exercises"],
@@ -67,7 +83,7 @@ export function ExerciseRowFormModal({
 
   const createMut = useMutation({
     mutationFn: (d: ExerciseRowFormData) =>
-      programService.createExerciseRow(programId, dayId!, toPayload(d)),
+      programService.createExerciseRow(programId, dayId!, buildPayload(d)),
     onSuccess: () => {
       toast.success("Exercise added");
       onSuccess();
@@ -77,7 +93,7 @@ export function ExerciseRowFormModal({
   const updateMut = useMutation({
     mutationFn: (d: ExerciseRowFormData) =>
       programService.updateExerciseRow(programId, row!.id, {
-        ...toPayload(d),
+        ...buildPayload(d),
         propagateForward,
       }),
     onSuccess: (result) => {

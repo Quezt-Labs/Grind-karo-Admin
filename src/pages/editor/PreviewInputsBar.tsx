@@ -13,7 +13,8 @@ export function PreviewInputsBar({ slots }: { slots: MovementSlot[] }) {
   return (
     <div className="sticky top-0 z-20 rounded-xl border border-indigo-200 bg-indigo-50/90 p-4 shadow-sm backdrop-blur-sm dark:border-indigo-800 dark:bg-indigo-950/80">
       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-        Preview athlete inputs
+        Reference 1RMs — loads auto-calculate when you edit rows, or use
+        &ldquo;Recalculate loads&rdquo; on the day header to save all at once
       </p>
       <div className="flex flex-wrap items-end gap-4">
         <Input

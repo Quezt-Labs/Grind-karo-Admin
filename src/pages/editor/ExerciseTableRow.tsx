@@ -29,6 +29,10 @@ import {
 } from "./inlineRowFieldParsers";
 import { showPrescriptionPropagationToasts } from "./propagatePrescriptionToast";
 import { usePropagateForwardStore } from "@/store/propagateForwardStore";
+import {
+  getCascadeLoadPatches,
+  withAutoComputedLoad,
+} from "@/utils/programEditorLoadSync";
 
 interface ExerciseTableRowProps {
   programId: string;
@@ -77,7 +81,44 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   });
 
   function patchPrescription(payload: UpdateExerciseRowPayload) {
-    updateMut.mutate({ ...payload, propagateForward });
+    void (async () => {
+      try {
+        let fullPayload: UpdateExerciseRowPayload = {
+          ...payload,
+          propagateForward,
+        };
+        if (preview?.enabled) {
+          fullPayload = {
+            ...withAutoComputedLoad(
+              dayExercises,
+              preview.slots,
+              preview.inputs,
+              row.id,
+              payload,
+            ),
+            propagateForward,
+          };
+        }
+
+        await updateMut.mutateAsync(fullPayload);
+
+        if (preview?.enabled) {
+          const cascade = getCascadeLoadPatches(
+            dayExercises,
+            preview.slots,
+            preview.inputs,
+            row.id,
+            payload,
+          );
+          for (const [depId, patch] of cascade) {
+            await programService.updateExerciseRow(programId, depId, patch);
+          }
+          if (cascade.size > 0) onRefresh();
+        }
+      } catch {
+        toast.error("Failed to update exercise row");
+      }
+    })();
   }
 
   const previewRow = preview?.enabled
