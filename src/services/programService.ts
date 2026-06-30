@@ -204,6 +204,17 @@ export const programService = {
     await api.delete(`/admin/programs/${programId}/exercises/${rowId}`);
   },
 
+  async cloneExerciseRow(
+    programId: string,
+    rowId: string,
+  ): Promise<ExerciseRow> {
+    const { data } = await api.post(
+      `/admin/programs/${programId}/exercises/${rowId}/clone`,
+      {},
+    );
+    return data.data ?? data;
+  },
+
   // ---- Exercise sets (per-set prescription) --------------------------------
   async listExerciseSets(
     programId: string,

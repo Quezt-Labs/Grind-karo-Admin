@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, Pencil, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 import { TableCell, TableRow } from "@/components/ui/ShadTable";
@@ -81,6 +81,15 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
     onError: () => toast.error("Failed to update exercise row"),
   });
 
+  const cloneMut = useMutation({
+    mutationFn: () => programService.cloneExerciseRow(programId, row.id),
+    onSuccess: () => {
+      toast.success("Exercise cloned");
+      onRefresh();
+    },
+    onError: () => toast.error("Failed to clone exercise"),
+  });
+
   function patchPrescription(payload: UpdateExerciseRowPayload) {
     void (async () => {
       try {
@@ -144,7 +153,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   const targetRpeInput = row.targetRpe ?? "";
   const percentInput = percentBasisToInput(row.percentOneRm);
   const loadInput = fixedLoad != null ? String(fixedLoad) : "";
-  const isSaving = updateMut.isPending;
+  const isSaving = updateMut.isPending || cloneMut.isPending;
   const hasNotes =
     (previewRow?.loadNote ?? row.loadNote) || (previewRow?.notes ?? row.notes);
   const isAccessory = row.category === "ACCESSORY" || row.category === "OTHER";
@@ -392,6 +401,14 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
               )}
             </button>
             <div className="flex items-center gap-0.5 opacity-100 sm:opacity-60 sm:group-hover:opacity-100">
+              <button
+                onClick={() => cloneMut.mutate()}
+                disabled={cloneMut.isPending}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-600 dark:hover:text-primary-400 disabled:opacity-50"
+                title="Clone exercise"
+              >
+                <Copy className={compact ? "h-3 w-3" : "h-4 w-4"} />
+              </button>
               <button
                 onClick={onEdit}
                 className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-200"
