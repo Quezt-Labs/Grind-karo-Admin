@@ -40,8 +40,12 @@ function assertPresignContentType(file: File): string {
   return contentType;
 }
 
+// api.grindkaro.in nginx client_max_body_size is 1 MB — buffered POST /upload
+// returns 413 above that. Presign bypasses the proxy (browser → S3).
+const BUFFERED_UPLOAD_MAX_BYTES = 900 * 1024;
+
 export const uploadService = {
-  /** Small files (images, CSVs, PDFs ≤ a few MB) — server-buffered. */
+  /** Small files only (≤ ~900 KB) — server-buffered. Prefer smartUpload. */
   async upload(file: File): Promise<UploadResponse> {
     const contentType = resolvePresignContentType(file);
     const logBase: UploadLogContext = {
@@ -54,9 +58,7 @@ export const uploadService = {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const { data } = await api.post("/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const { data } = await api.post("/upload", formData);
       return data.data ?? data;
     } catch (error) {
       logUploadFailure(logBase, error);
@@ -157,7 +159,7 @@ export const uploadService = {
     const usePresign =
       contentType.startsWith("video/") ||
       contentType.startsWith("audio/") ||
-      file.size > 4 * 1024 * 1024;
+      file.size > BUFFERED_UPLOAD_MAX_BYTES;
 
     if (usePresign) {
       return this.presignUpload(file, onProgress, mediaType);

@@ -35,8 +35,8 @@ export function ImageUploadField({
 
     setIsUploading(true);
     try {
-      const result = await uploadService.upload(file);
-      onImageChange(result.url);
+      const url = await uploadService.smartUpload(file);
+      onImageChange(url);
       toast.success("Image uploaded");
     } catch {
       toast.error("Failed to upload image");
