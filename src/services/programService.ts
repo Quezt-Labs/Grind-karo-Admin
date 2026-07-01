@@ -215,6 +215,17 @@ export const programService = {
     return data.data ?? data;
   },
 
+  async reorderDayExercises(
+    programId: string,
+    dayId: string,
+    orderedIds: string[],
+  ): Promise<void> {
+    await api.post(
+      `/admin/programs/${programId}/days/${dayId}/exercises/reorder`,
+      { orderedIds },
+    );
+  },
+
   // ---- Exercise sets (per-set prescription) --------------------------------
   async listExerciseSets(
     programId: string,

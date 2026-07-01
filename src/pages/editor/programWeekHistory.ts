@@ -42,7 +42,7 @@ export function getPriorWeekExercise(
   }
 
   const exercises = [...day.exercises].sort(
-    (a, b) => a.sortOrder - b.sortOrder,
+    (a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id),
   );
   return exercises[slotOrIndex] ?? null;
 }

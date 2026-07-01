@@ -7,6 +7,10 @@ import {
   computeDayPreview,
   type PreviewInputs,
 } from "@/utils/programPreviewCompute";
+import {
+  sortDayExercises,
+  nextExerciseSortOrder,
+} from "@/utils/exerciseSortOrder";
 
 export type AutoLoadPatch = Pick<
   UpdateExerciseRowPayload,
@@ -71,7 +75,7 @@ export function rowIdsNeedingLoadSync(
   dayExercises: ExerciseRow[],
   triggerRowId: string,
 ): string[] {
-  const sorted = [...dayExercises].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sorted = sortDayExercises(dayExercises);
   const triggerIdx = sorted.findIndex((r) => r.id === triggerRowId);
   if (triggerIdx < 0) return [triggerRowId];
 
@@ -200,7 +204,7 @@ export function autoLoadPatchForFormRow(
   const virtualRow: ExerciseRow = {
     id: virtualId,
     dayId: "",
-    sortOrder: payload.sortOrder ?? dayExercises.length,
+    sortOrder: payload.sortOrder ?? nextExerciseSortOrder(dayExercises),
     category: payload.category,
     exerciseId: payload.exerciseId ?? null,
     exerciseNameOverride: payload.exerciseNameOverride ?? null,

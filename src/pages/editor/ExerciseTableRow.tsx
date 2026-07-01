@@ -1,6 +1,14 @@
-import { memo, useState } from "react";
+import { memo, useState, type CSSProperties } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Copy, Pencil, Trash2 } from "lucide-react";
+import type { DraggableAttributes } from "@dnd-kit/core";
+import {
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  GripVertical,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 import { TableCell, TableRow } from "@/components/ui/ShadTable";
@@ -35,7 +43,16 @@ import {
   withAutoComputedLoad,
 } from "@/utils/programEditorLoadSync";
 
-interface ExerciseTableRowProps {
+export interface ExerciseRowSortableProps {
+  setNodeRef: (node: HTMLTableRowElement | null) => void;
+  style: CSSProperties;
+  attributes: DraggableAttributes;
+  listeners?: Record<string, unknown>;
+  isDragging: boolean;
+  disabled?: boolean;
+}
+
+export interface ExerciseTableRowProps {
   programId: string;
   row: ExerciseRow;
   dayExercises: ExerciseRow[];
@@ -46,6 +63,7 @@ interface ExerciseTableRowProps {
   dayNumber?: number;
   priorWeekColumns?: PriorWeekColumn[];
   tableColSpan?: number;
+  sortable?: ExerciseRowSortableProps;
   onEdit: () => void;
   onDelete: () => void;
   onRefresh: () => void;
@@ -62,6 +80,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   dayNumber,
   priorWeekColumns,
   tableColSpan = 9,
+  sortable,
   onEdit,
   onDelete,
   onRefresh,
@@ -161,6 +180,8 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   return (
     <>
       <TableRow
+        ref={sortable?.setNodeRef}
+        style={sortable?.style}
         className={cn(
           "group border-l-3 transition-colors",
           CATEGORY_BORDER[row.category] || CATEGORY_BORDER.OTHER,
@@ -168,19 +189,40 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             ? "bg-white hover:bg-gray-50/80 dark:bg-gray-800 dark:hover:bg-gray-750"
             : "hover:bg-blue-50/30 dark:bg-gray-800/40 dark:hover:bg-gray-750",
           "border-t border-gray-200 dark:border-gray-700/60",
+          sortable?.isDragging &&
+            "relative z-20 bg-white shadow-lg ring-2 ring-primary-300/60 dark:bg-gray-800 dark:ring-primary-700/50",
         )}
       >
-        <TableCell className={cn(cellPy, "pl-2")}>
-          <span
-            className={cn(
-              "font-mono text-xs",
-              isAccessory
-                ? "text-gray-400 dark:text-gray-500"
-                : "text-gray-500 dark:text-gray-400",
+        <TableCell className={cn(cellPy, "pl-1")}>
+          <div className="flex items-center gap-0.5">
+            {sortable && (
+              <button
+                type="button"
+                className={cn(
+                  "touch-none rounded p-0.5 text-gray-400 transition-colors",
+                  sortable.disabled
+                    ? "cursor-not-allowed opacity-40"
+                    : "cursor-grab hover:bg-gray-100 hover:text-gray-600 active:cursor-grabbing dark:hover:bg-gray-700 dark:hover:text-gray-200",
+                )}
+                aria-label="Drag to reorder"
+                disabled={sortable.disabled}
+                {...sortable.attributes}
+                {...sortable.listeners}
+              >
+                <GripVertical className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+              </button>
             )}
-          >
-            {index + 1}
-          </span>
+            <span
+              className={cn(
+                "min-w-[1ch] font-mono text-xs tabular-nums",
+                isAccessory
+                  ? "text-gray-400 dark:text-gray-500"
+                  : "text-gray-500 dark:text-gray-400",
+              )}
+            >
+              {index + 1}
+            </span>
+          </div>
         </TableCell>
         <TableCell className={cn(cellPy, "pl-1")}>
           <div className="flex items-center gap-1">

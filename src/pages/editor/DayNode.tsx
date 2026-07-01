@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Sun } from "lucide-react";
 import type { ProgramTree, ExerciseRow } from "@/types/programs";
 import { TreeNodeActions } from "./TreeNodeActions";
 import { ExerciseTable } from "./ExerciseTable";
+import { nextExerciseSortOrder } from "@/utils/exerciseSortOrder";
 
 type DayTree = ProgramTree["blocks"][number]["weeks"][number]["days"][number];
 
@@ -40,9 +41,7 @@ export const DayNode = memo(function DayNode({
   onRefresh,
 }: DayNodeProps) {
   const nextSortOrder =
-    day.exercises.length > 0
-      ? Math.max(...day.exercises.map((e) => e.sortOrder)) + 1
-      : 0;
+    day.exercises.length > 0 ? nextExerciseSortOrder(day.exercises) : 0;
 
   return (
     <div className="flex w-64 min-w-64 shrink-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800">

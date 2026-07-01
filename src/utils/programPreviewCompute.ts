@@ -10,6 +10,7 @@ import {
   mround,
   type E1rmInputs,
 } from "@/utils/programFormulas";
+import { sortDayExercises } from "@/utils/exerciseSortOrder";
 
 export interface PreviewInputs {
   squat: number;
@@ -141,7 +142,7 @@ export function computeDayPreview(
   const computedById = new Map<string, number>();
   const result = new Map<string, PreviewRowState>();
 
-  const sorted = [...exercises].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sorted = sortDayExercises(exercises);
 
   for (const row of sorted) {
     const fields = resolvePreviewFields(row, slots, inputs.movementSelections);

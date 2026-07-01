@@ -13,6 +13,7 @@ import type {
   DayTree,
 } from "./programStructureUtils";
 import { computeBlockDateRange, formatWeekDateRange } from "@/utils/weekDates";
+import { nextExerciseSortOrder } from "@/utils/exerciseSortOrder";
 
 export interface ProgramStructureMainProps {
   programId: string;
@@ -89,7 +90,7 @@ export function ProgramStructureMain({
 
   const nextSortOrder =
     selection && selection.day.exercises.length > 0
-      ? Math.max(...selection.day.exercises.map((e) => e.sortOrder)) + 1
+      ? nextExerciseSortOrder(selection.day.exercises)
       : 0;
 
   return (
