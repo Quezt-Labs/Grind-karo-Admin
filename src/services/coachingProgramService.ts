@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { CLONE_STRUCTURE_TIMEOUT_MS } from "./api";
 
 export interface CoachingProgramRecord {
   program: {
@@ -48,10 +48,14 @@ export const coachingProgramService = {
     sourceProgramId: string,
   ): Promise<{ id: string }> {
     return api
-      .post<{ id: string }>(`/admin/users/${userId}/coaching-program`, {
-        mode: "clone",
-        sourceProgramId,
-      })
+      .post<{ id: string }>(
+        `/admin/users/${userId}/coaching-program`,
+        {
+          mode: "clone",
+          sourceProgramId,
+        },
+        { timeout: CLONE_STRUCTURE_TIMEOUT_MS },
+      )
       .then((r) => r.data);
   },
 
@@ -60,10 +64,14 @@ export const coachingProgramService = {
     sourceProgramId: string,
   ): Promise<{ id: string }> {
     return api
-      .post<{ id: string }>(`/admin/users/${userId}/coaching-program/replace`, {
-        mode: "clone",
-        sourceProgramId,
-      })
+      .post<{ id: string }>(
+        `/admin/users/${userId}/coaching-program/replace`,
+        {
+          mode: "clone",
+          sourceProgramId,
+        },
+        { timeout: CLONE_STRUCTURE_TIMEOUT_MS },
+      )
       .then((r) => r.data);
   },
 

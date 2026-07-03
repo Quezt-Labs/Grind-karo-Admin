@@ -25,7 +25,7 @@ export function CloneTemplateModal({
   const [selectedId, setSelectedId] = useState("");
   const [confirmReplace, setConfirmReplace] = useState(false);
 
-  const { data: templates = [], isLoading } = useQuery({
+  const { data: templates = [], isLoading, isError } = useQuery({
     queryKey: ["program-templates"],
     queryFn: programTemplateService.getAll,
   });
@@ -70,6 +70,19 @@ export function CloneTemplateModal({
           <div className="flex justify-center py-8">
             <Spinner />
           </div>
+        ) : isError ? (
+          <p className="text-sm text-destructive">
+            Failed to load templates. Refresh and try again.
+          </p>
+        ) : cloneMut.isPending ? (
+          <div className="space-y-3 py-6 text-center">
+            <Spinner className="mx-auto" />
+            <p className="text-sm font-medium">Copying program structure…</p>
+            <p className="text-sm text-muted-foreground">
+              Large templates can take up to a minute. Please keep this window
+              open.
+            </p>
+          </div>
         ) : (
           <div className="space-y-4">
             <Select
@@ -81,6 +94,7 @@ export function CloneTemplateModal({
               }))}
               value={selectedId}
               onValueChange={setSelectedId}
+              disabled={cloneMut.isPending}
               placeholder={
                 templateOptions.length === 0
                   ? "No templates found"

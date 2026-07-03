@@ -15,6 +15,9 @@ const api = axios.create({
   timeout: 15000,
 });
 
+/** Deep program tree copies can take longer than the default axios timeout. */
+export const CLONE_STRUCTURE_TIMEOUT_MS = 120_000;
+
 api.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token;

@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { CLONE_STRUCTURE_TIMEOUT_MS } from "./api";
 
 export interface ProgramTemplate {
   id: string;
@@ -47,6 +47,7 @@ export const programTemplateService = {
     const { data } = await api.post(
       "/admin/program-templates/from-source",
       payload,
+      { timeout: CLONE_STRUCTURE_TIMEOUT_MS },
     );
     return data.data ?? data;
   },
