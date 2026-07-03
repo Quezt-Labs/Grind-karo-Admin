@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { CLONE_STRUCTURE_TIMEOUT_MS } from "./api";
 import type {
   Program,
   CreateProgramPayload,
@@ -101,6 +101,7 @@ export const programService = {
     const { data } = await api.post(
       `/admin/programs/${programId}/blocks/${blockId}/clone`,
       {},
+      { timeout: CLONE_STRUCTURE_TIMEOUT_MS },
     );
     return data.data ?? data;
   },
@@ -138,6 +139,7 @@ export const programService = {
     const { data } = await api.post(
       `/admin/programs/${programId}/weeks/${weekId}/clone`,
       {},
+      { timeout: CLONE_STRUCTURE_TIMEOUT_MS },
     );
     return data.data ?? data;
   },
