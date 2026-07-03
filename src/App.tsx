@@ -110,7 +110,10 @@ export default function App() {
                     path="/program-templates"
                     element={<ProgramTemplatesPage />}
                   />
-                  <Route path="/programs/:id" element={<ProgramDetailPage />} />
+                  <Route
+                    path="/programs/:programKey"
+                    element={<ProgramDetailPage />}
+                  />
                   <Route path="/exercises" element={<ExercisesPage />} />
                   <Route path="/plans" element={<PlansPage />} />
                   <Route path="/plans/:id" element={<PlanDetailPage />} />

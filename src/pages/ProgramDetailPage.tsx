@@ -25,10 +25,14 @@ import { AthleteSelectionsPanel } from "./editor/AthleteSelectionsPanel";
 import { ProgramAddonsPanel } from "@/components/programs/ProgramAddonsPanel";
 import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
 
+import { useResolveProgramKey } from "@/hooks/useResolveProgramKey";
+
 /* ─── Main Page ───────────────────────────────────────────────────────── */
 
 export function ProgramDetailPage() {
-  const { id: programId } = useParams<{ id: string }>();
+  const { programKey } = useParams<{ programKey: string }>();
+  const { programId, isResolving, resolveError } =
+    useResolveProgramKey(programKey);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -72,6 +76,18 @@ export function ProgramDetailPage() {
     if (deleteTarget.type === "resource") {
       deleteResourceMutation.mutate(deleteTarget.id);
     }
+  }
+
+  if (isResolving) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (resolveError) {
+    return <ErrorAlert message={resolveError} />;
   }
 
   if (isLoading) {
