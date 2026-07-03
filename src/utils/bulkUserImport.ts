@@ -2,6 +2,7 @@ import type { CoachingPlan } from "@/types/program";
 import type { Program } from "@/types/programs";
 import type { AssistantCoach } from "@/types/athleteAssignment";
 import type { CreateAdminUserPayload } from "@/types/user";
+import { planGrantsFormCheck } from "@/utils/coachingPlanCapabilities";
 import {
   addMonthsToDateInput,
   defaultFeeCoversMonths,
@@ -26,7 +27,7 @@ export type BulkImportParseResult = {
 };
 
 export const BULK_USER_CSV_TEMPLATE = `email,name,role,password,coaching_plan_slug,coaching_amount,coaching_fee_months,coaching_start_date,coaching_end_date,program_slug,program_amount,program_start_date,assistant_coach_email,personal_coaching,form_check_enabled
-athlete@example.com,Rahul Sharma,USER,,mega,14999,3,2026-06-01,2026-09-01,,,,coach@example.com,true,false`;
+athlete@example.com,Rahul Sharma,USER,,mega,14999,3,2026-06-01,2026-09-01,,,,coach@example.com,true,true`;
 
 function normalizeKey(key: string): string {
   return key.trim().toLowerCase().replace(/\s+/g, "_");
@@ -260,10 +261,11 @@ function mapRowToPayload(
     const formCheck = parseBool(
       rowValue(row, "form_check_enabled", "form_check"),
     );
+    const defaultFormCheck = plan ? planGrantsFormCheck(plan.slug) : false;
     payload.assignment = {
       assistantCoachId: coach.id,
       personalCoachingEnabled: personal ?? true,
-      formCheckEnabled: formCheck ?? false,
+      formCheckEnabled: formCheck ?? defaultFormCheck,
     };
   }
 

@@ -19,6 +19,7 @@ import type { UpsertAthleteAssignmentPayload } from "@/types/athleteAssignment";
 
 interface AthleteAssignmentSectionProps {
   athleteId: string;
+  defaultFormCheckEnabled?: boolean;
 }
 
 interface AssignmentFormProps {
@@ -27,12 +28,14 @@ interface AssignmentFormProps {
     ReturnType<typeof athleteAssignmentService.getByAthleteId>
   >;
   coaches: Awaited<ReturnType<typeof assistantCoachService.list>>;
+  defaultFormCheckEnabled: boolean;
 }
 
 function AssignmentForm({
   athleteId,
   assignment,
   coaches,
+  defaultFormCheckEnabled,
 }: AssignmentFormProps) {
   const queryClient = useQueryClient();
   const [assistantCoachId, setAssistantCoachId] = useState(
@@ -42,7 +45,7 @@ function AssignmentForm({
     assignment?.personalCoachingEnabled ?? false,
   );
   const [formCheckSupport, setFormCheckSupport] = useState(
-    assignment?.formCheckEnabled ?? false,
+    assignment?.formCheckEnabled ?? defaultFormCheckEnabled,
   );
 
   const assignmentLabel = useMemo(() => {
@@ -184,6 +187,7 @@ function ToggleRow({
 
 export function AthleteAssignmentSection({
   athleteId,
+  defaultFormCheckEnabled = false,
 }: AthleteAssignmentSectionProps) {
   const { data: coaches = [], isLoading: coachesLoading } = useQuery({
     queryKey: ["assistant-coaches"],
@@ -225,6 +229,7 @@ export function AthleteAssignmentSection({
           athleteId={athleteId}
           assignment={assignment ?? null}
           coaches={coaches}
+          defaultFormCheckEnabled={defaultFormCheckEnabled}
         />
       )}
     </div>

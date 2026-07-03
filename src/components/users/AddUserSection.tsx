@@ -23,6 +23,7 @@ import {
   type FeeCoversMonths,
 } from "@/utils/coachingBilling";
 import type { CreateAdminUserPayload } from "@/types/user";
+import { planGrantsFormCheck } from "@/utils/coachingPlanCapabilities";
 
 type Props = {
   onClose: () => void;
@@ -246,6 +247,9 @@ export function AddUserSection({ onClose }: Props) {
                     setCustomPrice("");
                     const plan = plans.find((p) => p.id === next);
                     setBilling(initialCoachingBillingState(plan));
+                    setFormCheckSupport(
+                      plan ? planGrantsFormCheck(plan.slug) : false,
+                    );
                   }}
                 >
                   <SelectTrigger>

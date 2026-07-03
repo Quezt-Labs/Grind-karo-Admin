@@ -44,6 +44,7 @@ import {
   type AthleteActivitySection,
 } from "@/components/users/athleteActivitySections";
 import { cn } from "@/utils/cn";
+import { planGrantsFormCheck } from "@/utils/coachingPlanCapabilities";
 import type { Purchase, FormCheckQuota } from "@/types/user";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
@@ -220,6 +221,13 @@ export function UserDetailPage() {
     purchases.some(
       (p) => p.kind === "coaching_subscription" && p.totalAmount > 0,
     );
+
+  const defaultFormCheckForAssignment = purchases.some(
+    (p) =>
+      p.kind === "coaching_subscription" &&
+      p.status === "ACTIVE" &&
+      planGrantsFormCheck(p.planSlug),
+  );
 
   const mainTabs: {
     key: UserDetailTab;
@@ -433,7 +441,10 @@ export function UserDetailPage() {
             onUpdated={invalidatePurchases}
           />
           {isAdmin && isPurchaser && (
-            <AthleteAssignmentSection athleteId={user.id} />
+            <AthleteAssignmentSection
+              athleteId={user.id}
+              defaultFormCheckEnabled={defaultFormCheckForAssignment}
+            />
           )}
           <UserPushPanel userId={user.id} />
         </div>
