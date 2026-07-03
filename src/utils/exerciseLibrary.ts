@@ -68,3 +68,54 @@ export function countExercises(grouped: ExercisesGrouped): number {
     0,
   );
 }
+
+export function findExerciseById(
+  grouped: ExercisesGrouped | undefined,
+  id: string,
+): Exercise | undefined {
+  if (!grouped || !id) return undefined;
+  for (const cat of EXERCISE_CATEGORY_ORDER) {
+    const match = grouped.categories[cat]?.find((e) => e.id === id);
+    if (match) return match;
+  }
+  return undefined;
+}
+
+export type ExerciseLibraryCategoryFilter = ExerciseCategory | "ALL";
+
+/** Filter grouped library by search term and optional category tab. */
+export function filterGroupedExercisesForPicker(
+  grouped: ExercisesGrouped,
+  opts: {
+    search?: string;
+    category?: ExerciseLibraryCategoryFilter;
+    activeOnly?: boolean;
+  },
+): ExercisesGrouped {
+  const term = opts.search?.trim().toLowerCase() ?? "";
+  const activeOnly = opts.activeOnly ?? true;
+  const categoryFilter = opts.category ?? "ALL";
+
+  const matches = (exercise: Exercise) => {
+    if (activeOnly && !exercise.isActive) return false;
+    if (term) {
+      const haystack = `${exercise.name} ${exercise.slug}`.toLowerCase();
+      if (!haystack.includes(term)) return false;
+    }
+    return true;
+  };
+
+  const categories = {} as Record<ExerciseCategory, Exercise[]>;
+  for (const cat of EXERCISE_CATEGORY_ORDER) {
+    if (categoryFilter !== "ALL" && categoryFilter !== cat) {
+      categories[cat] = [];
+      continue;
+    }
+    categories[cat] = (grouped.categories[cat] ?? []).filter(matches);
+  }
+  return { categories };
+}
+
+export function countFilteredExercises(grouped: ExercisesGrouped): number {
+  return countExercises(grouped);
+}

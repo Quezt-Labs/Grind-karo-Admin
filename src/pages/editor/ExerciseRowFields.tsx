@@ -10,12 +10,17 @@ import { Input } from "@/components/ui/Input";
 import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { ExerciseLibraryPicker } from "@/components/programs/ExerciseLibraryPicker";
 import {
   CATEGORY_OPTIONS,
   LOAD_COMPUTATION_OPTIONS,
 } from "./exerciseRowSchema";
 import type { ExerciseRowFormData } from "./exerciseRowSchema";
-import type { ExerciseRow, MovementSlot } from "@/types/programs";
+import type {
+  ExerciseRow,
+  ExercisesGrouped,
+  MovementSlot,
+} from "@/types/programs";
 
 interface ExerciseRowFieldsProps {
   register: UseFormRegister<ExerciseRowFormData>;
@@ -23,7 +28,7 @@ interface ExerciseRowFieldsProps {
   watch: UseFormWatch<ExerciseRowFormData>;
   setValue: UseFormSetValue<ExerciseRowFormData>;
   errors: FieldErrors<ExerciseRowFormData>;
-  exerciseOptions: { value: string; label: string }[];
+  groupedExercises?: ExercisesGrouped;
   movementSlots?: MovementSlot[];
   dayExercises?: ExerciseRow[];
   currentRowId?: string;
@@ -35,7 +40,7 @@ export function ExerciseRowFields({
   watch,
   setValue,
   errors,
-  exerciseOptions,
+  groupedExercises,
   movementSlots = [],
   dayExercises = [],
   currentRowId,
@@ -77,21 +82,21 @@ export function ExerciseRowFields({
         control={control}
         name="exerciseId"
         render={({ field }) => (
-          <Select
+          <ExerciseLibraryPicker
             id="row-exercise"
             label="Exercise (from library)"
             labelInfo="Exercise library se pick karo jab ek clear movement ho. Slash/combo options (jaise Lunges/BSS) ke liye neeche manual name likho."
-            options={[
-              { value: "", label: "— Manual name only —" },
-              ...exerciseOptions,
-            ]}
+            groupedExercises={groupedExercises}
             value={field.value ?? ""}
-            onValueChange={(value) => {
-              field.onChange(value);
-              if (value) setValue("exerciseNameOverride", "");
+            onValueChange={(next) => {
+              field.onChange(next);
+              if (next) setValue("exerciseNameOverride", "");
+            }}
+            onExercisePick={(exercise) => {
+              setValue("category", exercise.category);
             }}
             onBlur={field.onBlur}
-            placeholder="Select exercise..."
+            placeholder="Search squat, bench, deadlift…"
           />
         )}
       />

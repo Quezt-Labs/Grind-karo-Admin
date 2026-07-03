@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/Button";
 import { CheckboxField } from "@/components/ui/CheckboxField";
 import { FormModal } from "@/components/ui/FormModal";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { ExerciseLibraryPicker } from "@/components/programs/ExerciseLibraryPicker";
 import { movementSlotService } from "@/services/movementSlotService";
 import { exerciseService } from "@/services/exerciseService";
-import { flattenExercises } from "@/utils/exerciseLibrary";
+import { findExerciseById } from "@/utils/exerciseLibrary";
 import type { MovementOption } from "@/types/programs";
 
 const schema = z.object({
@@ -41,16 +41,6 @@ export function OptionFormModal({
     queryKey: ["exercises"],
     queryFn: exerciseService.getAll,
   });
-
-  const exerciseOptions = (
-    groupedExercises ? flattenExercises(groupedExercises) : []
-  )
-    .filter((e) => e.isActive)
-    .map((e) => ({ value: e.id, label: `${e.name} (${e.category})` }));
-
-  const activeExercises = groupedExercises
-    ? flattenExercises(groupedExercises).filter((e) => e.isActive)
-    : [];
 
   const {
     register,
@@ -107,10 +97,9 @@ export function OptionFormModal({
     else createMut.mutate(data);
   }
 
-  // Auto-fill exercise name when selecting from library
   function handleExerciseChange(exerciseId: string) {
     setValue("exerciseId", exerciseId);
-    const ex = activeExercises.find((item) => item.id === exerciseId);
+    const ex = findExerciseById(groupedExercises, exerciseId);
     if (ex) setValue("exerciseName", ex.name);
   }
 
@@ -125,13 +114,11 @@ export function OptionFormModal({
           control={control}
           name="exerciseId"
           render={({ field }) => (
-            <Select
+            <ExerciseLibraryPicker
               id="opt-exercise"
               label="Exercise (from library)"
-              options={[
-                { value: "", label: "— Manual entry —" },
-                ...exerciseOptions,
-              ]}
+              groupedExercises={groupedExercises}
+              manualOptionLabel="— Manual entry —"
               value={field.value ?? ""}
               onValueChange={(value) => {
                 field.onChange(value);

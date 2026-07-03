@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/Button";
 import { FormModal } from "@/components/ui/FormModal";
 import { programService } from "@/services/programService";
 import { exerciseService } from "@/services/exerciseService";
-import { flattenExercises } from "@/utils/exerciseLibrary";
 import type { ExerciseRow, MovementSlot } from "@/types/programs";
 import { ExerciseRowFields } from "./ExerciseRowFields";
 import {
@@ -63,12 +62,6 @@ export function ExerciseRowFormModal({
     queryFn: exerciseService.getAll,
   });
 
-  const exerciseOptions = (
-    groupedExercises ? flattenExercises(groupedExercises) : []
-  )
-    .filter((e) => e.isActive)
-    .map((e) => ({ value: e.id, label: `${e.name} (${e.category})` }));
-
   const {
     register,
     handleSubmit,
@@ -123,7 +116,7 @@ export function ExerciseRowFormModal({
           watch={watch}
           setValue={setValue}
           errors={errors}
-          exerciseOptions={exerciseOptions}
+          groupedExercises={groupedExercises}
           movementSlots={movementSlots}
           dayExercises={dayExercises}
           currentRowId={row?.id}
