@@ -6,7 +6,7 @@ import { FormModal } from "@/components/ui/FormModal";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
-import { programService } from "@/services/programService";
+import { programTemplateService } from "@/services/programTemplateService";
 import { coachingProgramService } from "@/services/coachingProgramService";
 
 interface CloneTemplateModalProps {
@@ -25,13 +25,13 @@ export function CloneTemplateModal({
   const [selectedId, setSelectedId] = useState("");
   const [confirmReplace, setConfirmReplace] = useState(false);
 
-  const { data: programs = [], isLoading } = useQuery({
-    queryKey: ["admin-programs-list"],
-    queryFn: () => programService.getAll(),
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ["program-templates"],
+    queryFn: programTemplateService.getAll,
   });
 
-  const retailPrograms = programs.filter(
-    (p) => p.kind !== "COACHING" && p.isActive,
+  const templateOptions = [...templates].sort(
+    (a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name),
   );
 
   const cloneMut = useMutation({
@@ -74,15 +74,25 @@ export function CloneTemplateModal({
           <div className="space-y-4">
             <Select
               id="template-program"
-              label="Retail program template"
-              options={retailPrograms.map((p) => ({
+              label="Program template"
+              options={templateOptions.map((p) => ({
                 value: p.id,
                 label: p.name,
               }))}
               value={selectedId}
               onValueChange={setSelectedId}
-              placeholder="Select program…"
+              placeholder={
+                templateOptions.length === 0
+                  ? "No templates found"
+                  : "Select template…"
+              }
             />
+            {templateOptions.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Create templates under Programs → Templates, then clone them
+                onto athletes here.
+              </p>
+            )}
             <div className="flex justify-end gap-2">
               <Button variant="secondary" type="button" onClick={onClose}>
                 Cancel

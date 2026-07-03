@@ -42,6 +42,7 @@ import {
   ProgramPurchasesPage,
   ProgramReviewsPage,
   ProgramsPage,
+  ProgramTemplatesPage,
   ReviewsPage,
   SubscriptionsPage,
   TestingPage,
@@ -105,6 +106,10 @@ export default function App() {
 
                 <Route element={<StaffRoute />}>
                   <Route path="/programs" element={<ProgramsPage />} />
+                  <Route
+                    path="/program-templates"
+                    element={<ProgramTemplatesPage />}
+                  />
                   <Route path="/programs/:id" element={<ProgramDetailPage />} />
                   <Route path="/exercises" element={<ExercisesPage />} />
                   <Route path="/plans" element={<PlansPage />} />

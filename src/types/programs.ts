@@ -52,7 +52,7 @@ export interface Program {
   highlights: string[];
   displayOrder: number;
   isActive: boolean;
-  kind?: "RETAIL" | "COACHING";
+  kind?: "RETAIL" | "COACHING" | "TEMPLATE";
   assignedUserId?: string | null;
   /** Only present in admin endpoints (GET /admin/programs, /admin/programs/:id) */
   googleSpreadsheetId?: string | null;

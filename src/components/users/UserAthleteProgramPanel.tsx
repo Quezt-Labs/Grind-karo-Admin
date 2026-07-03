@@ -201,7 +201,7 @@ export function UserAthleteProgramPanel({
           No program for {userName} yet
         </p>
         <p className="mt-1 text-xs text-gray-500">
-          Clone from a retail template or start blank in the admin editor.
+          Clone from a program template or start blank in the admin editor.
         </p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <Button

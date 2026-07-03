@@ -49,6 +49,10 @@ export const ProgramsPage = lazyPage(
   () => import("@/pages/ProgramsPage"),
   "ProgramsPage",
 );
+export const ProgramTemplatesPage = lazyPage(
+  () => import("@/pages/ProgramTemplatesPage"),
+  "ProgramTemplatesPage",
+);
 export const ProgramAddonsPage = lazyPage(
   () => import("@/pages/ProgramAddonsPage"),
   "ProgramAddonsPage",

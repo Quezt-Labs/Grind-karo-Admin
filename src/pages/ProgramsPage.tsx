@@ -22,6 +22,7 @@ import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
 import { programService } from "@/services/programService";
+import { programTemplateService } from "@/services/programTemplateService";
 import type { Program } from "@/types/programs";
 
 function formatINR(rupees: number): string {
@@ -64,13 +65,25 @@ export function ProgramsPage() {
     },
   });
 
+  const promoteTemplateMutation = useMutation({
+    mutationFn: (id: string) => programTemplateService.promoteFromProgram(id),
+    onSuccess: (template) => {
+      toast.success(`"${template.name}" is now a coaching template`);
+      queryClient.invalidateQueries({ queryKey: ["programs"] });
+      queryClient.invalidateQueries({ queryKey: ["program-templates"] });
+    },
+    onError: () => toast.error("Failed to save as template"),
+  });
+
   const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
   }, []);
 
   const statusCounts = useMemo(() => {
     if (!programs) return { all: 0, active: 0, inactive: 0 };
-    const retail = programs.filter((p) => p.kind !== "COACHING");
+    const retail = programs.filter(
+      (p) => p.kind === "RETAIL" || p.kind == null,
+    );
     return {
       all: retail.length,
       active: retail.filter((p) => p.isActive).length,
@@ -80,7 +93,7 @@ export function ProgramsPage() {
 
   const filtered = useMemo(() => {
     if (!programs) return [];
-    let list = programs.filter((p) => p.kind !== "COACHING");
+    let list = programs.filter((p) => p.kind === "RETAIL" || p.kind == null);
     if (statusFilter === "active") list = list.filter((p) => p.isActive);
     else if (statusFilter === "inactive")
       list = list.filter((p) => !p.isActive);
@@ -194,6 +207,13 @@ export function ProgramsPage() {
               onDelete={() => setDeleteTarget(program)}
               onOpen={() => navigate(`/programs/${program.id}`)}
               onBuild={() => navigate(`/programs/${program.slug}/editor`)}
+              onPromoteToTemplate={() =>
+                promoteTemplateMutation.mutate(program.id)
+              }
+              isPromoting={
+                promoteTemplateMutation.isPending &&
+                promoteTemplateMutation.variables === program.id
+              }
             />
           ))}
         </div>
@@ -236,6 +256,8 @@ interface ProgramCardProps {
   onDelete: () => void;
   onOpen: () => void;
   onBuild: () => void;
+  onPromoteToTemplate: () => void;
+  isPromoting: boolean;
 }
 
 function ProgramCard({
@@ -244,6 +266,8 @@ function ProgramCard({
   onDelete,
   onOpen,
   onBuild,
+  onPromoteToTemplate,
+  isPromoting,
 }: ProgramCardProps) {
   const hasDiscount =
     program.salePrice !== null && program.salePrice < program.regularPrice;
@@ -376,6 +400,14 @@ function ProgramCard({
           <LayoutList className="h-3.5 w-3.5" />
           Build
         </Button>
+        <button
+          onClick={onPromoteToTemplate}
+          disabled={isPromoting}
+          className="rounded-lg p-2 text-gray-400 hover:bg-primary-50 hover:text-primary-600 disabled:opacity-50 dark:hover:bg-primary-900/20"
+          title="Save as coaching template"
+        >
+          <LayoutList className="h-3.5 w-3.5" />
+        </button>
         <button
           onClick={onEdit}
           className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"

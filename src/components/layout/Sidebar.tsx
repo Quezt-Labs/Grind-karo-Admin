@@ -26,6 +26,7 @@ import {
   MapPin,
   Megaphone,
   PlayCircle,
+  LayoutList,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -72,6 +73,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Programs",
     items: [
       { path: "/programs", label: "Programs", icon: BookOpen },
+      { path: "/program-templates", label: "Templates", icon: LayoutList },
       { path: "/program-books", label: "Program Books", icon: FileText },
       { path: "/program-addons", label: "Program Add-ons", icon: Puzzle },
       {
@@ -128,6 +130,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     items: [
       { path: "/plans", label: "Coaching Plans", icon: CreditCard },
       { path: "/programs", label: "Programs", icon: BookOpen },
+      { path: "/program-templates", label: "Templates", icon: LayoutList },
       { path: "/exercises", label: "Exercises", icon: Dumbbell },
     ],
   },
