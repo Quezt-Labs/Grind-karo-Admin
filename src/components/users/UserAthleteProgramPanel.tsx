@@ -77,9 +77,9 @@ export function UserAthleteProgramPanel({
   const profileMut = useMutation({
     mutationFn: () =>
       coachingProgramService.updateProfile(userId, data!.program.id, {
-        squatOneRm: squat ? parseInt(squat, 10) : null,
-        benchOneRm: bench ? parseInt(bench, 10) : null,
-        deadliftOneRm: deadlift ? parseInt(deadlift, 10) : null,
+        squatOneRm: squat ? parseFloat(squat) : null,
+        benchOneRm: bench ? parseFloat(bench) : null,
+        deadliftOneRm: deadlift ? parseFloat(deadlift) : null,
       }),
     onSuccess: () => {
       toast.success("Athlete profile updated");
