@@ -22,10 +22,11 @@ import {
 import { PreviewInputsBar } from "./editor/PreviewInputsBar";
 import { ProgramPreviewProvider } from "./editor/ProgramPreviewContext";
 import { useProgramEditorRoute } from "@/hooks/useProgramEditorRoute";
+import { useCoachAthleteContext } from "@/hooks/useCoachAthleteContext";
+import { useIsAssistantCoach } from "@/hooks/useRole";
 import { ProgramComparePanel } from "./editor/ProgramComparePanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
-import { userService } from "@/services/userService";
 import { hasPersonalCoachingSubscription } from "@/utils/coachingCapabilities";
 
 type DeleteTarget = { type: string; id: string; name: string };
@@ -69,6 +70,7 @@ export function ProgramEditorPage() {
     nextSortOrder?: number;
   }>({ open: false });
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const isAssistantCoach = useIsAssistantCoach();
 
   // ---- data -------------------------------------------------------------
   const {
@@ -85,21 +87,18 @@ export function ProgramEditorPage() {
     qc.invalidateQueries({ queryKey: ["program-tree", programId] });
   }
 
-  const { data: coachingAthlete } = useQuery({
-    queryKey: ["admin-user", coachingUserId],
-    queryFn: () => userService.getById(coachingUserId!),
-    enabled: !!coachingUserId,
-  });
-
-  const { data: coachingPurchases } = useQuery({
-    queryKey: ["admin-user-purchases", coachingUserId],
-    queryFn: () => userService.getPurchases(coachingUserId!),
-    enabled: coachingNeedsSetup && !!coachingUserId,
+  const {
+    athleteLabel: coachingAthleteLabel,
+    purchases: coachingPurchaseList,
+  } = useCoachAthleteContext(coachingUserId, {
+    loadPurchases: coachingNeedsSetup,
   });
 
   const subscriptionId = searchParams.get("subscriptionId");
   const backHref = coachingUserId
-    ? `/users/${coachingUserId}${subscriptionId ? `?subscriptionId=${subscriptionId}` : ""}`
+    ? isAssistantCoach
+      ? `/coach/athletes/${coachingUserId}`
+      : `/users/${coachingUserId}${subscriptionId ? `?subscriptionId=${subscriptionId}` : ""}`
     : `/programs/${programSlug ?? programId}`;
 
   // ---- mutations --------------------------------------------------------
@@ -202,9 +201,8 @@ export function ProgramEditorPage() {
   }
 
   if (coachingNeedsSetup && coachingUserId) {
-    const athleteLabel =
-      coachingAthlete?.name ?? coachingAthlete?.email ?? "Athlete";
-    const purchases = coachingPurchases?.purchases ?? [];
+    const athleteLabel = coachingAthleteLabel;
+    const purchases = coachingPurchaseList;
     const isPersonalCoaching = hasPersonalCoachingSubscription(purchases);
 
     return (
@@ -312,7 +310,7 @@ export function ProgramEditorPage() {
     />
   );
 
-  const athleteLabel = coachingAthlete?.name ?? coachingAthlete?.email ?? null;
+  const athleteLabel = coachingUserId ? coachingAthleteLabel : null;
 
   return (
     <ProgramPreviewProvider
