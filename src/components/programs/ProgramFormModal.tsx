@@ -7,18 +7,19 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { CheckboxField } from "@/components/ui/CheckboxField";
 import { FormModal } from "@/components/ui/FormModal";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { ImageUploadField } from "@/components/shared/ImageUploadField";
+import { PdfUploadField } from "@/components/shared/PdfUploadField";
 import { programService } from "@/services/programService";
-import type { Program } from "@/types/programs";
+import type { Program, ProgramTree } from "@/types/programs";
 
 /** Strip a full Google Sheets URL down to just the file id segment */
 function extractSheetId(value: string): string {
@@ -37,6 +38,7 @@ const programSchema = z.object({
   tagline: z.string().optional(),
   description: z.string().optional(),
   coverImageUrl: z.string().nullable().optional(),
+  pdfUrl: z.union([z.string().url(), z.literal("")]).optional(),
   badge: z.string().optional(),
   regularPrice: z.coerce.number().min(0, "Min ₹0"),
   salePrice: z.coerce.number().min(0).nullable().optional(),
@@ -67,9 +69,15 @@ const programSchema = z.object({
 type ProgramFormData = z.infer<typeof programSchema>;
 
 interface ProgramFormModalProps {
-  program: Program | null;
+  program: Program | ProgramTree | null;
   onClose: () => void;
   onSuccess: () => void;
+}
+
+function programHasResources(
+  program: Program | ProgramTree,
+): program is ProgramTree {
+  return "resources" in program && Array.isArray(program.resources);
 }
 
 export function ProgramFormModal({
@@ -78,6 +86,21 @@ export function ProgramFormModal({
   onSuccess,
 }: ProgramFormModalProps) {
   const isEdit = !!program;
+  const hasInlineResources = program ? programHasResources(program) : false;
+
+  const { data: fetchedResources } = useQuery({
+    queryKey: ["program-resources", program?.id],
+    queryFn: () => programService.getResources(program!.id),
+    enabled: isEdit && !!program?.id && !hasInlineResources,
+  });
+
+  const existingPdfResource = useMemo(() => {
+    const resources =
+      program && hasInlineResources && programHasResources(program)
+        ? program.resources
+        : fetchedResources;
+    return resources?.find((r) => r.resourceType === "pdf");
+  }, [hasInlineResources, program, fetchedResources]);
 
   const {
     register,
@@ -94,6 +117,7 @@ export function ProgramFormModal({
           tagline: program.tagline || "",
           description: program.description || "",
           coverImageUrl: program.coverImageUrl,
+          pdfUrl: existingPdfResource?.pdfUrl ?? "",
           badge: program.badge || "",
           regularPrice: program.regularPrice,
           salePrice: program.salePrice,
@@ -114,6 +138,7 @@ export function ProgramFormModal({
           tagline: "",
           description: "",
           coverImageUrl: null,
+          pdfUrl: "",
           badge: "",
           regularPrice: 0,
           salePrice: null,
@@ -130,7 +155,13 @@ export function ProgramFormModal({
 
   const highlightsArray = useFieldArray({ control, name: "highlights" });
   const coverImageUrl = useWatch({ control, name: "coverImageUrl" });
+  const pdfUrl = useWatch({ control, name: "pdfUrl" });
   const watchedName = useWatch({ control, name: "name" });
+
+  useEffect(() => {
+    if (!isEdit || !existingPdfResource?.pdfUrl) return;
+    setValue("pdfUrl", existingPdfResource.pdfUrl, { shouldValidate: true });
+  }, [isEdit, existingPdfResource?.pdfUrl, setValue]);
 
   // Auto-generate slug from name (only when creating, and user hasn't manually edited the slug)
   const [slugTouched, setSlugTouched] = useState(isEdit);
@@ -140,49 +171,107 @@ export function ProgramFormModal({
     setValue("slug", toSlug(watchedName ?? ""), { shouldValidate: true });
   }, [watchedName, isEdit, slugTouched, setValue]);
 
+  async function syncProgramPdf(
+    programId: string,
+    slug: string,
+    name: string,
+    nextPdfUrl: string | null | undefined,
+  ) {
+    const pdfUrlValue = nextPdfUrl?.trim() || null;
+
+    if (pdfUrlValue) {
+      if (existingPdfResource) {
+        await programService.updateResource(programId, existingPdfResource.id, {
+          resourceType: "pdf",
+          pdfUrl: pdfUrlValue,
+          slug: `${slug}-book`,
+          title: name,
+        });
+      } else {
+        await programService.createResource(programId, {
+          slug: `${slug}-book`,
+          title: name,
+          resourceType: "pdf",
+          pdfUrl: pdfUrlValue,
+          body: "",
+          sortOrder: 0,
+        });
+      }
+      return;
+    }
+
+    if (existingPdfResource) {
+      await programService.removeResource(programId, existingPdfResource.id);
+    }
+  }
+
   const createMutation = useMutation({
-    mutationFn: programService.create,
+    mutationFn: async (data: ProgramFormData) => {
+      const created = await programService.create({
+        slug: data.slug,
+        name: data.name,
+        tagline: data.tagline || null,
+        description: data.description || null,
+        coverImageUrl: data.coverImageUrl || null,
+        badge: data.badge || null,
+        regularPrice: data.regularPrice,
+        salePrice: data.salePrice || null,
+        currency: data.currency,
+        liftingFrequency: data.liftingFrequency || null,
+        programLengthWeeks: data.programLengthWeeks || null,
+        highlights: data.highlights.map((h) => h.value).filter(Boolean),
+        displayOrder: data.displayOrder,
+        isActive: data.isActive,
+        googleSpreadsheetId: data.googleSpreadsheetId || null,
+        autoAssignSheetId: data.autoAssignSheetId || null,
+      });
+      await syncProgramPdf(created.id, data.slug, data.name, data.pdfUrl);
+      return created;
+    },
     onSuccess: () => {
       toast.success("Program created!");
       onSuccess();
     },
+    onError: () => toast.error("Failed to create program"),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: Parameters<typeof programService.update>) =>
-      programService.update(...data),
+    mutationFn: async (data: ProgramFormData) => {
+      const updated = await programService.update(program!.id, {
+        slug: data.slug,
+        name: data.name,
+        tagline: data.tagline || null,
+        description: data.description || null,
+        coverImageUrl: data.coverImageUrl || null,
+        badge: data.badge || null,
+        regularPrice: data.regularPrice,
+        salePrice: data.salePrice || null,
+        currency: data.currency,
+        liftingFrequency: data.liftingFrequency || null,
+        programLengthWeeks: data.programLengthWeeks || null,
+        highlights: data.highlights.map((h) => h.value).filter(Boolean),
+        displayOrder: data.displayOrder,
+        isActive: data.isActive,
+        googleSpreadsheetId: data.googleSpreadsheetId || null,
+        autoAssignSheetId: data.autoAssignSheetId || null,
+      });
+      await syncProgramPdf(program!.id, data.slug, data.name, data.pdfUrl);
+      return updated;
+    },
     onSuccess: () => {
       toast.success("Program updated!");
       onSuccess();
     },
+    onError: () => toast.error("Failed to update program"),
   });
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   function onSubmit(data: ProgramFormData) {
-    const payload = {
-      slug: data.slug,
-      name: data.name,
-      tagline: data.tagline || null,
-      description: data.description || null,
-      coverImageUrl: data.coverImageUrl || null,
-      badge: data.badge || null,
-      regularPrice: data.regularPrice,
-      salePrice: data.salePrice || null,
-      currency: data.currency,
-      liftingFrequency: data.liftingFrequency || null,
-      programLengthWeeks: data.programLengthWeeks || null,
-      highlights: data.highlights.map((h) => h.value).filter(Boolean),
-      displayOrder: data.displayOrder,
-      isActive: data.isActive,
-      googleSpreadsheetId: data.googleSpreadsheetId || null,
-      autoAssignSheetId: data.autoAssignSheetId || null,
-    };
-
     if (isEdit && program) {
-      updateMutation.mutate([program.id, payload]);
+      updateMutation.mutate(data);
     } else {
-      createMutation.mutate(payload);
+      createMutation.mutate(data);
     }
   }
 
@@ -236,6 +325,16 @@ export function ProgramFormModal({
             onImageChange={(url) => setValue("coverImageUrl", url)}
           />
         </div>
+
+        <PdfUploadField
+          pdfUrl={pdfUrl?.trim() ? pdfUrl : null}
+          onPdfChange={(url) =>
+            setValue("pdfUrl", url ?? "", { shouldValidate: true })
+          }
+        />
+        {errors.pdfUrl && (
+          <p className="text-sm text-red-600">{errors.pdfUrl.message}</p>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Input
