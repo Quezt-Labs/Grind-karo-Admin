@@ -8,21 +8,25 @@ import { Spinner } from "@/components/ui/Spinner";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { programTemplateService } from "@/services/programTemplateService";
 import { coachingProgramService } from "@/services/coachingProgramService";
+import { cn } from "@/utils/cn";
+
+type MergeMode = "append" | "replace";
 
 interface CloneTemplateModalProps {
   userId: string;
-  replace: boolean;
+  hasExistingProgram: boolean;
   onClose: () => void;
   onSuccess: (programId: string) => void;
 }
 
 export function CloneTemplateModal({
   userId,
-  replace,
+  hasExistingProgram,
   onClose,
   onSuccess,
 }: CloneTemplateModalProps) {
   const [selectedId, setSelectedId] = useState("");
+  const [mergeMode, setMergeMode] = useState<MergeMode>("append");
   const [confirmReplace, setConfirmReplace] = useState(false);
 
   const {
@@ -39,34 +43,71 @@ export function CloneTemplateModal({
   );
 
   const cloneMut = useMutation({
-    mutationFn: (sourceProgramId: string) =>
-      replace
-        ? coachingProgramService.replaceFromTemplate(userId, sourceProgramId)
-        : coachingProgramService.cloneFromTemplate(userId, sourceProgramId),
-    onSuccess: (program: { id: string }) => {
+    mutationFn: ({
+      sourceProgramId,
+      mode,
+    }: {
+      sourceProgramId: string;
+      mode: MergeMode | "create";
+    }) => {
+      if (mode === "create") {
+        return coachingProgramService.cloneFromTemplate(
+          userId,
+          sourceProgramId,
+        );
+      }
+      if (mode === "append") {
+        return coachingProgramService.appendFromTemplate(
+          userId,
+          sourceProgramId,
+        );
+      }
+      return coachingProgramService.replaceFromTemplate(
+        userId,
+        sourceProgramId,
+      );
+    },
+    onSuccess: (program: { id: string }, { mode }) => {
       toast.success(
-        replace ? "Program replaced from template" : "Program cloned",
+        mode === "replace"
+          ? "Program replaced from template"
+          : mode === "append"
+            ? "Template blocks added to program"
+            : "Program cloned from template",
       );
       onSuccess(program.id);
     },
   });
+
+  function runClone(mode: MergeMode | "create") {
+    if (!selectedId) {
+      toast.error("Select a template program");
+      return;
+    }
+    cloneMut.mutate({ sourceProgramId: selectedId, mode });
+  }
 
   function handleSubmit() {
     if (!selectedId) {
       toast.error("Select a template program");
       return;
     }
-    if (replace) {
+    const mode = hasExistingProgram ? mergeMode : "create";
+    if (mode === "replace") {
       setConfirmReplace(true);
       return;
     }
-    cloneMut.mutate(selectedId);
+    runClone(mode);
   }
+
+  const modalTitle = hasExistingProgram
+    ? "Add template to program"
+    : "Clone from Template";
 
   return (
     <>
       <FormModal
-        title={replace ? "Replace from Template" : "Clone from Template"}
+        title={modalTitle}
         onClose={onClose}
         contentClassName="max-w-md"
       >
@@ -105,6 +146,65 @@ export function CloneTemplateModal({
                   : "Select template…"
               }
             />
+
+            {hasExistingProgram && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  How should this template be applied?
+                </p>
+                <div className="grid gap-2">
+                  <label
+                    className={cn(
+                      "flex cursor-pointer gap-3 rounded-lg border p-3 text-sm transition-colors",
+                      mergeMode === "append"
+                        ? "border-primary-500 bg-primary-50/50 dark:border-primary-400 dark:bg-primary-900/20"
+                        : "border-gray-200 dark:border-gray-700",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="merge-mode"
+                      className="mt-0.5"
+                      checked={mergeMode === "append"}
+                      onChange={() => setMergeMode("append")}
+                    />
+                    <span>
+                      <span className="font-medium">Add as new block(s)</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        Keep the current program and append the template blocks
+                        at the end.
+                      </span>
+                    </span>
+                  </label>
+                  <label
+                    className={cn(
+                      "flex cursor-pointer gap-3 rounded-lg border p-3 text-sm transition-colors",
+                      mergeMode === "replace"
+                        ? "border-red-500 bg-red-50/40 dark:border-red-400 dark:bg-red-900/10"
+                        : "border-gray-200 dark:border-gray-700",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="merge-mode"
+                      className="mt-0.5"
+                      checked={mergeMode === "replace"}
+                      onChange={() => setMergeMode("replace")}
+                    />
+                    <span>
+                      <span className="font-medium">
+                        Replace entire program
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        Delete the athlete&apos;s current program and clone the
+                        template from scratch.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            )}
+
             {templateOptions.length === 0 && (
               <p className="text-sm text-muted-foreground">
                 Create templates under Programs → Templates, then clone them
@@ -119,8 +219,13 @@ export function CloneTemplateModal({
                 type="button"
                 onClick={handleSubmit}
                 isLoading={cloneMut.isPending}
+                variant={mergeMode === "replace" ? "danger" : "primary"}
               >
-                {replace ? "Replace" : "Clone"}
+                {hasExistingProgram
+                  ? mergeMode === "replace"
+                    ? "Replace program"
+                    : "Add blocks"
+                  : "Clone"}
               </Button>
             </div>
           </div>
@@ -135,7 +240,7 @@ export function CloneTemplateModal({
           confirmLabel="Replace"
           variant="danger"
           isLoading={cloneMut.isPending}
-          onConfirm={() => cloneMut.mutate(selectedId)}
+          onConfirm={() => runClone("replace")}
           onCancel={() => setConfirmReplace(false)}
         />
       )}

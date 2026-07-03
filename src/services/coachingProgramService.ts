@@ -59,6 +59,17 @@ export const coachingProgramService = {
       .then((r) => r.data);
   },
 
+  appendFromTemplate(
+    userId: string,
+    sourceProgramId: string,
+  ): Promise<{ id: string }> {
+    return api
+      .post<{
+        id: string;
+      }>(`/admin/users/${userId}/coaching-program/append`, { sourceProgramId }, { timeout: CLONE_STRUCTURE_TIMEOUT_MS })
+      .then((r) => r.data);
+  },
+
   replaceFromTemplate(
     userId: string,
     sourceProgramId: string,

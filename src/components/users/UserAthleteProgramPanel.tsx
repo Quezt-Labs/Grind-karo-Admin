@@ -33,7 +33,6 @@ export function UserAthleteProgramPanel({
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [showClone, setShowClone] = useState(false);
-  const [replaceMode, setReplaceMode] = useState(false);
   const [confirmReplaceBlank, setConfirmReplaceBlank] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [squat, setSquat] = useState("");
@@ -141,13 +140,7 @@ export function UserAthleteProgramPanel({
           . Replace it to build for the current plan.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            onClick={() => {
-              setReplaceMode(true);
-              setShowClone(true);
-            }}
-          >
+          <Button size="sm" onClick={() => setShowClone(true)}>
             <Copy className="mr-1 h-3.5 w-3.5" />
             Clone from Template
           </Button>
@@ -176,14 +169,10 @@ export function UserAthleteProgramPanel({
         {showClone && (
           <CloneTemplateModal
             userId={userId}
-            replace={replaceMode}
-            onClose={() => {
-              setShowClone(false);
-              setReplaceMode(false);
-            }}
+            hasExistingProgram
+            onClose={() => setShowClone(false)}
             onSuccess={() => {
               setShowClone(false);
-              setReplaceMode(false);
               qc.invalidateQueries({ queryKey: ["coaching-program", userId] });
               navigate(`/coaching/${userId}/editor`);
             }}
@@ -225,7 +214,7 @@ export function UserAthleteProgramPanel({
         {showClone && (
           <CloneTemplateModal
             userId={userId}
-            replace={false}
+            hasExistingProgram={false}
             onClose={() => setShowClone(false)}
             onSuccess={() => {
               setShowClone(false);
@@ -267,10 +256,7 @@ export function UserAthleteProgramPanel({
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => {
-              setReplaceMode(true);
-              setShowClone(true);
-            }}
+            onClick={() => setShowClone(true)}
           >
             <Copy className="mr-1 h-3.5 w-3.5" />
             Clone from Template…
@@ -362,14 +348,10 @@ export function UserAthleteProgramPanel({
       {showClone && (
         <CloneTemplateModal
           userId={userId}
-          replace={replaceMode}
-          onClose={() => {
-            setShowClone(false);
-            setReplaceMode(false);
-          }}
+          hasExistingProgram
+          onClose={() => setShowClone(false)}
           onSuccess={() => {
             setShowClone(false);
-            setReplaceMode(false);
             qc.invalidateQueries({ queryKey: ["coaching-program", userId] });
             navigate(`/coaching/${userId}/editor`);
           }}
