@@ -25,7 +25,11 @@ export function CloneTemplateModal({
   const [selectedId, setSelectedId] = useState("");
   const [confirmReplace, setConfirmReplace] = useState(false);
 
-  const { data: templates = [], isLoading, isError } = useQuery({
+  const {
+    data: templates = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["program-templates"],
     queryFn: programTemplateService.getAll,
   });
