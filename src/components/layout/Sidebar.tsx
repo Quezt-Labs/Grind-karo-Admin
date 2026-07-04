@@ -25,6 +25,7 @@ import {
   UserCog,
   MapPin,
   Megaphone,
+  ClipboardCheck,
   PlayCircle,
   LayoutList,
   type LucideIcon,
@@ -90,6 +91,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Coaching",
     items: [
       { path: "/coach/locations", label: "Athlete locations", icon: MapPin },
+      { path: "/coach/ops-board", label: "Daily ops", icon: ClipboardCheck },
       { path: "/plans", label: "Plans", icon: CreditCard },
       { path: "/addons", label: "Coaching Add-ons", icon: Puzzle },
       { path: "/subscriptions", label: "Subscriptions", icon: Award },
@@ -119,6 +121,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     title: "Coaching",
     items: [
       { path: "/coach/athletes", label: "My Athletes", icon: Users },
+      { path: "/coach/ops-board", label: "Daily ops", icon: ClipboardCheck },
       { path: "/coach/locations", label: "Locations", icon: MapPin },
       { path: "/form-checks", label: "Form checks", icon: Video },
       { path: "/chat", label: "Chat", icon: MessageCircle },

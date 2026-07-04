@@ -22,6 +22,7 @@ import {
   CoachAthletesPage,
   CoachAthletesLocationPage,
   FormCheckInboxPage,
+  CoachOpsBoardPage,
   ChatPage,
   ContactSubmissionsPage,
   ClientErrorsPage,
@@ -79,6 +80,10 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/coach/athletes" element={<CoachAthletesPage />} />
+                <Route
+                  path="/coach/ops-board"
+                  element={<CoachOpsBoardPage />}
+                />
                 <Route
                   path="/coach/locations"
                   element={<CoachAthletesLocationPage />}
