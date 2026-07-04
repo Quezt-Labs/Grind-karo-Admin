@@ -1,202 +1,33 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  ChevronRight,
-  Loader2,
-  MessageSquare,
-  User,
-  Video,
-} from "lucide-react";
-import toast from "react-hot-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, ChevronRight, User, Video } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
-import { FormCheckAthleteNotesBlocks } from "@/components/shared/FormCheckAthleteNotesBlocks";
-import { FormCheckAthleteLoggedMetrics } from "@/components/shared/FormCheckSheetContext";
-import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
+import { FormCheckInboxExerciseCard } from "@/components/form-check/FormCheckInboxExerciseCard";
 import {
   formCheckInboxService,
   type FormCheckInboxAthlete,
-  type FormCheckInboxItem,
 } from "@/services/formCheckInboxService";
-import { sheetsSetVideoCommentService } from "@/services/sheetsSetVideoService";
-import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import {
   bulkUpsertFormCheckComments,
-  type FormCheckCommentTarget,
+  type BulkCommentResult,
 } from "@/utils/bulkFormCheckComments";
+import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
+import {
+  groupFormCheckInboxItems,
+  type FormCheckInboxGroup,
+} from "@/utils/groupFormCheckInboxItems";
 import { cn } from "@/utils/cn";
 
 type PlanTier = "mega" | "ultra";
 type ReviewFilter = "pending" | "all";
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function athleteLabel(
   athlete: Pick<FormCheckInboxAthlete, "userName" | "userEmail">,
 ) {
   return athlete.userName?.trim() || athlete.userEmail;
-}
-
-function InboxCommentEditor({ video }: { video: FormCheckInboxItem }) {
-  const queryClient = useQueryClient();
-  const [comment, setComment] = useState(video.coachComment ?? "");
-
-  const saveMutation = useMutation({
-    mutationFn: () => {
-      const trimmed = comment.trim();
-      if (video.source === "program") {
-        if (!video.exerciseLogId) {
-          throw new Error("Missing exercise log");
-        }
-        return workoutVideoCommentService.upsert({
-          exerciseLogId: video.exerciseLogId,
-          setNumber: video.setNumber,
-          comment: trimmed,
-        });
-      }
-      return sheetsSetVideoCommentService.upsert({
-        sheetsSetVideoId: video.id,
-        comment: trimmed,
-      });
-    },
-    onSuccess: () => {
-      toast.success("Comment saved");
-      void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
-      void queryClient.invalidateQueries({
-        queryKey: ["form-check-inbox-athletes"],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["form-check-pending-count"],
-      });
-    },
-    onError: () => toast.error("Failed to save comment"),
-  });
-
-  return (
-    <div className="border-t border-gray-200 p-3 dark:border-gray-700">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-        <MessageSquare className="h-3 w-3" />
-        Coach comment
-      </div>
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        rows={2}
-        placeholder="Form-check feedback for the client…"
-        className="w-full resize-y rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-      />
-      <button
-        type="button"
-        disabled={!comment.trim() || saveMutation.isPending}
-        onClick={() => saveMutation.mutate()}
-        className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
-      >
-        {saveMutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
-        Save comment
-      </button>
-    </div>
-  );
-}
-
-function formatVideoContext(video: FormCheckInboxItem): string {
-  if (video.source === "program") {
-    const programLabel = video.programName ?? "Program";
-    const weekDay =
-      video.weekNumber != null && video.dayNumber != null
-        ? ` · W${video.weekNumber} · Day ${video.dayNumber}${
-            video.dayLabel ? ` (${video.dayLabel})` : ""
-          }`
-        : "";
-    const prescription =
-      video.prescriptionSets != null || video.repScheme
-        ? ` · ${video.prescriptionSets ?? "?"}×${video.repScheme ?? "?"}`
-        : "";
-    const category = video.exerciseCategory
-      ? ` · ${video.exerciseCategory}`
-      : "";
-    return `${programLabel}${weekDay}${category}${prescription} · Set ${video.setNumber} · ${formatDateTime(video.createdAt)}`;
-  }
-  return `${video.tabName ?? "Sheet"} · W${video.weekNumber} · Day ${video.dayNumber} · Set ${video.setNumber} · ${formatDateTime(video.createdAt)}`;
-}
-
-function InboxVideoCard({
-  video,
-  showAthleteLink = true,
-}: {
-  video: FormCheckInboxItem;
-  showAthleteLink?: boolean;
-}) {
-  const athleteName = video.userName ?? video.userEmail;
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            {showAthleteLink ? (
-              <Link
-                to={`/users/${video.userId}`}
-                className="text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
-              >
-                {athleteName}
-              </Link>
-            ) : null}
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              {video.exerciseName}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <span
-              className={cn(
-                "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                video.source === "program"
-                  ? "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300"
-                  : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-              )}
-            >
-              {video.source === "program" ? "Program" : "Sheet"}
-            </span>
-            {video.reviewed ? (
-              <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
-                Reviewed
-              </span>
-            ) : (
-              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                Pending
-              </span>
-            )}
-          </div>
-        </div>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-          {formatVideoContext(video)}
-        </p>
-        {video.source === "sheet" ? (
-          <FormCheckAthleteLoggedMetrics ctx={video.sheetContext} />
-        ) : null}
-        <FormCheckAthleteNotesBlocks
-          exerciseNotes={video.exerciseNotes}
-          setNotes={video.setNotes}
-          setNumber={video.setNumber}
-          athleteNotes={video.athleteNotes}
-        />
-      </div>
-      <FormCheckVideoPlayer src={video.videoUrl} />
-      <InboxCommentEditor
-        key={`${video.id}-${video.coachComment ?? ""}`}
-        video={video}
-      />
-    </div>
-  );
 }
 
 function ReviewFilterBar({
@@ -283,25 +114,65 @@ function AthleteRow({
   );
 }
 
-function inboxVideoToTarget(
-  video: FormCheckInboxItem,
-): FormCheckCommentTarget | null {
-  if (video.reviewed || video.coachComment?.trim()) return null;
-  const label = `${video.exerciseName} · Set ${video.setNumber}`;
-  if (video.source === "program") {
-    if (!video.exerciseLogId) return null;
-    return {
-      source: "program",
-      exerciseLogId: video.exerciseLogId,
-      setNumber: video.setNumber,
-      label,
-    };
-  }
-  return {
-    source: "sheet",
-    sheetsSetVideoId: video.id,
-    label,
-  };
+type ExpansionChoice = string | null | undefined;
+
+function FormCheckInboxExerciseList({
+  exerciseGroups,
+  pendingCount,
+  onBulkApply,
+}: {
+  exerciseGroups: FormCheckInboxGroup[];
+  pendingCount: number;
+  onBulkApply: (comment: string) => Promise<BulkCommentResult>;
+}) {
+  const autoExpandedKey = useMemo(() => {
+    if (exerciseGroups.length === 0) return null;
+    const firstPending = exerciseGroups.find((g) => g.pendingCount > 0);
+    return firstPending?.key ?? exerciseGroups[0]?.key ?? null;
+  }, [exerciseGroups]);
+
+  const [expansionChoice, setExpansionChoice] =
+    useState<ExpansionChoice>(undefined);
+
+  const expandedGroupKey = useMemo(() => {
+    if (expansionChoice === null) return null;
+    if (
+      typeof expansionChoice === "string" &&
+      exerciseGroups.some((g) => g.key === expansionChoice)
+    ) {
+      return expansionChoice;
+    }
+    return autoExpandedKey;
+  }, [expansionChoice, exerciseGroups, autoExpandedKey]);
+
+  return (
+    <div className="space-y-3">
+      <BulkFormCheckCommentBar
+        pendingCount={pendingCount}
+        onApply={onBulkApply}
+      />
+      {exerciseGroups.map((group) => (
+        <FormCheckInboxExerciseCard
+          key={group.key}
+          videos={group.videos}
+          showAthleteLink={false}
+          expanded={expandedGroupKey === group.key}
+          onToggle={() =>
+            setExpansionChoice((current) => {
+              const effective =
+                current === null
+                  ? null
+                  : typeof current === "string" &&
+                      exerciseGroups.some((g) => g.key === current)
+                    ? current
+                    : autoExpandedKey;
+              return effective === group.key ? null : group.key;
+            })
+          }
+        />
+      ))}
+    </div>
+  );
 }
 
 export function FormCheckInboxPage() {
@@ -346,17 +217,39 @@ export function FormCheckInboxPage() {
   );
   const globalPending = megaPending + ultraPending;
 
+  const videos = useMemo(() => videosData?.items ?? [], [videosData?.items]);
+  const exerciseGroups = useMemo(
+    () => groupFormCheckInboxItems(videos),
+    [videos],
+  );
+
+  const pendingTargets = useMemo(
+    () => pendingTargetsForVideos(videos),
+    [videos],
+  );
+
   const subtitle = useMemo(() => {
     if (selectedUserId && selectedAthlete) {
-      return reviewFilter === "pending"
-        ? `${selectedAthlete.pendingCount} video${selectedAthlete.pendingCount === 1 ? "" : "s"} waiting for review`
-        : `${selectedAthlete.totalCount} form-check video${selectedAthlete.totalCount === 1 ? "" : "s"} total`;
+      if (reviewFilter === "pending") {
+        const exercises = exerciseGroups.length;
+        return exercises > 0
+          ? `${pendingTargets.length} set video${pendingTargets.length === 1 ? "" : "s"} across ${exercises} exercise${exercises === 1 ? "" : "s"}`
+          : "No videos waiting for review";
+      }
+      return `${selectedAthlete.totalCount} form-check video${selectedAthlete.totalCount === 1 ? "" : "s"} total`;
     }
     if (globalPending === 0) {
       return "All caught up — no videos waiting for review";
     }
     return `${globalPending} video${globalPending === 1 ? "" : "s"} waiting for review`;
-  }, [selectedUserId, selectedAthlete, reviewFilter, globalPending]);
+  }, [
+    selectedUserId,
+    selectedAthlete,
+    reviewFilter,
+    globalPending,
+    exerciseGroups.length,
+    pendingTargets.length,
+  ]);
 
   const handlePlanChange = (tier: PlanTier) => {
     setPlanTier(tier);
@@ -367,15 +260,6 @@ export function FormCheckInboxPage() {
     setReviewFilter(next);
     if (next === "pending") setSelectedUserId(null);
   };
-
-  const videos = useMemo(() => videosData?.items ?? [], [videosData?.items]);
-  const pendingTargets = useMemo(
-    () =>
-      videos
-        .map(inboxVideoToTarget)
-        .filter((target): target is FormCheckCommentTarget => target != null),
-    [videos],
-  );
 
   const handleBulkApply = async (comment: string) => {
     const result = await bulkUpsertFormCheckComments(pendingTargets, comment);
@@ -464,21 +348,12 @@ export function FormCheckInboxPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <BulkFormCheckCommentBar
-                pendingCount={pendingTargets.length}
-                onApply={handleBulkApply}
-              />
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                {videos.map((video) => (
-                  <InboxVideoCard
-                    key={video.id}
-                    video={video}
-                    showAthleteLink={false}
-                  />
-                ))}
-              </div>
-            </div>
+            <FormCheckInboxExerciseList
+              key={`${selectedUserId}-${reviewFilter}`}
+              exerciseGroups={exerciseGroups}
+              pendingCount={pendingTargets.length}
+              onBulkApply={handleBulkApply}
+            />
           )}
         </div>
       ) : (
