@@ -29,6 +29,12 @@ export interface FormCheckInboxItem {
   dayLabel?: string | null;
   prescriptionSets?: number | null;
   repScheme?: string | null;
+  actualSets?: number | null;
+  actualReps?: number | null;
+  actualLoad?: number | null;
+  actualRpe?: number | null;
+  targetRpe?: string | null;
+  prescribedLoadKg?: number | null;
 }
 
 export interface FormCheckInboxResponse {

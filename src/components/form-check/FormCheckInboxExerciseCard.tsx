@@ -32,6 +32,41 @@ function formatUploadedAt(iso: string): string {
   });
 }
 
+function formatLoggedRpe(rpe: number | null | undefined): string | null {
+  if (rpe == null || Number.isNaN(rpe)) return null;
+  return `@${Number(rpe).toFixed(1).replace(/\.0$/, "")}`;
+}
+
+function formatLoadKg(kg: number | null | undefined): string | null {
+  if (kg == null || Number.isNaN(kg)) return null;
+  const n = Number(kg);
+  return `${Number.isInteger(n) ? n : n.toFixed(1).replace(/\.0$/, "")} kg`;
+}
+
+function AthleteLoggedValues({ video }: { video: FormCheckInboxItem }) {
+  const parts: string[] = [];
+  if (video.actualSets != null) parts.push(`${video.actualSets} sets`);
+  if (video.actualReps != null) parts.push(`${video.actualReps} reps`);
+  const load = formatLoadKg(video.actualLoad);
+  if (load) parts.push(load);
+  const rpe = formatLoggedRpe(video.actualRpe);
+  if (rpe) parts.push(rpe);
+
+  if (parts.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+        Athlete logged
+        {video.setNumber != null ? ` · Set ${video.setNumber}` : ""}
+      </p>
+      <p className="mt-0.5 text-sm font-medium text-emerald-950 dark:text-emerald-100">
+        {parts.join(" · ")}
+      </p>
+    </div>
+  );
+}
+
 function ExerciseContextChips({ video }: { video: FormCheckInboxItem }) {
   const chips: string[] = [];
 
@@ -46,6 +81,11 @@ function ExerciseContextChips({ video }: { video: FormCheckInboxItem }) {
   if (video.exerciseCategory) chips.push(video.exerciseCategory);
   if (video.prescriptionSets != null || video.repScheme) {
     chips.push(`${video.prescriptionSets ?? "?"}×${video.repScheme ?? "?"}`);
+  }
+  if (video.targetRpe?.trim()) chips.push(video.targetRpe.trim());
+  if (video.prescribedLoadKg != null) {
+    const rxLoad = formatLoadKg(video.prescribedLoadKg);
+    if (rxLoad) chips.push(`Rx ${rxLoad}`);
   }
 
   if (chips.length === 0) return null;
@@ -154,6 +194,15 @@ function SetCommentPanelWithBulk({
             setNumber={video.setNumber}
             athleteNotes={video.athleteNotes}
           />
+        </div>
+      )}
+
+      {(video.actualSets != null ||
+        video.actualReps != null ||
+        video.actualLoad != null ||
+        video.actualRpe != null) && (
+        <div className="mb-3">
+          <AthleteLoggedValues video={video} />
         </div>
       )}
 
@@ -312,7 +361,7 @@ export function FormCheckInboxExerciseCard({
               {head.exerciseName}
             </h3>
             {expanded ? (
-              <ExerciseContextChips video={head} />
+              <ExerciseContextChips video={active} />
             ) : (
               <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
                 {formatExerciseContextLine(head)}
@@ -456,5 +505,12 @@ function formatExerciseContextLine(video: FormCheckInboxItem): string {
   if (video.weekNumber != null && video.dayNumber != null) {
     parts.push(`W${video.weekNumber} · Day ${video.dayNumber}`);
   }
+  const logged: string[] = [];
+  if (video.actualReps != null) logged.push(`${video.actualReps} reps`);
+  const load = formatLoadKg(video.actualLoad);
+  if (load) logged.push(load);
+  const rpe = formatLoggedRpe(video.actualRpe);
+  if (rpe) logged.push(rpe);
+  if (logged.length > 0) parts.push(logged.join(" · "));
   return parts.join(" · ");
 }
