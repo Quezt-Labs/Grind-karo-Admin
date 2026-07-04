@@ -116,19 +116,16 @@ export function UserDetailPage() {
     [setSearchParams],
   );
 
-  const selectCoachingSubscription = useCallback(
-    (subscriptionId: string) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("subscriptionId", subscriptionId);
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
+  const selectCoachingSubscription = (subscriptionId: string) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("subscriptionId", subscriptionId);
+        return next;
+      },
+      { replace: true },
+    );
+  };
 
   const [activitySection, setActivitySection] =
     useState<AthleteActivitySection>("videos");
