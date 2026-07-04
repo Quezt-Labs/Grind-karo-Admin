@@ -366,17 +366,22 @@ export function ProgramEditorPage() {
 
         <ProgramEditorTabs active={activeTab} onChange={setActiveTab} />
 
-        {activeTab === "structure" && structureEditor}
+        {activeTab === "structure" && (
+          <div className="space-y-4">
+            <PreviewInputsBar slots={movementSlots} />
+            {structureEditor}
+          </div>
+        )}
 
         {activeTab === "compare" && <ProgramComparePanel tree={tree} />}
 
         {activeTab === "loads" && (
           <div className="space-y-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Set reference 1RMs for template load calculations. Values are
-              saved per program. On the Structure tab, use{" "}
-              <strong>Recalculate loads</strong> on each day to persist template
-              weights for all rows.
+              Reference 1RMs and movement slot preview are shared with the
+              Structure and Preview tabs (saved per program in this browser).
+              Use <strong>Recalculate loads</strong> on each day in Structure to
+              persist template weights for all rows.
             </p>
             <PreviewInputsBar slots={movementSlots} />
           </div>
@@ -403,16 +408,11 @@ export function ProgramEditorPage() {
         {activeTab === "preview" && (
           <div className="space-y-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Computed template loads use reference 1RMs from the{" "}
-              <button
-                type="button"
-                onClick={() => setActiveTab("loads")}
-                className="font-medium text-primary-600 underline-offset-2 hover:underline dark:text-primary-400"
-              >
-                Load settings
-              </button>{" "}
-              tab. Expand days below to review.
+              Pick movement variations above to see how the same program
+              resolves for different athlete choices. Expand days below to
+              review computed loads.
             </p>
+            <PreviewInputsBar slots={movementSlots} />
             {structureEditor}
           </div>
         )}

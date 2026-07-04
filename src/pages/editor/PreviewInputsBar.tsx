@@ -73,11 +73,13 @@ export function PreviewInputsBar({ slots }: { slots: MovementSlot[] }) {
       {hasSlots && (
         <div className="mt-6 border-t border-indigo-200/60 pt-5 dark:border-indigo-800/60">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-            Movement slot preview
+            Movement selection preview
           </p>
           <p className="mb-3 text-xs text-indigo-800/70 dark:text-indigo-200/70">
-            Optional — pick which variation to use when previewing computed
-            loads on Structure / Preview tabs.
+            Same program for every athlete — pick a variation to preview
+            resolved exercise names, sets, and loads on Structure / Preview
+            below. &ldquo;Default option&rdquo; uses each slot&apos;s marked
+            default.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {slots.map((slot) => (
