@@ -1,9 +1,8 @@
 import api from "./api";
-import type { SheetExerciseContext } from "@/components/shared/formCheckSheetContext.utils";
 
 export interface FormCheckInboxItem {
   id: string;
-  source: "sheet" | "program";
+  source: "program";
   userId: string;
   userName: string | null;
   userEmail: string;
@@ -13,7 +12,6 @@ export interface FormCheckInboxItem {
   sortOrder?: number | null;
   setNumber: number;
   exerciseName: string;
-  sheetContext?: SheetExerciseContext | null;
   videoUrl: string;
   createdAt: string;
   coachComment: string | null;
@@ -67,7 +65,13 @@ export const formCheckInboxService = {
       params,
       timeout: 60_000,
     });
-    return data.data ?? data;
+    const response = data.data ?? data;
+    return {
+      ...response,
+      items: (response.items ?? []).filter(
+        (item: FormCheckInboxItem) => item.source === "program",
+      ),
+    };
   },
 
   async pendingCount(): Promise<{ pendingCount: number }> {

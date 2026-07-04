@@ -1,19 +1,15 @@
 /**
  * Bulk form-check comments — frontend-only MVP (parallel existing upsert APIs).
- * Backend not required; see docs/BULK_FORM_CHECK_COMMENTS.md for trade-offs.
  */
 import { isAxiosError } from "axios";
-import { sheetsSetVideoCommentService } from "@/services/sheetsSetVideoService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 
-export type FormCheckCommentTarget =
-  | {
-      source: "program";
-      exerciseLogId: string;
-      setNumber: number;
-      label?: string;
-    }
-  | { source: "sheet"; sheetsSetVideoId: string; label?: string };
+export type FormCheckCommentTarget = {
+  source: "program";
+  exerciseLogId: string;
+  setNumber: number;
+  label?: string;
+};
 
 export type BulkCommentResult = {
   succeeded: number;
@@ -23,10 +19,7 @@ export type BulkCommentResult = {
 
 function targetLabel(target: FormCheckCommentTarget): string {
   if (target.label) return target.label;
-  if (target.source === "program") {
-    return `Set ${target.setNumber}`;
-  }
-  return `Sheet video ${target.sheetsSetVideoId.slice(0, 8)}`;
+  return `Set ${target.setNumber}`;
 }
 
 function errorMessage(error: unknown): string {
@@ -46,16 +39,9 @@ async function upsertTarget(
   target: FormCheckCommentTarget,
   comment: string,
 ): Promise<void> {
-  if (target.source === "program") {
-    await workoutVideoCommentService.upsert({
-      exerciseLogId: target.exerciseLogId,
-      setNumber: target.setNumber,
-      comment,
-    });
-    return;
-  }
-  await sheetsSetVideoCommentService.upsert({
-    sheetsSetVideoId: target.sheetsSetVideoId,
+  await workoutVideoCommentService.upsert({
+    exerciseLogId: target.exerciseLogId,
+    setNumber: target.setNumber,
     comment,
   });
 }

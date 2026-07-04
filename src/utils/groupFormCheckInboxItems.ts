@@ -10,25 +10,19 @@ export interface FormCheckInboxGroup {
 
 /** Stable key for grouping set videos that belong to the same logged exercise. */
 export function formCheckExerciseGroupKey(video: FormCheckInboxItem): string {
-  if (video.source === "program" && video.exerciseLogId) {
+  if (video.exerciseLogId) {
     return `program:${video.exerciseLogId}`;
   }
-  return [
-    "sheet",
-    video.tabName ?? "",
-    video.weekNumber ?? "",
-    video.dayNumber ?? "",
-    video.exerciseName,
-    video.sortOrder ?? 0,
-  ].join(":");
+  return `video:${video.id}`;
 }
 
 export function groupFormCheckInboxItems(
   items: FormCheckInboxItem[],
 ): FormCheckInboxGroup[] {
+  const programItems = items.filter((item) => item.source === "program");
   const byKey = new Map<string, FormCheckInboxItem[]>();
 
-  for (const item of items) {
+  for (const item of programItems) {
     const key = formCheckExerciseGroupKey(item);
     const list = byKey.get(key) ?? [];
     list.push(item);
@@ -50,7 +44,6 @@ export function groupFormCheckInboxItems(
     });
   }
 
-  // Preserve inbox sort: pending groups first, then by newest upload in the group.
   return groups.sort((a, b) => {
     const aPending = a.pendingCount > 0 ? 0 : 1;
     const bPending = b.pendingCount > 0 ? 0 : 1;

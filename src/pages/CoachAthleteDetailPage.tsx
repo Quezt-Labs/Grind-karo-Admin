@@ -13,7 +13,7 @@ import {
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
 import { athleteAssignmentService } from "@/services/athleteAssignmentService";
-import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
+import { UserProgramFormCheckPanel } from "@/components/users/UserProgramFormCheckPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
@@ -198,7 +198,7 @@ export function CoachAthleteDetailPage() {
       )}
 
       {tab === "videos" && assignment?.formCheckEnabled && id && (
-        <UserSheetsWorkoutVideosPanel userId={id} />
+        <UserProgramFormCheckPanel userId={id} />
       )}
 
       {tab === "logs" && assignment?.personalCoachingEnabled && id && (

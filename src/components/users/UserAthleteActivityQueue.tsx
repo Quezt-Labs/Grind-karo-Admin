@@ -38,7 +38,7 @@ export function UserAthleteActivityQueue({
           <p className="text-sm font-semibold text-gray-900 dark:text-white">
             {hasPending
               ? `${pendingVideoCount} form-check video${pendingVideoCount === 1 ? "" : "s"} waiting for review`
-              : "All sheet form-check videos reviewed"}
+              : "All form-check videos reviewed"}
           </p>
         </div>
         {formCheckQuota?.weeklyLimit != null ? (
@@ -57,8 +57,8 @@ export function UserAthleteActivityQueue({
           </p>
         ) : (
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-            Start with Form-check review, then use Sheet program for full
-            context.
+            Review program workouts in Form-check review, or open the global
+            inbox.
           </p>
         )}
       </div>

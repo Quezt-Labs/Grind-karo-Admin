@@ -3,16 +3,12 @@ import {
   BarChart3,
   ClipboardList,
   HeartPulse,
-  Sheet,
-  StickyNote,
   Video,
   type LucideIcon,
 } from "lucide-react";
 
 export type AthleteActivitySection =
   | "videos"
-  | "sheet"
-  | "notes"
   | "logs"
   | "checkins"
   | "summaries";
@@ -50,38 +46,26 @@ export function buildAthleteActivityTabs(opts: {
   pendingVideoCount?: number;
 }): AthleteActivityTab[] {
   const { purchases, pendingVideoCount = 0 } = opts;
-  const sheet = hasCoachingAthleteContext(purchases);
+  const coaching = hasCoachingAthleteContext(purchases);
   const program = hasPaidProgramPurchase(purchases);
 
   const tabs: AthleteActivityTab[] = [];
 
-  if (sheet) {
+  if (coaching) {
     tabs.push({
       key: "videos",
       label: "Form-check review",
-      description: "Pending videos, athlete notes, and coach comments",
+      description: "Program workout videos, athlete notes, and coach comments",
       icon: Video,
       badge: pendingVideoCount > 0 ? pendingVideoCount : undefined,
     });
-    tabs.push({
-      key: "sheet",
-      label: "Program",
-      description: "Athlete program is built in Setup → Open Program Editor",
-      icon: Sheet,
-    });
-    tabs.push({
-      key: "notes",
-      label: "Exercise notes",
-      description: "All athlete notes by week and exercise",
-      icon: StickyNote,
-    });
   }
 
-  if (program) {
+  if (program || coaching) {
     tabs.push({
       key: "logs",
       label: "Program workouts",
-      description: "9to5-style in-app workout logs and set videos",
+      description: "In-app workout logs and set videos",
       icon: ClipboardList,
     });
   }

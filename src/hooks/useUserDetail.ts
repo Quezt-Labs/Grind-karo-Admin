@@ -10,7 +10,7 @@ import {
 } from "@/utils/coachingCapabilities";
 import { coachingProgramMatchesSubscription } from "@/utils/coachingProgramPlanMatch";
 import { hasCoachingAthleteContext } from "@/components/users/athleteActivitySections";
-import { sheetsSetVideoService } from "@/services/sheetsSetVideoService";
+import { formCheckInboxService } from "@/services/formCheckInboxService";
 
 export type UserDetailTab = "activity" | "coaching" | "purchases";
 
@@ -113,19 +113,18 @@ export function useUserDetail(
   const showCoachingActivity = hasCoachingAthleteContext(purchases);
   const scopeKey = subscriptionId ?? "all";
 
-  const { data: allSheetVideos = [] } = useQuery({
-    queryKey: ["admin-user-sheets-set-videos-pending", userId, scopeKey],
+  const { data: pendingFormCheckData } = useQuery({
+    queryKey: ["form-check-inbox-pending-user", userId, scopeKey],
     queryFn: () =>
-      sheetsSetVideoService.listForUser(userId!, {
-        subscriptionId,
+      formCheckInboxService.list({
+        userId: userId!,
+        uncommentedOnly: true,
+        limit: 100,
       }),
     enabled: !!userId && showCoachingActivity,
   });
 
-  const pendingVideoCount = useMemo(
-    () => allSheetVideos.filter((v) => !v.coachComment?.trim()).length,
-    [allSheetVideos],
-  );
+  const pendingVideoCount = pendingFormCheckData?.items.length ?? 0;
 
   const purchaseStats = useMemo(() => {
     if (!purchasesData) return null;

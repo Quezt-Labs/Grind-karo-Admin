@@ -12,11 +12,9 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { FormCheckAthleteNotesBlocks } from "@/components/shared/FormCheckAthleteNotesBlocks";
-import { FormCheckAthleteLoggedMetrics } from "@/components/shared/FormCheckSheetContext";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { FORM_CHECK_PASS_COMMENT } from "@/constants/formCheckComments";
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
-import { sheetsSetVideoCommentService } from "@/services/sheetsSetVideoService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import {
   bulkUpsertFormCheckComments,
@@ -37,23 +35,17 @@ function formatUploadedAt(iso: string): string {
 function ExerciseContextChips({ video }: { video: FormCheckInboxItem }) {
   const chips: string[] = [];
 
-  if (video.source === "program") {
-    if (video.programName) chips.push(video.programName);
-    if (video.weekNumber != null && video.dayNumber != null) {
-      const day =
-        video.dayLabel != null && video.dayLabel !== ""
-          ? `Day ${video.dayNumber} · ${video.dayLabel}`
-          : `Day ${video.dayNumber}`;
-      chips.push(`W${video.weekNumber}`, day);
-    }
-    if (video.exerciseCategory) chips.push(video.exerciseCategory);
-    if (video.prescriptionSets != null || video.repScheme) {
-      chips.push(`${video.prescriptionSets ?? "?"}×${video.repScheme ?? "?"}`);
-    }
-  } else {
-    if (video.tabName) chips.push(video.tabName);
-    if (video.weekNumber != null) chips.push(`W${video.weekNumber}`);
-    if (video.dayNumber != null) chips.push(`Day ${video.dayNumber}`);
+  if (video.programName) chips.push(video.programName);
+  if (video.weekNumber != null && video.dayNumber != null) {
+    const day =
+      video.dayLabel != null && video.dayLabel !== ""
+        ? `Day ${video.dayNumber} · ${video.dayLabel}`
+        : `Day ${video.dayNumber}`;
+    chips.push(`W${video.weekNumber}`, day);
+  }
+  if (video.exerciseCategory) chips.push(video.exerciseCategory);
+  if (video.prescriptionSets != null || video.repScheme) {
+    chips.push(`${video.prescriptionSets ?? "?"}×${video.repScheme ?? "?"}`);
   }
 
   if (chips.length === 0) return null;
@@ -102,16 +94,10 @@ function SetCommentPanelWithBulk({
   const saveMutation = useMutation({
     mutationFn: () => {
       const trimmed = comment.trim();
-      if (video.source === "program") {
-        if (!video.exerciseLogId) throw new Error("Missing exercise log");
-        return workoutVideoCommentService.upsert({
-          exerciseLogId: video.exerciseLogId,
-          setNumber: video.setNumber,
-          comment: trimmed,
-        });
-      }
-      return sheetsSetVideoCommentService.upsert({
-        sheetsSetVideoId: video.id,
+      if (!video.exerciseLogId) throw new Error("Missing exercise log");
+      return workoutVideoCommentService.upsert({
+        exerciseLogId: video.exerciseLogId,
+        setNumber: video.setNumber,
         comment: trimmed,
       });
     },
@@ -335,15 +321,8 @@ export function FormCheckInboxExerciseCard({
           </div>
           <div className="flex shrink-0 items-start gap-2">
             <div className="flex flex-col items-end gap-1.5">
-              <span
-                className={cn(
-                  "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                  head.source === "program"
-                    ? "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300"
-                    : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-                )}
-              >
-                {head.source === "program" ? "Program" : "Sheet"}
+              <span className="rounded-md bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-800 dark:bg-violet-900/40 dark:text-violet-300">
+                Program
               </span>
               {multiSet ? (
                 <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -383,14 +362,6 @@ export function FormCheckInboxExerciseCard({
               style={{ width: `${(reviewedCount / videos.length) * 100}%` }}
             />
           </div>
-        ) : null}
-
-        {expanded && head.source === "sheet" ? (
-          <FormCheckAthleteLoggedMetrics
-            ctx={head.sheetContext}
-            className="mt-3"
-            compact
-          />
         ) : null}
 
         {expanded && head.exerciseNotes?.trim() ? (
@@ -487,15 +458,9 @@ export function FormCheckInboxExerciseCard({
 
 function formatExerciseContextLine(video: FormCheckInboxItem): string {
   const parts: string[] = [];
-  if (video.source === "program") {
-    if (video.programName) parts.push(video.programName);
-    if (video.weekNumber != null && video.dayNumber != null) {
-      parts.push(`W${video.weekNumber} · Day ${video.dayNumber}`);
-    }
-  } else {
-    if (video.tabName) parts.push(video.tabName);
-    if (video.weekNumber != null) parts.push(`W${video.weekNumber}`);
-    if (video.dayNumber != null) parts.push(`Day ${video.dayNumber}`);
+  if (video.programName) parts.push(video.programName);
+  if (video.weekNumber != null && video.dayNumber != null) {
+    parts.push(`W${video.weekNumber} · Day ${video.dayNumber}`);
   }
   return parts.join(" · ");
 }

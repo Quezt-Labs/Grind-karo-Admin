@@ -4,21 +4,15 @@ import type { FormCheckCommentTarget } from "@/utils/bulkFormCheckComments";
 export function formCheckVideoToTarget(
   video: FormCheckInboxItem,
 ): FormCheckCommentTarget | null {
+  if (video.source !== "program") return null;
   if (video.reviewed || video.coachComment?.trim()) return null;
-  const label = `${video.exerciseName} · Set ${video.setNumber}`;
-  if (video.source === "program") {
-    if (!video.exerciseLogId) return null;
-    return {
-      source: "program",
-      exerciseLogId: video.exerciseLogId,
-      setNumber: video.setNumber,
-      label,
-    };
-  }
+  if (!video.exerciseLogId) return null;
+
   return {
-    source: "sheet",
-    sheetsSetVideoId: video.id,
-    label,
+    source: "program",
+    exerciseLogId: video.exerciseLogId,
+    setNumber: video.setNumber,
+    label: `${video.exerciseName} · Set ${video.setNumber}`,
   };
 }
 

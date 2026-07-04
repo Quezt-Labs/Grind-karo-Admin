@@ -4,21 +4,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ChevronRight, User, Video } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
-import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
-import { FormCheckInboxExerciseCard } from "@/components/form-check/FormCheckInboxExerciseCard";
+import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
 import {
   formCheckInboxService,
   type FormCheckInboxAthlete,
 } from "@/services/formCheckInboxService";
-import {
-  bulkUpsertFormCheckComments,
-  type BulkCommentResult,
-} from "@/utils/bulkFormCheckComments";
+import { bulkUpsertFormCheckComments } from "@/utils/bulkFormCheckComments";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
-import {
-  groupFormCheckInboxItems,
-  type FormCheckInboxGroup,
-} from "@/utils/groupFormCheckInboxItems";
+import { groupFormCheckInboxItems } from "@/utils/groupFormCheckInboxItems";
 import { cn } from "@/utils/cn";
 
 type PlanTier = "mega" | "ultra";
@@ -111,67 +104,6 @@ function AthleteRow({
         <ChevronRight className="h-4 w-4 text-gray-400" />
       </div>
     </button>
-  );
-}
-
-type ExpansionChoice = string | null | undefined;
-
-function FormCheckInboxExerciseList({
-  exerciseGroups,
-  pendingCount,
-  onBulkApply,
-}: {
-  exerciseGroups: FormCheckInboxGroup[];
-  pendingCount: number;
-  onBulkApply: (comment: string) => Promise<BulkCommentResult>;
-}) {
-  const autoExpandedKey = useMemo(() => {
-    if (exerciseGroups.length === 0) return null;
-    const firstPending = exerciseGroups.find((g) => g.pendingCount > 0);
-    return firstPending?.key ?? exerciseGroups[0]?.key ?? null;
-  }, [exerciseGroups]);
-
-  const [expansionChoice, setExpansionChoice] =
-    useState<ExpansionChoice>(undefined);
-
-  const expandedGroupKey = useMemo(() => {
-    if (expansionChoice === null) return null;
-    if (
-      typeof expansionChoice === "string" &&
-      exerciseGroups.some((g) => g.key === expansionChoice)
-    ) {
-      return expansionChoice;
-    }
-    return autoExpandedKey;
-  }, [expansionChoice, exerciseGroups, autoExpandedKey]);
-
-  return (
-    <div className="space-y-3">
-      <BulkFormCheckCommentBar
-        pendingCount={pendingCount}
-        onApply={onBulkApply}
-      />
-      {exerciseGroups.map((group) => (
-        <FormCheckInboxExerciseCard
-          key={group.key}
-          videos={group.videos}
-          showAthleteLink={false}
-          expanded={expandedGroupKey === group.key}
-          onToggle={() =>
-            setExpansionChoice((current) => {
-              const effective =
-                current === null
-                  ? null
-                  : typeof current === "string" &&
-                      exerciseGroups.some((g) => g.key === current)
-                    ? current
-                    : autoExpandedKey;
-              return effective === group.key ? null : group.key;
-            })
-          }
-        />
-      ))}
-    </div>
   );
 }
 

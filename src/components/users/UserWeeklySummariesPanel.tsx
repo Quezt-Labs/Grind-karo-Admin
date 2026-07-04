@@ -42,7 +42,7 @@ function StatsGrid({ stats }: { stats: WorkoutWeeklySummary["stats"] }) {
     { label: "Sessions", value: stats.sessionsCompleted },
     { label: "Exercises", value: stats.exercisesLogged },
     { label: "Total sets", value: stats.totalSets },
-    { label: "Sheet entries", value: stats.sheetsEntriesLogged },
+    { label: "Workout entries", value: stats.sheetsEntriesLogged },
     { label: "Active days", value: stats.sheetsDaysActive },
     { label: "Set videos", value: stats.setVideosUploaded },
     { label: "Form checks", value: stats.coachVideoComments },
@@ -141,7 +141,7 @@ function SummaryCard({ summary }: { summary: WorkoutWeeklySummary }) {
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {summary.stats.sessionsCompleted} sessions ·{" "}
-            {summary.stats.sheetsEntriesLogged} sheet logs ·{" "}
+            {summary.stats.sheetsEntriesLogged} workout logs ·{" "}
             {formCheckFeedback.length} form-check comment
             {formCheckFeedback.length !== 1 ? "s" : ""}
           </p>

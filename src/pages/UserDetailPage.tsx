@@ -31,11 +31,10 @@ import { Button } from "@/components/ui/Button";
 import { userService } from "@/services/userService";
 import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
-import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
+import { UserProgramFormCheckPanel } from "@/components/users/UserProgramFormCheckPanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { UserActiveCoachingPlansPanel } from "@/components/users/UserActiveCoachingPlansPanel";
 import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
-import { UserSheetsExerciseNotesPanel } from "@/components/users/UserSheetsExerciseNotesPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
 import { UserCheckInsPanel } from "@/components/users/UserCheckInsPanel";
 import { UserAthleteActivityQueue } from "@/components/users/UserAthleteActivityQueue";
@@ -129,10 +128,6 @@ export function UserDetailPage() {
 
   const [activitySection, setActivitySection] =
     useState<AthleteActivitySection>("videos");
-  const [videoWeekFilter, setVideoWeekFilter] = useState<number | "all">("all");
-  const [videoReviewFilter, setVideoReviewFilter] = useState<
-    "all" | "unreviewed"
-  >("all");
 
   const subscriptionIdParam = searchParams.get("subscriptionId") ?? undefined;
 
@@ -499,7 +494,6 @@ export function UserDetailPage() {
               formCheckQuota={formCheckQuota}
               onReviewClick={() => {
                 setActivitySection("videos");
-                setVideoReviewFilter("unreviewed");
               }}
             />
           ) : (
@@ -544,28 +538,10 @@ export function UserDetailPage() {
               ) : null}
 
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
-                {resolvedActivitySection === "sheet" && (
-                  <p className="text-sm text-gray-500">
-                    Edit program structure in the{" "}
-                    <button
-                      type="button"
-                      className="font-medium text-primary-600 hover:underline"
-                      onClick={() => setMainTab("coaching")}
-                    >
-                      Coaching
-                    </button>{" "}
-                    tab → Athlete program.
-                  </p>
-                )}
                 {resolvedActivitySection === "videos" && (
-                  <UserSheetsWorkoutVideosPanel
+                  <UserProgramFormCheckPanel
                     userId={user.id}
                     formCheckQuota={formCheckQuota}
-                    activityScope={scope}
-                    weekFilter={videoWeekFilter}
-                    onWeekFilterChange={setVideoWeekFilter}
-                    reviewFilter={videoReviewFilter}
-                    onReviewFilterChange={setVideoReviewFilter}
                   />
                 )}
                 {resolvedActivitySection === "logs" && (
@@ -573,17 +549,6 @@ export function UserDetailPage() {
                     userId={user.id}
                     purchases={purchases}
                     activityScope={scope}
-                  />
-                )}
-                {resolvedActivitySection === "notes" && (
-                  <UserSheetsExerciseNotesPanel
-                    userId={user.id}
-                    activityScope={scope}
-                    onOpenVideos={({ weekNumber, reviewFilter }) => {
-                      setVideoWeekFilter(weekNumber);
-                      setVideoReviewFilter(reviewFilter);
-                      setActivitySection("videos");
-                    }}
                   />
                 )}
                 {resolvedActivitySection === "summaries" && (
@@ -835,7 +800,7 @@ function FormCheckQuotaSummary({ quota }: { quota: FormCheckQuota }) {
       {remaining > 0 ? ` · ${remaining} remaining` : " · limit reached"}
       {weekGate} ({quota.planName ?? quota.planSlug}).
       {quota.programWeeksReviewed && quota.programWeeksReviewed.length > 0 && (
-        <> Reviewed sheet weeks: W{quota.programWeeksReviewed.join(", W")}.</>
+        <> Reviewed program weeks: W{quota.programWeeksReviewed.join(", W")}.</>
       )}
     </p>
   );
