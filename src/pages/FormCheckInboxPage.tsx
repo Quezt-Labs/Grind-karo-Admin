@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
+import { FormCheckAthleteNotesBlocks } from "@/components/shared/FormCheckAthleteNotesBlocks";
 import { FormCheckAthleteLoggedMetrics } from "@/components/shared/FormCheckSheetContext";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import {
@@ -110,7 +111,20 @@ function InboxCommentEditor({ video }: { video: FormCheckInboxItem }) {
 function formatVideoContext(video: FormCheckInboxItem): string {
   if (video.source === "program") {
     const programLabel = video.programName ?? "Program";
-    return `${programLabel} · Set ${video.setNumber} · ${formatDateTime(video.createdAt)}`;
+    const weekDay =
+      video.weekNumber != null && video.dayNumber != null
+        ? ` · W${video.weekNumber} · Day ${video.dayNumber}${
+            video.dayLabel ? ` (${video.dayLabel})` : ""
+          }`
+        : "";
+    const prescription =
+      video.prescriptionSets != null || video.repScheme
+        ? ` · ${video.prescriptionSets ?? "?"}×${video.repScheme ?? "?"}`
+        : "";
+    const category = video.exerciseCategory
+      ? ` · ${video.exerciseCategory}`
+      : "";
+    return `${programLabel}${weekDay}${category}${prescription} · Set ${video.setNumber} · ${formatDateTime(video.createdAt)}`;
   }
   return `${video.tabName ?? "Sheet"} · W${video.weekNumber} · Day ${video.dayNumber} · Set ${video.setNumber} · ${formatDateTime(video.createdAt)}`;
 }
@@ -169,16 +183,12 @@ function InboxVideoCard({
         {video.source === "sheet" ? (
           <FormCheckAthleteLoggedMetrics ctx={video.sheetContext} />
         ) : null}
-        {video.athleteNotes?.trim() ? (
-          <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-800/60 dark:bg-amber-900/20">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
-              Athlete notes
-            </p>
-            <p className="mt-0.5 whitespace-pre-wrap text-xs text-amber-950 dark:text-amber-100">
-              {video.athleteNotes.trim()}
-            </p>
-          </div>
-        ) : null}
+        <FormCheckAthleteNotesBlocks
+          exerciseNotes={video.exerciseNotes}
+          setNotes={video.setNotes}
+          setNumber={video.setNumber}
+          athleteNotes={video.athleteNotes}
+        />
       </div>
       <FormCheckVideoPlayer src={video.videoUrl} />
       <InboxCommentEditor

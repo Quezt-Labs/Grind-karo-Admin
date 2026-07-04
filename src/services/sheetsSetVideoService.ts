@@ -14,6 +14,9 @@ export interface AdminSheetsSetVideo {
   coachComment?: string | null;
   coachCommentId?: string | null;
   coachCommentUpdatedAt?: string | null;
+  exerciseNotes?: string | null;
+  setNotes?: string | null;
+  /** @deprecated use exerciseNotes + setNotes */
   athleteNotes?: string | null;
   sheetContext?: SheetExerciseContext | null;
 }

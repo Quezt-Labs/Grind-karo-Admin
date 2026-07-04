@@ -19,11 +19,18 @@ export interface FormCheckInboxItem {
   coachComment: string | null;
   coachCommentId: string | null;
   reviewed: boolean;
+  exerciseNotes?: string | null;
+  setNotes?: string | null;
+  /** @deprecated use exerciseNotes + setNotes */
   athleteNotes?: string | null;
   exerciseLogId?: string;
   programId?: string;
   workoutLogId?: string;
   programName?: string | null;
+  exerciseCategory?: string | null;
+  dayLabel?: string | null;
+  prescriptionSets?: number | null;
+  repScheme?: string | null;
 }
 
 export interface FormCheckInboxResponse {
