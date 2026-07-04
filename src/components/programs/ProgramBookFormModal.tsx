@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { PdfUploadField } from "@/components/shared/PdfUploadField";
+import { ImageUploadField } from "@/components/shared/ImageUploadField";
 import { programBookService } from "@/services/programBookService";
 import type { ProgramBook } from "@/types/programs";
 
@@ -19,6 +20,7 @@ const schema = z.object({
   title: z.string().min(1),
   body: z.string().optional(),
   pdfUrl: z.string().url({ message: "Upload a PDF file" }),
+  thumbnailUrl: z.union([z.string().url(), z.literal("")]).optional(),
   regularPrice: z.coerce.number().min(0, "Min ₹0"),
   salePrice: z.coerce.number().min(0).nullable().optional(),
   sortOrder: z.coerce.number().min(0),
@@ -52,6 +54,7 @@ export function ProgramBookFormModal({
           title: book.title,
           body: book.body,
           pdfUrl: book.pdfUrl ?? "",
+          thumbnailUrl: book.thumbnailUrl ?? "",
           regularPrice: book.regularPrice,
           salePrice: book.salePrice,
           sortOrder: book.sortOrder,
@@ -61,6 +64,7 @@ export function ProgramBookFormModal({
           title: "",
           body: "",
           pdfUrl: "",
+          thumbnailUrl: "",
           regularPrice: 0,
           salePrice: null,
           sortOrder: 0,
@@ -68,6 +72,7 @@ export function ProgramBookFormModal({
   });
 
   const pdfUrl = useWatch({ control, name: "pdfUrl" });
+  const thumbnailUrl = useWatch({ control, name: "thumbnailUrl" });
 
   const createMut = useMutation({
     mutationFn: (d: FormData) =>
@@ -76,6 +81,7 @@ export function ProgramBookFormModal({
         title: d.title,
         body: d.body?.trim() || "",
         pdfUrl: d.pdfUrl,
+        thumbnailUrl: d.thumbnailUrl?.trim() || null,
         regularPrice: d.regularPrice,
         salePrice: d.salePrice ?? null,
         sortOrder: d.sortOrder,
@@ -94,6 +100,7 @@ export function ProgramBookFormModal({
         title: d.title,
         body: d.body?.trim() || "",
         pdfUrl: d.pdfUrl,
+        thumbnailUrl: d.thumbnailUrl?.trim() || null,
         regularPrice: d.regularPrice,
         salePrice: d.salePrice ?? null,
         sortOrder: d.sortOrder,
@@ -153,6 +160,22 @@ export function ProgramBookFormModal({
           {errors.pdfUrl && (
             <p className="text-sm text-red-600">{errors.pdfUrl.message}</p>
           )}
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Cover thumbnail
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Shown in the athlete app and on grindkaro.in books page. Use a
+              portrait cover (JPEG/PNG/WebP).
+            </p>
+            <ImageUploadField
+              imageUrl={thumbnailUrl?.trim() || null}
+              onImageChange={(url) =>
+                setValue("thumbnailUrl", url ?? "", { shouldValidate: true })
+              }
+            />
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input

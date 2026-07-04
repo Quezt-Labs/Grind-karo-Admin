@@ -6,6 +6,7 @@ export interface CreateProgramBookPayload {
   title: string;
   body?: string;
   pdfUrl: string;
+  thumbnailUrl?: string | null;
   regularPrice?: number;
   salePrice?: number | null;
   sortOrder?: number;

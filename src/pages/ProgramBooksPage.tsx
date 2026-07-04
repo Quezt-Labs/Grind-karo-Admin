@@ -123,6 +123,9 @@ export function ProgramBooksPage() {
             <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
               <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
                 <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Cover
+                </TableHead>
+                <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500">
                   Title
                 </TableHead>
                 <TableHead className="h-auto px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -143,8 +146,23 @@ export function ProgramBooksPage() {
               {filtered.map((book) => (
                 <TableRow key={book.id}>
                   <TableCell className="px-4 py-3">
+                    {book.thumbnailUrl ? (
+                      <img
+                        src={book.thumbnailUrl}
+                        alt=""
+                        className="h-14 w-10 rounded object-cover ring-1 ring-gray-200 dark:ring-gray-700"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-10 items-center justify-center rounded bg-gray-100 dark:bg-gray-700">
+                        <FileText className="h-5 w-5 text-gray-400" />
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                      {!book.thumbnailUrl && (
+                        <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                      )}
                       <span className="font-medium text-gray-900 dark:text-white">
                         {book.title}
                       </span>

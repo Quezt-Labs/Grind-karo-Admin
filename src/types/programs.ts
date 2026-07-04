@@ -309,6 +309,7 @@ export interface ProgramBook {
   title: string;
   body: string;
   pdfUrl: string | null;
+  thumbnailUrl: string | null;
   regularPrice: number;
   salePrice: number | null;
   sortOrder: number;
