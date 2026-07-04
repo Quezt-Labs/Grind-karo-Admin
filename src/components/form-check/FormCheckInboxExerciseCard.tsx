@@ -363,12 +363,6 @@ export function FormCheckInboxExerciseCard({
             />
           </div>
         ) : null}
-
-        {expanded && head.exerciseNotes?.trim() ? (
-          <div className="mt-3">
-            <FormCheckAthleteNotesBlocks exerciseNotes={head.exerciseNotes} />
-          </div>
-        ) : null}
       </header>
 
       {expanded ? (
