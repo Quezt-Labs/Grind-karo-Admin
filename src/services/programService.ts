@@ -53,11 +53,6 @@ export const programService = {
     return data.data ?? data;
   },
 
-  async getContentV2(programId: string): Promise<unknown> {
-    const { data } = await api.get(`/programs/${programId}/content-v2`);
-    return data;
-  },
-
   async remove(id: string, hard = false): Promise<void> {
     await api.delete(`/admin/programs/${id}`, {
       params: hard ? { hard: true } : undefined,

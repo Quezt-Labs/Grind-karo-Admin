@@ -109,16 +109,6 @@ export const userService = {
     return raw;
   },
 
-  async patchSpreadsheetId(
-    userId: string,
-    spreadsheetId: string | null,
-  ): Promise<{ success: true; spreadsheetId: string | null }> {
-    const { data } = await api.patch(`/admin/users/${userId}/spreadsheet-id`, {
-      spreadsheetId,
-    });
-    return data;
-  },
-
   async patchWorkoutSetVideos(
     userId: string,
     enabled: boolean,

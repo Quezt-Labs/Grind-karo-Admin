@@ -21,12 +21,6 @@ import { PdfUploadField } from "@/components/shared/PdfUploadField";
 import { programService } from "@/services/programService";
 import type { Program, ProgramTree } from "@/types/programs";
 
-/** Strip a full Google Sheets URL down to just the file id segment */
-function extractSheetId(value: string): string {
-  const match = value.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : value.trim();
-}
-
 import { toSlug } from "@/utils/toSlug";
 
 const programSchema = z.object({
@@ -48,22 +42,6 @@ const programSchema = z.object({
   highlights: z.array(z.object({ value: z.string() })),
   displayOrder: z.coerce.number().min(0),
   isActive: z.boolean(),
-  googleSpreadsheetId: z
-    .string()
-    .optional()
-    .transform((v) => (v ? extractSheetId(v) : v))
-    .refine(
-      (v) => !v || /^[a-zA-Z0-9_-]+$/.test(v),
-      "Must be a valid Google Sheets file id (alphanumeric, _ and - only)",
-    ),
-  autoAssignSheetId: z
-    .string()
-    .optional()
-    .transform((v) => (v ? extractSheetId(v) : v))
-    .refine(
-      (v) => !v || /^[a-zA-Z0-9_-]+$/.test(v),
-      "Must be a valid Google Sheets file id (alphanumeric, _ and - only)",
-    ),
 });
 
 type ProgramFormData = z.infer<typeof programSchema>;
@@ -129,8 +107,6 @@ export function ProgramFormModal({
             : [{ value: "" }],
           displayOrder: program.displayOrder,
           isActive: program.isActive,
-          googleSpreadsheetId: program.googleSpreadsheetId ?? "",
-          autoAssignSheetId: program.autoAssignSheetId ?? "",
         }
       : {
           slug: "",
@@ -148,8 +124,6 @@ export function ProgramFormModal({
           highlights: [{ value: "" }],
           displayOrder: 0,
           isActive: true,
-          googleSpreadsheetId: "",
-          autoAssignSheetId: "",
         },
   });
 
@@ -222,8 +196,6 @@ export function ProgramFormModal({
         highlights: data.highlights.map((h) => h.value).filter(Boolean),
         displayOrder: data.displayOrder,
         isActive: data.isActive,
-        googleSpreadsheetId: data.googleSpreadsheetId || null,
-        autoAssignSheetId: data.autoAssignSheetId || null,
       });
       await syncProgramPdf(created.id, data.slug, data.name, data.pdfUrl);
       return created;
@@ -252,8 +224,6 @@ export function ProgramFormModal({
         highlights: data.highlights.map((h) => h.value).filter(Boolean),
         displayOrder: data.displayOrder,
         isActive: data.isActive,
-        googleSpreadsheetId: data.googleSpreadsheetId || null,
-        autoAssignSheetId: data.autoAssignSheetId || null,
       });
       await syncProgramPdf(program!.id, data.slug, data.name, data.pdfUrl);
       return updated;
@@ -386,43 +356,6 @@ export function ProgramFormModal({
           placeholder="Gift"
           {...register("badge")}
         />
-
-        {/* Auto-assign Sheet */}
-        <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/10">
-          <div className="mb-2 flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4 text-indigo-600 dark:text-indigo-400"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
-                />
-              </svg>
-            </div>
-            <label className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
-              Auto-Assign Coaching Sheet
-            </label>
-          </div>
-          <Input
-            id="prog-auto-assign-sheet-id"
-            label=""
-            placeholder="Spreadsheet ID or URL — assigned on every new purchase…"
-            className="font-mono text-xs"
-            error={errors.autoAssignSheetId?.message}
-            {...register("autoAssignSheetId")}
-          />
-          <p className="mt-1.5 text-xs text-indigo-700 dark:text-indigo-400">
-            When set, every new paid purchase automatically links this
-            spreadsheet to the buyer's account — if they don't already have one.
-            Leave blank to assign sheets manually.
-          </p>
-        </div>
 
         {/* Highlights */}
         <div>
