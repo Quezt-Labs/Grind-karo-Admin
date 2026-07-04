@@ -4,9 +4,9 @@ import { userService } from "@/services/userService";
 import { coachingProgramService } from "@/services/coachingProgramService";
 import type { CoachingSetupStatus } from "@/types/user";
 import {
-  activeCoachingSubscriptions,
   hasPersonalCoachingSubscription,
   paidProgramPurchases,
+  primaryCoachingSubscription,
 } from "@/utils/coachingCapabilities";
 import { coachingProgramMatchesSubscription } from "@/utils/coachingProgramPlanMatch";
 import { hasCoachingAthleteContext } from "@/components/users/athleteActivitySections";
@@ -46,7 +46,10 @@ export function useUserDetail(
   );
 
   const hasPaidPrograms = paidProgramPurchases(purchases).length > 0;
-  const primaryCoachingSub = activeCoachingSubscriptions(purchases)[0];
+  const primaryCoachingSub = primaryCoachingSubscription(
+    purchases,
+    purchasesData?.user?.primaryCoachingSubscriptionId,
+  );
 
   const {
     data: intakeData,
@@ -75,7 +78,10 @@ export function useUserDetail(
     if (intakeMissing || !intakeData) return "needs_intake";
     if (!coachingProgramData?.program) return "awaiting_program";
 
-    const primarySub = activeCoachingSubscriptions(purchases)[0];
+    const primarySub = primaryCoachingSubscription(
+      purchases,
+      purchasesData?.user?.primaryCoachingSubscriptionId,
+    );
     if (
       primarySub &&
       !(

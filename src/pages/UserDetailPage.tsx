@@ -33,6 +33,7 @@ import { UserPushPanel } from "@/components/push/UserPushPanel";
 import { UserWorkoutLogsPanel } from "@/components/users/UserWorkoutLogsPanel";
 import { UserSheetsWorkoutVideosPanel } from "@/components/users/UserSheetsWorkoutVideosPanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
+import { UserActiveCoachingPlansPanel } from "@/components/users/UserActiveCoachingPlansPanel";
 import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
 import { UserSheetsExerciseNotesPanel } from "@/components/users/UserSheetsExerciseNotesPanel";
 import { UserWeeklySummariesPanel } from "@/components/users/UserWeeklySummariesPanel";
@@ -262,6 +263,20 @@ export function UserDetailPage() {
       queryKey: ["admin-user-purchases", user.id],
     });
 
+  const selectCoachingSubscription = useCallback(
+    (subscriptionId: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("subscriptionId", subscriptionId);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -393,6 +408,14 @@ export function UserDetailPage() {
 
       {activeTab === "coaching" && showCoachingTab && (
         <div className="space-y-4">
+          <UserActiveCoachingPlansPanel
+            userId={user.id}
+            purchases={purchases}
+            primarySubscriptionId={user.primaryCoachingSubscriptionId}
+            onUpdated={invalidatePurchases}
+            onSelectSubscription={selectCoachingSubscription}
+          />
+
           {hasActiveCoaching && (
             <CoachingIntakePanel
               userId={user.id}
@@ -408,6 +431,7 @@ export function UserDetailPage() {
                 userId={user.id}
                 userName={user.name ?? user.email}
                 purchases={purchases}
+                primarySubscriptionId={user.primaryCoachingSubscriptionId}
                 coachingData={coachingProgramData}
                 coachingLoading={coachingProgramLoading}
               />

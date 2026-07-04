@@ -11,6 +11,7 @@ export interface AdminUser {
   spreadsheetId?: string | null;
   sheetContentRevision?: number;
   workoutSetVideosEnabled?: boolean;
+  primaryCoachingSubscriptionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

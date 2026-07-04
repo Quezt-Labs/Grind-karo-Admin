@@ -88,4 +88,22 @@ export const coachingSubscriptionService = {
     );
     return data.data ?? data;
   },
+
+  async setPrimarySubscription(
+    userId: string,
+    subscriptionId: string | null,
+  ): Promise<{ success: true; primaryCoachingSubscriptionId: string | null }> {
+    const { data } = await api.patch(
+      `/admin/coaching/subscriptions/users/${userId}/primary`,
+      { subscriptionId },
+    );
+    return data.data ?? data;
+  },
+
+  async cancelSubscription(subscriptionId: string) {
+    const { data } = await api.post(
+      `/admin/coaching/subscriptions/${subscriptionId}/cancel`,
+    );
+    return data.data ?? data;
+  },
 };

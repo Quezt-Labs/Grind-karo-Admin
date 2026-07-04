@@ -14,6 +14,28 @@ export function activeCoachingSubscriptions(purchases: Purchase[]) {
   );
 }
 
+/** Primary subscription first — matches athlete app when admin has pinned one. */
+export function orderedActiveCoachingSubscriptions(
+  purchases: Purchase[],
+  primarySubscriptionId?: string | null,
+) {
+  const active = activeCoachingSubscriptions(purchases);
+  if (!primarySubscriptionId) return active;
+  const primary = active.find((s) => s.id === primarySubscriptionId);
+  if (!primary) return active;
+  return [primary, ...active.filter((s) => s.id !== primary.id)];
+}
+
+export function primaryCoachingSubscription(
+  purchases: Purchase[],
+  primarySubscriptionId?: string | null,
+) {
+  return orderedActiveCoachingSubscriptions(
+    purchases,
+    primarySubscriptionId,
+  )[0];
+}
+
 export function hasPersonalCoachingSubscription(
   purchases: Purchase[],
 ): boolean {

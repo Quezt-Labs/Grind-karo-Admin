@@ -11,7 +11,7 @@ import { MovementSelectionPanel } from "@/components/movement/MovementSelectionP
 import type { CoachingProgramRecord } from "@/services/coachingProgramService";
 import type { Purchase } from "@/types/user";
 import { coachingProgramMatchesSubscription } from "@/utils/coachingProgramPlanMatch";
-import { activeCoachingSubscriptions } from "@/utils/coachingCapabilities";
+import { primaryCoachingSubscription } from "@/utils/coachingCapabilities";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { CloneTemplateModal } from "./CloneTemplateModal";
 
@@ -19,6 +19,7 @@ interface UserAthleteProgramPanelProps {
   userId: string;
   userName: string;
   purchases?: Purchase[];
+  primarySubscriptionId?: string | null;
   coachingData?: CoachingProgramRecord | null;
   coachingLoading?: boolean;
 }
@@ -27,6 +28,7 @@ export function UserAthleteProgramPanel({
   userId,
   userName,
   purchases = [],
+  primarySubscriptionId,
   coachingData: coachingDataProp,
   coachingLoading: coachingLoadingProp = false,
 }: UserAthleteProgramPanelProps) {
@@ -101,7 +103,10 @@ export function UserAthleteProgramPanel({
     );
   }
 
-  const activeCoachingSub = activeCoachingSubscriptions(purchases)[0];
+  const activeCoachingSub = primaryCoachingSubscription(
+    purchases,
+    primarySubscriptionId,
+  );
   const programMatchesPlan = !data?.program
     ? true
     : (data.programMatchesActivePlan ??
