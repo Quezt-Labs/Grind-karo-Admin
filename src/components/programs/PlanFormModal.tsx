@@ -31,7 +31,7 @@ const planSchema = z.object({
   tagline: z.string().optional(),
   description: z.string().optional(),
   price: z.coerce.number().min(1, "Min ₹1"),
-  validityMonths: z.coerce.number().min(1, "Min 1 month"),
+  validityMonths: z.coerce.number().min(1, "Min 1 block (4 weeks)"),
   includedFeatures: z.array(z.object({ value: z.string() })),
   excludedFeatures: z.array(z.object({ value: z.string() })),
   badge: z.string().optional(),
@@ -203,7 +203,7 @@ export function PlanFormModal({
           <div className="grid gap-4 sm:grid-cols-3">
             <Input
               id="plan-price"
-              label="Price (₹)"
+              label="Lifter fee (₹)"
               type="number"
               min={0}
               placeholder="4999"
@@ -212,7 +212,7 @@ export function PlanFormModal({
             />
             <Input
               id="plan-validity"
-              label="Validity (months)"
+              label="Validity (4-week blocks)"
               type="number"
               min={1}
               placeholder="3"

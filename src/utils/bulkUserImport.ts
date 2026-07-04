@@ -4,7 +4,7 @@ import type { AssistantCoach } from "@/types/athleteAssignment";
 import type { CreateAdminUserPayload } from "@/types/user";
 import { planGrantsFormCheck } from "@/utils/coachingPlanCapabilities";
 import {
-  addMonthsToDateInput,
+  addBillingPeriodsToDateInput,
   defaultFeeCoversMonths,
   todayDateInput,
 } from "@/utils/coachingBilling";
@@ -204,7 +204,7 @@ function mapRowToPayload(
       todayDateInput();
     const endDate =
       rowValue(row, "coaching_end_date", "coaching_end") ??
-      addMonthsToDateInput(startDate, feeMonths);
+      addBillingPeriodsToDateInput(startDate, feeMonths);
     const amountRaw = rowValue(row, "coaching_amount", "coaching_price");
     const amount = amountRaw ? Number(amountRaw) : undefined;
     if (amountRaw && (!Number.isFinite(amount) || (amount ?? 0) <= 0)) {

@@ -542,6 +542,9 @@ export function UserDetailPage() {
                   <UserProgramFormCheckPanel
                     userId={user.id}
                     formCheckQuota={formCheckQuota}
+                    purchases={purchases}
+                    showBilling={isStaff}
+                    onBillingUpdated={invalidatePurchases}
                   />
                 )}
                 {resolvedActivitySection === "logs" && (
@@ -795,8 +798,8 @@ function FormCheckQuotaSummary({ quota }: { quota: FormCheckQuota }) {
     <p
       className={`mt-2 text-xs ${remaining <= 0 ? "text-amber-700 dark:text-amber-300" : "text-gray-500 dark:text-gray-400"}`}
     >
-      Form checks ({quota.weekStart}): {quota.usedThisWeek}/{quota.weeklyLimit}{" "}
-      program weeks used
+      Form checks ({quota.weekStart} · 4-week block): {quota.usedThisWeek}/
+      {quota.weeklyLimit} program weeks used
       {remaining > 0 ? ` · ${remaining} remaining` : " · limit reached"}
       {weekGate} ({quota.planName ?? quota.planSlug}).
       {quota.programWeeksReviewed && quota.programWeeksReviewed.length > 0 && (

@@ -16,6 +16,7 @@ import { planService } from "@/services/planService";
 import type { Column } from "@/types/dashboard";
 import type { CoachingPlan } from "@/types/program";
 import { PlanFormModal } from "@/components/programs/PlanFormModal";
+import { billingPeriodWeeks } from "@/utils/coachingBillingPeriod";
 import { useIsAdmin } from "@/hooks/useRole";
 
 function formatINR(rupees: number): string {
@@ -41,7 +42,7 @@ type PlanRow = {
 const planColumns: Column<PlanRow>[] = [
   { key: "name", header: "Plan Name", sortable: true },
   { key: "slug", header: "Slug", sortable: true },
-  { key: "price", header: "Price", sortable: true },
+  { key: "price", header: "Lifter fee", sortable: true },
   { key: "validityMonths", header: "Validity", sortable: true },
   {
     key: "badge",
@@ -139,7 +140,7 @@ export function PlansPage() {
       name: p.name,
       slug: p.slug,
       price: formatINR(p.price),
-      validityMonths: `${p.validityMonths} months`,
+      validityMonths: `${billingPeriodWeeks(p.validityMonths)} weeks`,
       badge: p.badge || "—",
       displayOrder: String(p.displayOrder),
       isActive: p.isActive ? "Active" : "Inactive",

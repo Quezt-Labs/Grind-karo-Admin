@@ -1,6 +1,18 @@
 import type { CoachingPlan } from "@/types/program";
+import {
+  billingPeriodDays,
+  formatBillingPeriodLabel,
+} from "@/utils/coachingBillingPeriod";
 
 export type FeeCoversMonths = 1 | 3;
+
+export type CoachingBillingState = {
+  feeCoversMonths: FeeCoversMonths;
+  startDate: string;
+  endDate: string;
+  endDateTouched: boolean;
+  lifterFee: string;
+};
 
 export function defaultFeeCoversMonths(
   plan: CoachingPlan | undefined,
@@ -13,36 +25,56 @@ function todayDateInput(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addMonthsToDateInput(dateInput: string, months: number): string {
+function addDaysToDateInput(dateInput: string, days: number): string {
   const base = dateInput ? new Date(`${dateInput}T12:00:00`) : new Date();
   if (Number.isNaN(base.getTime())) return todayDateInput();
-  base.setMonth(base.getMonth() + months);
+  base.setDate(base.getDate() + days);
   return base.toISOString().slice(0, 10);
 }
 
-export function initialCoachingBillingState(plan?: CoachingPlan) {
+function addBillingPeriodsToDateInput(
+  dateInput: string,
+  periodCount: number,
+): string {
+  return addDaysToDateInput(dateInput, billingPeriodDays(periodCount));
+}
+
+export function initialCoachingBillingState(
+  plan?: CoachingPlan,
+): CoachingBillingState {
   const start = todayDateInput();
-  const months = defaultFeeCoversMonths(plan);
+  const periods = defaultFeeCoversMonths(plan);
   return {
-    feeCoversMonths: months,
+    feeCoversMonths: periods,
     startDate: start,
-    endDate: addMonthsToDateInput(start, months),
+    endDate: addBillingPeriodsToDateInput(start, periods),
     endDateTouched: false,
+    lifterFee: "",
   };
+}
+
+export function parseLifterFeeInput(lifterFee: string): number | undefined {
+  const trimmed = lifterFee.trim();
+  if (!trimmed) return undefined;
+  const amount = Number(trimmed);
+  if (!Number.isFinite(amount) || amount <= 0) return undefined;
+  return amount;
+}
+
+export function isLifterFeeInputInvalid(lifterFee: string): boolean {
+  const trimmed = lifterFee.trim();
+  if (!trimmed) return false;
+  const amount = Number(trimmed);
+  return !Number.isFinite(amount) || amount <= 0;
 }
 
 export function coachingBillingPayload(
   planId: string,
-  customPrice: string,
-  billing: {
-    feeCoversMonths: FeeCoversMonths;
-    startDate: string;
-    endDate: string;
-  },
+  billing: CoachingBillingState,
 ) {
   return {
     planId,
-    totalAmount: customPrice.trim() ? Number(customPrice.trim()) : undefined,
+    totalAmount: parseLifterFeeInput(billing.lifterFee),
     feeCoversMonths: billing.feeCoversMonths,
     startDate: billing.startDate
       ? new Date(`${billing.startDate}T00:00:00`).toISOString()
@@ -53,4 +85,8 @@ export function coachingBillingPayload(
   };
 }
 
-export { todayDateInput, addMonthsToDateInput };
+export {
+  todayDateInput,
+  addBillingPeriodsToDateInput,
+  formatBillingPeriodLabel,
+};

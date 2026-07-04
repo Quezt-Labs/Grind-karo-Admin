@@ -4,6 +4,7 @@ import { coachingSubscriptionService } from "@/services/coachingSubscriptionServ
 import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
 import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
 import type { Purchase } from "@/types/user";
+import { COACHING_DAYS_PER_BILLING_PERIOD } from "@/utils/coachingBillingPeriod";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -21,9 +22,9 @@ function formatDate(iso: string): string {
   });
 }
 
-function addMonths(date: Date, months: number): Date {
+function addDays(date: Date, days: number): Date {
   const next = new Date(date);
-  next.setMonth(next.getMonth() + months);
+  next.setDate(next.getDate() + days);
   return next;
 }
 
@@ -73,7 +74,7 @@ function coachingMilestones(
   ];
 
   if (isMonthly) {
-    let cursor = addMonths(start, 1);
+    let cursor = addDays(start, COACHING_DAYS_PER_BILLING_PERIOD);
     let installment = 2;
     while (cursor < end) {
       const waived = subAdjustments.some((row) => {
@@ -93,7 +94,7 @@ function coachingMilestones(
         amount: waived ? undefined : sub.totalAmount,
         status: waived ? "waived" : cursor <= now ? "paid" : "upcoming",
       });
-      cursor = addMonths(cursor, 1);
+      cursor = addDays(cursor, COACHING_DAYS_PER_BILLING_PERIOD);
       installment += 1;
     }
   }

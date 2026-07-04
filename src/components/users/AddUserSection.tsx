@@ -19,6 +19,7 @@ import { CoachingBillingFields } from "@/components/users/CoachingBillingFields"
 import {
   coachingBillingPayload,
   initialCoachingBillingState,
+  isLifterFeeInputInvalid,
   todayDateInput,
   type FeeCoversMonths,
 } from "@/utils/coachingBilling";
@@ -51,7 +52,6 @@ export function AddUserSection({ onClose }: Props) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [planId, setPlanId] = useState("");
-  const [customPrice, setCustomPrice] = useState("");
   const [programId, setProgramId] = useState("");
   const [programAmount, setProgramAmount] = useState("");
   const [programStartDate, setProgramStartDate] = useState(todayDateInput);
@@ -99,11 +99,7 @@ export function AddUserSection({ onClose }: Props) {
 
       if (role === "USER") {
         if (planId) {
-          payload.coaching = coachingBillingPayload(
-            planId,
-            customPrice,
-            billing,
-          );
+          payload.coaching = coachingBillingPayload(planId, billing);
         }
         if (programId) {
           payload.program = {
@@ -157,9 +153,9 @@ export function AddUserSection({ onClose }: Props) {
     },
   });
 
-  const customPriceInvalid =
-    customPrice.trim().length > 0 &&
-    (!Number.isFinite(Number(customPrice)) || Number(customPrice) <= 0);
+  const lifterFeeInvalid = planId
+    ? isLifterFeeInputInvalid(billing.lifterFee)
+    : false;
 
   const programAmountInvalid =
     programAmount.trim().length > 0 &&
@@ -168,7 +164,7 @@ export function AddUserSection({ onClose }: Props) {
   const canSubmit =
     email.trim().length > 0 &&
     (role === "USER" || password.length >= 8) &&
-    !customPriceInvalid &&
+    !lifterFeeInvalid &&
     !programAmountInvalid &&
     !createMutation.isPending;
 
@@ -244,7 +240,6 @@ export function AddUserSection({ onClose }: Props) {
                   onValueChange={(v) => {
                     const next = v === "__none__" ? "" : v;
                     setPlanId(next);
-                    setCustomPrice("");
                     const plan = plans.find((p) => p.id === next);
                     setBilling(initialCoachingBillingState(plan));
                     setFormCheckSupport(
@@ -265,24 +260,6 @@ export function AddUserSection({ onClose }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-              <Input
-                label="Custom price (INR)"
-                type="number"
-                min={1}
-                value={customPrice}
-                onChange={(e) => setCustomPrice(e.target.value)}
-                placeholder={
-                  selectedPlan
-                    ? `Default ${formatINR(selectedPlan.price)}`
-                    : "Optional"
-                }
-                disabled={!planId}
-                error={
-                  customPriceInvalid
-                    ? "Enter a valid amount greater than zero"
-                    : undefined
-                }
-              />
             </div>
             <CoachingBillingFields
               plan={selectedPlan}
@@ -290,6 +267,7 @@ export function AddUserSection({ onClose }: Props) {
               startDate={billing.startDate}
               endDate={billing.endDate}
               endDateTouched={billing.endDateTouched}
+              lifterFee={billing.lifterFee}
               onFeeCoversMonthsChange={(feeCoversMonths: FeeCoversMonths) =>
                 setBilling((b) => ({ ...b, feeCoversMonths }))
               }
@@ -301,6 +279,9 @@ export function AddUserSection({ onClose }: Props) {
               }
               onEndDateTouchedChange={(endDateTouched) =>
                 setBilling((b) => ({ ...b, endDateTouched }))
+              }
+              onLifterFeeChange={(lifterFee) =>
+                setBilling((b) => ({ ...b, lifterFee }))
               }
             />
             {!planId && (

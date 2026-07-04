@@ -198,7 +198,13 @@ export function CoachAthleteDetailPage() {
       )}
 
       {tab === "videos" && assignment?.formCheckEnabled && id && (
-        <UserProgramFormCheckPanel userId={id} />
+        <UserProgramFormCheckPanel
+          userId={id}
+          formCheckQuota={purchaseData?.formCheckQuota}
+          purchases={purchaseData?.purchases ?? []}
+          showBilling
+          onBillingUpdated={refreshPurchases}
+        />
       )}
 
       {tab === "logs" && assignment?.personalCoachingEnabled && id && (

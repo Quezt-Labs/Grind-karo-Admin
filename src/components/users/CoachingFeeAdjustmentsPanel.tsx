@@ -13,16 +13,20 @@ import {
   SelectValue,
 } from "@/components/ui/ShadSelect";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
+import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
 import { planService } from "@/services/planService";
 import { formatINR } from "@/pages/users/usersConstants";
 import { CoachingBillingFields } from "@/components/users/CoachingBillingFields";
 import {
   coachingBillingPayload,
   initialCoachingBillingState,
+  isLifterFeeInputInvalid,
+  parseLifterFeeInput,
+  type CoachingBillingState,
   type FeeCoversMonths,
 } from "@/utils/coachingBilling";
 import type { Purchase } from "@/types/user";
-import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
+import { COACHING_DAYS_PER_BILLING_PERIOD } from "@/utils/coachingBillingPeriod";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -37,6 +41,7 @@ const TYPE_LABEL: Record<CoachingBillingAdjustment["type"], string> = {
   WAIVE: "Fee waived / hold",
   MANUAL_PAYMENT: "Manual payment",
   DATE_CORRECTION: "Dates corrected",
+  FEE_CORRECTION: "Lifter fee updated",
 };
 
 type Props = {
@@ -53,8 +58,8 @@ export function CoachingFeeAdjustmentsPanel({
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [manualPlanId, setManualPlanId] = useState("");
-  const [manualAmount, setManualAmount] = useState("");
   const [billing, setBilling] = useState(() => initialCoachingBillingState());
+  const [lifterFeeDraft, setLifterFeeDraft] = useState("");
 
   const paidCoachingSubs = useMemo(
     () =>
@@ -134,23 +139,50 @@ export function CoachingFeeAdjustmentsPanel({
     mutationFn: () =>
       coachingSubscriptionService.recordManualPayment({
         userId,
-        ...coachingBillingPayload(manualPlanId, manualAmount, billing),
+        ...coachingBillingPayload(manualPlanId, billing),
         reason: reason.trim(),
       }),
     onSuccess: () => {
       toast.success("Manual payment recorded");
       setReason("");
-      setManualAmount("");
+      setBilling((b) => ({ ...b, lifterFee: "" }));
       invalidate();
     },
     onError: (err: Error) =>
       toast.error(err.message || "Failed to record manual payment"),
   });
 
+  const feeMutation = useMutation({
+    mutationFn: () => {
+      if (!primarySub) throw new Error("No subscription to update");
+      const nextFee = parseLifterFeeInput(lifterFeeDraft);
+      if (nextFee == null) throw new Error("Enter a valid lifter fee");
+      return coachingSubscriptionService.patchSubscriptionFee(primarySub.id, {
+        totalAmount: nextFee,
+        reason: reason.trim(),
+      });
+    },
+    onSuccess: () => {
+      toast.success("Lifter fee updated");
+      setReason("");
+      setLifterFeeDraft("");
+      invalidate();
+    },
+    onError: (err: Error) =>
+      toast.error(err.message || "Failed to update lifter fee"),
+  });
+
   const busy =
     extendMutation.isPending ||
     waiveMutation.isPending ||
-    manualMutation.isPending;
+    manualMutation.isPending ||
+    feeMutation.isPending;
+
+  const lifterFeeDraftInvalid = isLifterFeeInputInvalid(lifterFeeDraft);
+  const lifterFeeChanged =
+    primarySub != null &&
+    parseLifterFeeInput(lifterFeeDraft) != null &&
+    parseLifterFeeInput(lifterFeeDraft) !== primarySub.totalAmount;
 
   if (paidCoachingSubs.length === 0) {
     return (
@@ -170,12 +202,9 @@ export function CoachingFeeAdjustmentsPanel({
           manualPlanId={manualPlanId}
           setManualPlanId={(id) => {
             setManualPlanId(id);
-            setManualAmount("");
             const plan = plans.find((p) => p.id === id);
             setBilling(initialCoachingBillingState(plan));
           }}
-          manualAmount={manualAmount}
-          setManualAmount={setManualAmount}
           billing={billing}
           setBilling={setBilling}
           manualPlan={manualPlan}
@@ -200,7 +229,8 @@ export function CoachingFeeAdjustmentsPanel({
           </div>
           {primarySub && (
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {primarySub.planName} · {primarySub.status} · expires{" "}
+              {primarySub.planName} · {primarySub.status} · lifter fee{" "}
+              {formatINR(primarySub.totalAmount)} · expires{" "}
               {formatDate(primarySub.expiresAt)}
             </p>
           )}
@@ -215,11 +245,58 @@ export function CoachingFeeAdjustmentsPanel({
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g. Athlete requested 1-month hold — comp prep break agreed on WhatsApp"
+            placeholder="e.g. Athlete requested 4-week hold — comp prep break agreed on WhatsApp"
             rows={2}
             className="text-sm"
           />
         </div>
+
+        {primarySub && (
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 dark:border-indigo-800/60 dark:bg-indigo-950/20">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-800 dark:text-indigo-200">
+              Change lifter fee
+            </p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[160px] flex-1">
+                <Input
+                  label="Lifter fee (INR)"
+                  type="number"
+                  min={1}
+                  value={lifterFeeDraft}
+                  onChange={(e) => setLifterFeeDraft(e.target.value)}
+                  placeholder={formatINR(primarySub.totalAmount)}
+                  error={
+                    lifterFeeDraftInvalid
+                      ? "Enter a valid amount greater than zero"
+                      : undefined
+                  }
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  busy ||
+                  reason.trim().length < 3 ||
+                  lifterFeeDraftInvalid ||
+                  !lifterFeeChanged
+                }
+                onClick={() => feeMutation.mutate()}
+              >
+                {feeMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <HandCoins className="h-4 w-4" />
+                )}
+                Update lifter fee
+              </Button>
+            </div>
+            <p className="mt-1 text-[11px] text-indigo-900/70 dark:text-indigo-200/70">
+              Current: {formatINR(primarySub.totalAmount)} per billing block.
+              Used for payment calendar reminders and offline payment defaults.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button
@@ -241,9 +318,11 @@ export function CoachingFeeAdjustmentsPanel({
             variant="secondary"
             size="sm"
             disabled={busy || reason.trim().length < 3 || !primarySub}
-            onClick={() => extendMutation.mutate(30)}
+            onClick={() =>
+              extendMutation.mutate(COACHING_DAYS_PER_BILLING_PERIOD)
+            }
           >
-            +30 days
+            +28 days (4 weeks)
           </Button>
           <Button
             type="button"
@@ -257,7 +336,7 @@ export function CoachingFeeAdjustmentsPanel({
             ) : (
               <PauseCircle className="h-4 w-4" />
             )}
-            Waive / hold month
+            Waive 4-week block
           </Button>
         </div>
 
@@ -266,12 +345,9 @@ export function CoachingFeeAdjustmentsPanel({
           manualPlanId={manualPlanId}
           setManualPlanId={(id) => {
             setManualPlanId(id);
-            setManualAmount("");
             const plan = plans.find((p) => p.id === id);
             setBilling(initialCoachingBillingState(plan));
           }}
-          manualAmount={manualAmount}
-          setManualAmount={setManualAmount}
           billing={billing}
           setBilling={setBilling}
           manualPlan={manualPlan}
@@ -329,8 +405,6 @@ function ManualPaymentForm({
   plans,
   manualPlanId,
   setManualPlanId,
-  manualAmount,
-  setManualAmount,
   billing,
   setBilling,
   manualPlan,
@@ -342,12 +416,8 @@ function ManualPaymentForm({
   plans: Awaited<ReturnType<typeof planService.getAll>>;
   manualPlanId: string;
   setManualPlanId: (value: string) => void;
-  manualAmount: string;
-  setManualAmount: (value: string) => void;
-  billing: ReturnType<typeof initialCoachingBillingState>;
-  setBilling: Dispatch<
-    SetStateAction<ReturnType<typeof initialCoachingBillingState>>
-  >;
+  billing: CoachingBillingState;
+  setBilling: Dispatch<SetStateAction<CoachingBillingState>>;
   manualPlan: (typeof plans)[number] | undefined;
   reason: string;
   onSubmit: () => void;
@@ -374,14 +444,6 @@ function ManualPaymentForm({
               ))}
           </SelectContent>
         </Select>
-        <Input
-          type="number"
-          min={0}
-          placeholder="Amount (optional)"
-          value={manualAmount}
-          onChange={(e) => setManualAmount(e.target.value)}
-          className="h-9 text-sm"
-        />
       </div>
       <CoachingBillingFields
         plan={manualPlan}
@@ -389,6 +451,7 @@ function ManualPaymentForm({
         startDate={billing.startDate}
         endDate={billing.endDate}
         endDateTouched={billing.endDateTouched}
+        lifterFee={billing.lifterFee}
         onFeeCoversMonthsChange={(feeCoversMonths: FeeCoversMonths) =>
           setBilling((b) => ({ ...b, feeCoversMonths }))
         }
@@ -398,6 +461,9 @@ function ManualPaymentForm({
         onEndDateChange={(endDate) => setBilling((b) => ({ ...b, endDate }))}
         onEndDateTouchedChange={(endDateTouched) =>
           setBilling((b) => ({ ...b, endDateTouched }))
+        }
+        onLifterFeeChange={(lifterFee) =>
+          setBilling((b) => ({ ...b, lifterFee }))
         }
       />
       <Button

@@ -5,7 +5,8 @@ import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInb
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { formCheckInboxService } from "@/services/formCheckInboxService";
-import type { FormCheckQuota } from "@/types/user";
+import type { FormCheckQuota, Purchase } from "@/types/user";
+import { FormCheckBillingControls } from "@/components/users/FormCheckBillingControls";
 import { bulkUpsertFormCheckComments } from "@/utils/bulkFormCheckComments";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
 import { groupFormCheckInboxItems } from "@/utils/groupFormCheckInboxItems";
@@ -15,11 +16,17 @@ type ReviewFilter = "pending" | "all";
 interface UserProgramFormCheckPanelProps {
   userId: string;
   formCheckQuota?: FormCheckQuota;
+  purchases?: Purchase[];
+  showBilling?: boolean;
+  onBillingUpdated?: () => void;
 }
 
 export function UserProgramFormCheckPanel({
   userId,
   formCheckQuota,
+  purchases = [],
+  showBilling = false,
+  onBillingUpdated,
 }: UserProgramFormCheckPanelProps) {
   const queryClient = useQueryClient();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("pending");
@@ -73,6 +80,14 @@ export function UserProgramFormCheckPanel({
 
   return (
     <div>
+      {showBilling && (
+        <FormCheckBillingControls
+          userId={userId}
+          purchases={purchases}
+          onUpdated={onBillingUpdated}
+        />
+      )}
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Video className="h-5 w-5 text-gray-500 dark:text-gray-400" />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -101,7 +116,7 @@ export function UserProgramFormCheckPanel({
 
       {formCheckQuota?.weeklyLimit != null ? (
         <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
-          Form checks this block ({formCheckQuota.weekStart}):{" "}
+          Form checks this 4-week block ({formCheckQuota.weekStart}):{" "}
           <span className="font-semibold">
             {formCheckQuota.usedThisWeek}/{formCheckQuota.weeklyLimit}
           </span>{" "}
@@ -111,6 +126,12 @@ export function UserProgramFormCheckPanel({
             ? ` · ${formCheckQuota.remainingThisWeek} remaining`
             : formCheckQuota.remainingThisWeek === 0
               ? " · limit reached"
+              : ""}
+          {formCheckQuota.formCheckWeekAllowed === false
+            ? ` · Not a form-check week (sub week ${formCheckQuota.subscriptionWeek ?? "?"})`
+            : formCheckQuota.formCheckWeekAllowed === true &&
+                formCheckQuota.subscriptionWeek != null
+              ? ` · Form-check week (sub week ${formCheckQuota.subscriptionWeek})`
               : ""}
         </div>
       ) : null}

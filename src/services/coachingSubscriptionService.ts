@@ -4,7 +4,8 @@ export type CoachingBillingAdjustmentType =
   | "EXTEND"
   | "WAIVE"
   | "MANUAL_PAYMENT"
-  | "DATE_CORRECTION";
+  | "DATE_CORRECTION"
+  | "FEE_CORRECTION";
 
 export interface CoachingBillingAdjustment {
   id: string;
@@ -69,6 +70,20 @@ export const coachingSubscriptionService = {
   }) {
     const { data } = await api.post(
       "/admin/coaching/subscriptions/manual-payment",
+      body,
+    );
+    return data.data ?? data;
+  },
+
+  async patchSubscriptionFee(
+    subscriptionId: string,
+    body: {
+      totalAmount: number;
+      reason: string;
+    },
+  ) {
+    const { data } = await api.patch(
+      `/admin/coaching/subscriptions/${subscriptionId}/fee`,
       body,
     );
     return data.data ?? data;

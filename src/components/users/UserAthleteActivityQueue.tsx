@@ -43,7 +43,7 @@ export function UserAthleteActivityQueue({
         </div>
         {formCheckQuota?.weeklyLimit != null ? (
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-            Block quota ({formCheckQuota.weekStart}):{" "}
+            Block quota ({formCheckQuota.weekStart} · 4-week block):{" "}
             <span className="font-semibold">
               {formCheckQuota.usedThisWeek}/{formCheckQuota.weeklyLimit}
             </span>{" "}

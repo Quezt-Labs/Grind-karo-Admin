@@ -12,7 +12,7 @@ import {
   ChevronRight,
   Pencil,
 } from "lucide-react";
-import toast from "react-hot-toast";
+import { billingPeriodWeeks } from "@/utils/coachingBillingPeriod";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import {
@@ -198,7 +198,8 @@ export function PlanDetailPage() {
             {plan.name}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {plan.slug} · {formatINR(plan.price)} · {plan.validityMonths} months
+            {plan.slug} · {formatINR(plan.price)} ·{" "}
+            {billingPeriodWeeks(plan.validityMonths)} weeks
           </p>
         </div>
         <StatusBadge status={plan.isActive ? "Active" : "Inactive"} />
@@ -207,7 +208,10 @@ export function PlanDetailPage() {
       {/* Info cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <InfoCard label="Price" value={formatINR(plan.price)} />
-        <InfoCard label="Validity" value={`${plan.validityMonths} months`} />
+        <InfoCard
+          label="Validity"
+          value={`${billingPeriodWeeks(plan.validityMonths)} weeks (${plan.validityMonths} × 4-week blocks)`}
+        />
         <InfoCard
           label="Reviews"
           value={

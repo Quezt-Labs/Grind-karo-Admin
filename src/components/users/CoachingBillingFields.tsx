@@ -8,9 +8,11 @@ import {
   SelectValue,
 } from "@/components/ui/ShadSelect";
 import type { CoachingPlan } from "@/types/program";
+import { formatINR } from "@/pages/users/usersConstants";
 import {
-  addMonthsToDateInput,
+  addBillingPeriodsToDateInput,
   defaultFeeCoversMonths,
+  isLifterFeeInputInvalid,
   todayDateInput,
   type FeeCoversMonths,
 } from "@/utils/coachingBilling";
@@ -21,10 +23,14 @@ type Props = {
   startDate: string;
   endDate: string;
   endDateTouched: boolean;
+  lifterFee: string;
   onFeeCoversMonthsChange: (value: FeeCoversMonths) => void;
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
   onEndDateTouchedChange: (touched: boolean) => void;
+  onLifterFeeChange: (value: string) => void;
+  /** Hide lifter fee when parent renders it elsewhere (e.g. subscription fee editor). */
+  showLifterFee?: boolean;
 };
 
 export function CoachingBillingFields({
@@ -33,10 +39,13 @@ export function CoachingBillingFields({
   startDate,
   endDate,
   endDateTouched,
+  lifterFee,
   onFeeCoversMonthsChange,
   onStartDateChange,
   onEndDateChange,
   onEndDateTouchedChange,
+  onLifterFeeChange,
+  showLifterFee = true,
 }: Props) {
   const prevPlanId = useRef(plan?.id);
 
@@ -45,12 +54,18 @@ export function CoachingBillingFields({
       prevPlanId.current = plan.id;
       onFeeCoversMonthsChange(defaultFeeCoversMonths(plan));
       onEndDateTouchedChange(false);
+      onLifterFeeChange("");
     }
-  }, [plan, onFeeCoversMonthsChange, onEndDateTouchedChange]);
+  }, [
+    plan,
+    onFeeCoversMonthsChange,
+    onEndDateTouchedChange,
+    onLifterFeeChange,
+  ]);
 
   useEffect(() => {
     if (endDateTouched) return;
-    const computed = addMonthsToDateInput(
+    const computed = addBillingPeriodsToDateInput(
       startDate || todayDateInput(),
       feeCoversMonths,
     );
@@ -60,6 +75,8 @@ export function CoachingBillingFields({
   }, [startDate, feeCoversMonths, endDateTouched, endDate, onEndDateChange]);
 
   if (!plan) return null;
+
+  const lifterFeeInvalid = isLifterFeeInputInvalid(lifterFee);
 
   return (
     <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -77,15 +94,31 @@ export function CoachingBillingFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">Monthly (1 month)</SelectItem>
-            <SelectItem value="3">3-month package</SelectItem>
+            <SelectItem value="1">4 weeks (28 days)</SelectItem>
+            <SelectItem value="3">12 weeks (84 days)</SelectItem>
           </SelectContent>
         </Select>
         <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-          How long this payment grants access — for monthly vs upfront packages.
+          How long this payment grants access — each block is 4 weeks (28 days).
         </p>
       </div>
-      <div />
+      {showLifterFee ? (
+        <Input
+          label="Lifter fee (INR)"
+          type="number"
+          min={1}
+          value={lifterFee}
+          onChange={(e) => onLifterFeeChange(e.target.value)}
+          placeholder={`Default ${formatINR(plan.price)}`}
+          error={
+            lifterFeeInvalid
+              ? "Enter a valid amount greater than zero"
+              : undefined
+          }
+        />
+      ) : (
+        <div />
+      )}
       <Input
         label="Start date"
         type="date"
