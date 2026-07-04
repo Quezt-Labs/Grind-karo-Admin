@@ -116,6 +116,20 @@ export function UserDetailPage() {
     [setSearchParams],
   );
 
+  const selectCoachingSubscription = useCallback(
+    (subscriptionId: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("subscriptionId", subscriptionId);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   const [activitySection, setActivitySection] =
     useState<AthleteActivitySection>("videos");
   const [videoWeekFilter, setVideoWeekFilter] = useState<number | "all">("all");
@@ -262,20 +276,6 @@ export function UserDetailPage() {
     void queryClient.invalidateQueries({
       queryKey: ["admin-user-purchases", user.id],
     });
-
-  const selectCoachingSubscription = useCallback(
-    (subscriptionId: string) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("subscriptionId", subscriptionId);
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
 
   return (
     <div className="space-y-4">
