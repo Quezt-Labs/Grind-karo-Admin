@@ -5,14 +5,11 @@ import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import toast from "react-hot-toast";
 import { uploadService } from "@/services/uploadService";
 import {
-  formatBytes,
   formatUploadError,
   isVideoFile,
   logUploadFailure,
   resolvePresignContentType,
 } from "@/utils/uploadErrors";
-
-const MAX_VIDEO_SIZE = 150 * 1024 * 1024; // 150 MB
 
 interface VideoUploadFieldProps {
   videoUrl: string | null;
@@ -36,13 +33,6 @@ export function VideoUploadField({
 
     if (!isVideoFile(file)) {
       const msg = "Only MP4, MOV, WebM, and MPEG videos are allowed";
-      setLastError(msg);
-      toast.error(msg);
-      return;
-    }
-
-    if (file.size > MAX_VIDEO_SIZE) {
-      const msg = `Video must be ${formatBytes(MAX_VIDEO_SIZE)} or smaller (selected: ${formatBytes(file.size)})`;
       setLastError(msg);
       toast.error(msg);
       return;
@@ -144,7 +134,7 @@ export function VideoUploadField({
                 Click to upload video
               </span>
               <span className="text-xs text-gray-400 dark:text-gray-500">
-                MP4, MOV, WebM up to 150 MB
+                MP4, MOV, WebM
               </span>
             </>
           )}
