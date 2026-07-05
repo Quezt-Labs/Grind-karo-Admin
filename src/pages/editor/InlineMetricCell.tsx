@@ -71,7 +71,8 @@ export function InlineMetricCell({
     );
   }
 
-  const hasValue = value.trim().length > 0;
+  const hasEditableValue = value.trim().length > 0;
+  const hasDisplay = display != null;
 
   return (
     <button
@@ -81,7 +82,7 @@ export function InlineMetricCell({
       title="Click to edit"
       className={cn(BUTTON_BASE, isSaving && "opacity-60", className)}
     >
-      {hasValue ? (
+      {hasEditableValue || hasDisplay ? (
         (display ?? (
           <span className="font-mono text-sm text-gray-800 dark:text-gray-200">
             {value}

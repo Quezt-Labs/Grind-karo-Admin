@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus } from "lucide-react";
@@ -28,6 +28,9 @@ import { ProgramComparePanel } from "./editor/ProgramComparePanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
 import { hasPersonalCoachingSubscription } from "@/utils/coachingCapabilities";
+import { coachingProgramService } from "@/services/coachingProgramService";
+import { defaultPreviewInputs } from "./editor/preview-context";
+import type { PreviewInputs } from "@/utils/programPreviewCompute";
 
 type DeleteTarget = { type: string; id: string; name: string };
 
@@ -93,6 +96,28 @@ export function ProgramEditorPage() {
   } = useCoachAthleteContext(coachingUserId, {
     loadPurchases: coachingNeedsSetup,
   });
+
+  const { data: coachingRecord } = useQuery({
+    queryKey: ["coaching-program", coachingUserId],
+    queryFn: () => coachingProgramService.getForUser(coachingUserId!),
+    enabled: !!coachingUserId && !coachingNeedsSetup,
+  });
+
+  const athletePreviewInputs = useMemo((): Partial<PreviewInputs> | null => {
+    if (!coachingRecord) return null;
+    const { profile, intake } = coachingRecord;
+    const squat = profile?.squatOneRm ?? intake?.squatMax ?? null;
+    const bench = profile?.benchOneRm ?? intake?.benchMax ?? null;
+    const deadlift = profile?.deadliftOneRm ?? intake?.deadliftMax ?? null;
+    if (squat == null && bench == null && deadlift == null) return null;
+    return {
+      squat: squat ?? defaultPreviewInputs.squat,
+      bench: bench ?? defaultPreviewInputs.bench,
+      deadlift: deadlift ?? defaultPreviewInputs.deadlift,
+      has125kgPlates:
+        profile?.has125kgPlates ?? defaultPreviewInputs.has125kgPlates,
+    };
+  }, [coachingRecord]);
 
   const subscriptionId = searchParams.get("subscriptionId");
   const backHref = coachingUserId
@@ -317,6 +342,7 @@ export function ProgramEditorPage() {
       slots={movementSlots}
       enabled={previewEnabled}
       programId={programId}
+      athleteProfileInputs={athletePreviewInputs}
     >
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
