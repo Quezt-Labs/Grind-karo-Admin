@@ -35,6 +35,7 @@ export interface FormCheckInboxItem {
   actualRpe?: number | null;
   targetRpe?: string | null;
   prescribedLoadKg?: number | null;
+  percentOneRm?: number | null;
 }
 
 export interface FormCheckInboxResponse {

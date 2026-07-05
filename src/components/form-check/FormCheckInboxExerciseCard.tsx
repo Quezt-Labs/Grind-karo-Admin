@@ -42,6 +42,91 @@ function formatLoadKg(kg: number | null | undefined): string | null {
   return `${Number.isInteger(n) ? n : n.toFixed(1).replace(/\.0$/, "")} kg`;
 }
 
+function formatPrescribedIntensity(video: FormCheckInboxItem): string | null {
+  const load = formatLoadKg(video.prescribedLoadKg);
+  if (load) return load;
+  if (video.percentOneRm != null && video.percentOneRm > 0) {
+    return `${(video.percentOneRm / 100).toFixed(1)}%`;
+  }
+  return null;
+}
+
+function PrescribedMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-200/80">
+        {label}
+      </p>
+      <p className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums text-white">
+        {value ?? "—"}
+      </p>
+    </div>
+  );
+}
+
+function PrescribedValues({ video }: { video: FormCheckInboxItem }) {
+  const sets =
+    video.prescriptionSets != null ? String(video.prescriptionSets) : null;
+  const reps = video.repScheme?.trim() || null;
+  const load = formatPrescribedIntensity(video);
+  const rpe = video.targetRpe?.trim() || null;
+
+  const hasRx = sets != null || reps != null || load != null || rpe != null;
+
+  if (!hasRx) return null;
+
+  return (
+    <div className="border-b border-white/10 bg-gray-950 px-4 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+        Prescribed
+      </p>
+      <p className="mt-1 text-base font-bold leading-tight text-white">
+        {video.exerciseName}
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <PrescribedMetric label="Sets" value={sets} />
+        <PrescribedMetric label="Reps" value={reps} />
+        <PrescribedMetric label="Load" value={load} />
+        <PrescribedMetric label="RPE" value={rpe} />
+      </div>
+    </div>
+  );
+}
+
+function PrescribedValuesPanel({ video }: { video: FormCheckInboxItem }) {
+  const sets =
+    video.prescriptionSets != null ? String(video.prescriptionSets) : null;
+  const reps = video.repScheme?.trim() || null;
+  const load = formatPrescribedIntensity(video);
+  const rpe = video.targetRpe?.trim() || null;
+
+  const hasRx = sets != null || reps != null || load != null || rpe != null;
+
+  if (!hasRx) return null;
+
+  return (
+    <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50/80 px-3 py-2 dark:border-indigo-900/50 dark:bg-indigo-950/30">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-800 dark:text-indigo-300">
+        Prescribed
+      </p>
+      <p className="mt-0.5 text-sm font-semibold text-indigo-950 dark:text-indigo-100">
+        {video.exerciseName}
+      </p>
+      <p className="mt-1 font-mono text-sm tabular-nums text-indigo-900 dark:text-indigo-100">
+        {[sets != null ? `${sets} sets` : null, reps, load, rpe]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+    </div>
+  );
+}
+
 function AthleteLoggedValues({ video }: { video: FormCheckInboxItem }) {
   const parts: string[] = [];
   if (video.actualSets != null) parts.push(`${video.actualSets} sets`);
@@ -78,14 +163,6 @@ function ExerciseContextChips({ video }: { video: FormCheckInboxItem }) {
     chips.push(`W${video.weekNumber}`, day);
   }
   if (video.exerciseCategory) chips.push(video.exerciseCategory);
-  if (video.prescriptionSets != null || video.repScheme) {
-    chips.push(`${video.prescriptionSets ?? "?"}×${video.repScheme ?? "?"}`);
-  }
-  if (video.targetRpe?.trim()) chips.push(video.targetRpe.trim());
-  if (video.prescribedLoadKg != null) {
-    const rxLoad = formatLoadKg(video.prescribedLoadKg);
-    if (rxLoad) chips.push(`Rx ${rxLoad}`);
-  }
 
   if (chips.length === 0) return null;
 
@@ -195,6 +272,8 @@ function SetCommentPanelWithBulk({
           />
         </div>
       )}
+
+      <PrescribedValuesPanel video={video} />
 
       {(video.actualSets != null ||
         video.actualReps != null ||
@@ -429,6 +508,7 @@ export function FormCheckInboxExerciseCard({
 
       <div className="grid grid-cols-1 lg:grid-cols-5">
         <div className="bg-black lg:col-span-3">
+          <PrescribedValues video={active} />
           <FormCheckVideoPlayer
             key={active.id}
             src={active.videoUrl}
