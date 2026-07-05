@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -251,13 +250,9 @@ function SetCommentPanelWithBulk({
 export function FormCheckInboxExerciseCard({
   videos,
   showAthleteLink = true,
-  expanded = true,
-  onToggle,
 }: {
   videos: FormCheckInboxItem[];
   showAthleteLink?: boolean;
-  expanded?: boolean;
-  onToggle?: () => void;
 }) {
   const head = videos[0];
   const multiSet = videos.length > 1;
@@ -289,7 +284,7 @@ export function FormCheckInboxExerciseCard({
   };
 
   useEffect(() => {
-    if (!multiSet || !expanded) return;
+    if (!multiSet) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (
         event.target instanceof HTMLTextAreaElement ||
@@ -309,18 +304,10 @@ export function FormCheckInboxExerciseCard({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [multiSet, videos.length, expanded, activeIndex, videos]);
+  }, [multiSet, videos.length, activeIndex, videos]);
 
   const active = videos[activeIndex] ?? head;
   const athleteName = head.userName ?? head.userEmail;
-  const collapsible = onToggle != null;
-  const HeaderTag = collapsible ? "button" : "div";
-
-  const headerSummary = multiSet
-    ? `${videos.length} sets · ${pendingCount} pending`
-    : active.reviewed
-      ? "Reviewed"
-      : "Pending";
 
   return (
     <article
@@ -329,29 +316,14 @@ export function FormCheckInboxExerciseCard({
         pendingCount > 0
           ? "border-amber-200/80 dark:border-amber-800/50"
           : "border-gray-200 dark:border-gray-700",
-        !expanded && "opacity-95",
       )}
     >
-      <header
-        className={cn(
-          "border-gray-200 bg-gradient-to-r from-gray-50/90 to-white dark:border-gray-700 dark:from-gray-900/50 dark:to-gray-800",
-          expanded ? "border-b px-4 py-3" : "px-4 py-3",
-        )}
-      >
-        <HeaderTag
-          type={collapsible ? "button" : undefined}
-          onClick={collapsible ? onToggle : undefined}
-          className={cn(
-            "flex w-full items-start justify-between gap-3 text-left",
-            collapsible &&
-              "cursor-pointer rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60",
-          )}
-        >
+      <header className="border-b border-gray-200 bg-gradient-to-r from-gray-50/90 to-white px-4 py-3 dark:border-gray-700 dark:from-gray-900/50 dark:to-gray-800">
+        <div className="flex w-full items-start justify-between gap-3 text-left">
           <div className="min-w-0 flex-1">
             {showAthleteLink ? (
               <Link
                 to={`/users/${head.userId}`}
-                onClick={(e) => e.stopPropagation()}
                 className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
               >
                 {athleteName}
@@ -360,13 +332,7 @@ export function FormCheckInboxExerciseCard({
             <h3 className="text-lg font-bold leading-tight text-gray-900 dark:text-white">
               {head.exerciseName}
             </h3>
-            {expanded ? (
-              <ExerciseContextChips video={active} />
-            ) : (
-              <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                {formatExerciseContextLine(head)}
-              </p>
-            )}
+            <ExerciseContextChips video={active} />
           </div>
           <div className="flex shrink-0 items-start gap-2">
             <div className="flex flex-col items-end gap-1.5">
@@ -387,24 +353,11 @@ export function FormCheckInboxExerciseCard({
                   Pending
                 </span>
               )}
-              {!expanded ? (
-                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                  {headerSummary}
-                </span>
-              ) : null}
             </div>
-            {collapsible ? (
-              <ChevronDown
-                className={cn(
-                  "mt-1 h-5 w-5 shrink-0 text-gray-400 transition-transform",
-                  expanded && "rotate-180",
-                )}
-              />
-            ) : null}
           </div>
-        </HeaderTag>
+        </div>
 
-        {expanded && multiSet ? (
+        {multiSet ? (
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
             <div
               className="h-full rounded-full bg-indigo-500 transition-all"
@@ -414,103 +367,83 @@ export function FormCheckInboxExerciseCard({
         ) : null}
       </header>
 
-      {expanded ? (
-        <>
-          {multiSet ? (
-            <div className="flex items-center gap-1 border-b border-gray-200 bg-gray-50/60 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/30">
-              <button
-                type="button"
-                onClick={goPrev}
-                disabled={activeIndex === 0}
-                className="rounded-lg p-1.5 text-gray-500 hover:bg-white disabled:opacity-30 dark:hover:bg-gray-800"
-                aria-label="Previous set"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+      {multiSet ? (
+        <div className="flex items-center gap-1 border-b border-gray-200 bg-gray-50/60 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/30">
+          <button
+            type="button"
+            onClick={goPrev}
+            disabled={activeIndex === 0}
+            className="rounded-lg p-1.5 text-gray-500 hover:bg-white disabled:opacity-30 dark:hover:bg-gray-800"
+            aria-label="Previous set"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
 
-              <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-                {videos.map((video, index) => {
-                  const isActive = index === activeIndex;
-                  return (
-                    <button
-                      key={video.id}
-                      type="button"
-                      onClick={() => setActiveVideoId(video.id)}
+          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+            {videos.map((video, index) => {
+              const isActive = index === activeIndex;
+              return (
+                <button
+                  key={video.id}
+                  type="button"
+                  onClick={() => setActiveVideoId(video.id)}
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                    isActive
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-600",
+                  )}
+                >
+                  Set {video.setNumber}
+                  {video.reviewed ? (
+                    <CheckCircle2
                       className={cn(
-                        "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-                        isActive
-                          ? "bg-indigo-600 text-white shadow-sm"
-                          : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-600",
+                        "h-3.5 w-3.5",
+                        isActive ? "text-indigo-200" : "text-indigo-500",
                       )}
-                    >
-                      Set {video.setNumber}
-                      {video.reviewed ? (
-                        <CheckCircle2
-                          className={cn(
-                            "h-3.5 w-3.5",
-                            isActive ? "text-indigo-200" : "text-indigo-500",
-                          )}
-                        />
-                      ) : (
-                        <Circle
-                          className={cn(
-                            "h-3 w-3 fill-amber-400 text-amber-400",
-                            isActive && "fill-amber-200 text-amber-200",
-                          )}
-                        />
+                    />
+                  ) : (
+                    <Circle
+                      className={cn(
+                        "h-3 w-3 fill-amber-400 text-amber-400",
+                        isActive && "fill-amber-200 text-amber-200",
                       )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={activeIndex === videos.length - 1}
-                className="rounded-lg p-1.5 text-gray-500 hover:bg-white disabled:opacity-30 dark:hover:bg-gray-800"
-                aria-label="Next set"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-1 lg:grid-cols-5">
-            <div className="bg-black lg:col-span-3">
-              <FormCheckVideoPlayer
-                key={active.id}
-                src={active.videoUrl}
-                downloadFileName={`${head.exerciseName}-set-${active.setNumber}`}
-              />
-            </div>
-            <div className="border-t border-gray-200 lg:col-span-2 lg:border-l lg:border-t-0 dark:border-gray-700">
-              <SetCommentPanelWithBulk
-                key={active.id}
-                video={active}
-                allVideos={videos}
-                exerciseName={head.exerciseName}
-              />
-            </div>
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
-        </>
+
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={activeIndex === videos.length - 1}
+            className="rounded-lg p-1.5 text-gray-500 hover:bg-white disabled:opacity-30 dark:hover:bg-gray-800"
+            aria-label="Next set"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       ) : null}
+
+      <div className="grid grid-cols-1 lg:grid-cols-5">
+        <div className="bg-black lg:col-span-3">
+          <FormCheckVideoPlayer
+            key={active.id}
+            src={active.videoUrl}
+            downloadFileName={`${head.exerciseName}-set-${active.setNumber}`}
+          />
+        </div>
+        <div className="border-t border-gray-200 lg:col-span-2 lg:border-l lg:border-t-0 dark:border-gray-700">
+          <SetCommentPanelWithBulk
+            key={active.id}
+            video={active}
+            allVideos={videos}
+            exerciseName={head.exerciseName}
+          />
+        </div>
+      </div>
     </article>
   );
-}
-
-function formatExerciseContextLine(video: FormCheckInboxItem): string {
-  const parts: string[] = [];
-  if (video.programName) parts.push(video.programName);
-  if (video.weekNumber != null && video.dayNumber != null) {
-    parts.push(`W${video.weekNumber} · Day ${video.dayNumber}`);
-  }
-  const logged: string[] = [];
-  if (video.actualReps != null) logged.push(`${video.actualReps} reps`);
-  const load = formatLoadKg(video.actualLoad);
-  if (load) logged.push(load);
-  const rpe = formatLoggedRpe(video.actualRpe);
-  if (rpe) logged.push(rpe);
-  if (logged.length > 0) parts.push(logged.join(" · "));
-  return parts.join(" · ");
 }
