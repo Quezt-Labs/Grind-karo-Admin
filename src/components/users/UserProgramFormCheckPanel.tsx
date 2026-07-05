@@ -2,16 +2,44 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Video } from "lucide-react";
 import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
+import { FormCheckHandlerBadge } from "@/components/form-check/FormCheckHandlerBadge";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { formCheckInboxService } from "@/services/formCheckInboxService";
+import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import type { FormCheckQuota, Purchase } from "@/types/user";
 import { FormCheckBillingControls } from "@/components/users/FormCheckBillingControls";
 import { bulkUpsertFormCheckComments } from "@/utils/bulkFormCheckComments";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
 import { groupFormCheckInboxItems } from "@/utils/groupFormCheckInboxItems";
+import type { FormCheckHandlerInfo } from "@/utils/formCheckHandler";
 
 type ReviewFilter = "pending" | "all";
+
+function resolveFormCheckHandlerFromAssignment(
+  assignment: Awaited<
+    ReturnType<typeof athleteAssignmentService.getByAthleteId>
+  > | null,
+): FormCheckHandlerInfo {
+  if (
+    assignment?.formCheckEnabled &&
+    assignment.assistantCoachId &&
+    assignment.assistantCoach
+  ) {
+    return {
+      formCheckHandler: "assistant_coach",
+      formCheckCoachId: assignment.assistantCoachId,
+      formCheckCoachName:
+        assignment.assistantCoach.name?.trim() ||
+        assignment.assistantCoach.email,
+    };
+  }
+  return {
+    formCheckHandler: "admin",
+    formCheckCoachId: null,
+    formCheckCoachName: null,
+  };
+}
 
 interface UserProgramFormCheckPanelProps {
   userId: string;
@@ -40,6 +68,16 @@ export function UserProgramFormCheckPanel({
         limit: 100,
       }),
   });
+
+  const { data: assignment } = useQuery({
+    queryKey: ["athlete-assignment", userId],
+    queryFn: () => athleteAssignmentService.getByAthleteId(userId),
+  });
+
+  const handlerInfo = useMemo(
+    () => resolveFormCheckHandlerFromAssignment(assignment ?? null),
+    [assignment],
+  );
 
   const videos = useMemo(
     () => (data?.items ?? []).filter((item) => item.source === "program"),
@@ -101,6 +139,7 @@ export function UserProgramFormCheckPanel({
               : ""}
           </span>
         ) : null}
+        <FormCheckHandlerBadge {...handlerInfo} size="md" />
         <div className="ml-auto">
           <Select
             className="h-8 w-36 text-xs"

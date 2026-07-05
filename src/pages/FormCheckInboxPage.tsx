@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronRight, User, Video } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
+import { FormCheckHandlerBadge } from "@/components/form-check/FormCheckHandlerBadge";
 import {
   formCheckInboxService,
   type FormCheckInboxAthlete,
@@ -16,6 +17,7 @@ import { cn } from "@/utils/cn";
 
 type PlanTier = "mega" | "ultra";
 type ReviewFilter = "pending" | "all";
+type HandlerFilter = "all" | "assistant_coach" | "admin";
 
 function athleteLabel(
   athlete: Pick<FormCheckInboxAthlete, "userName" | "userEmail">,
@@ -90,6 +92,12 @@ function AthleteRow({
         <p className="truncate text-xs text-gray-500 dark:text-gray-400">
           {athlete.userEmail}
         </p>
+        <div className="mt-1.5">
+          <FormCheckHandlerBadge
+            formCheckHandler={athlete.formCheckHandler}
+            formCheckCoachName={athlete.formCheckCoachName}
+          />
+        </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {athlete.pendingCount > 0 ? (
@@ -107,11 +115,51 @@ function AthleteRow({
   );
 }
 
+function HandlerFilterBar({
+  filter,
+  onChange,
+  counts,
+}: {
+  filter: HandlerFilter;
+  onChange: (next: HandlerFilter) => void;
+  counts: { all: number; assistant_coach: number; admin: number };
+}) {
+  const options: { value: HandlerFilter; label: string }[] = [
+    { value: "all", label: `All (${counts.all})` },
+    {
+      value: "assistant_coach",
+      label: `Assistant coach (${counts.assistant_coach})`,
+    },
+    { value: "admin", label: `Admin (${counts.admin})` },
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={cn(
+            "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+            filter === opt.value
+              ? "bg-violet-600 text-white"
+              : "border border-gray-200 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200",
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function FormCheckInboxPage() {
   const queryClient = useQueryClient();
   const [planTier, setPlanTier] = useState<PlanTier>("mega");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("pending");
+  const [handlerFilter, setHandlerFilter] = useState<HandlerFilter>("all");
 
   const { data: athletesData, isLoading: athletesLoading } = useQuery({
     queryKey: ["form-check-inbox-athletes", reviewFilter],
@@ -141,6 +189,21 @@ export function FormCheckInboxPage() {
   const megaAthletes = athletesData?.mega ?? [];
   const ultraAthletes = athletesData?.ultra ?? [];
   const tierAthletes = planTier === "mega" ? megaAthletes : ultraAthletes;
+
+  const handlerCounts = useMemo(() => {
+    return {
+      all: tierAthletes.length,
+      assistant_coach: tierAthletes.filter(
+        (a) => a.formCheckHandler === "assistant_coach",
+      ).length,
+      admin: tierAthletes.filter((a) => a.formCheckHandler === "admin").length,
+    };
+  }, [tierAthletes]);
+
+  const filteredTierAthletes = useMemo(() => {
+    if (handlerFilter === "all") return tierAthletes;
+    return tierAthletes.filter((a) => a.formCheckHandler === handlerFilter);
+  }, [tierAthletes, handlerFilter]);
 
   const megaPending = megaAthletes.reduce((sum, a) => sum + a.pendingCount, 0);
   const ultraPending = ultraAthletes.reduce(
@@ -186,6 +249,7 @@ export function FormCheckInboxPage() {
   const handlePlanChange = (tier: PlanTier) => {
     setPlanTier(tier);
     setSelectedUserId(null);
+    setHandlerFilter("all");
   };
 
   const handleReviewFilterChange = (next: ReviewFilter) => {
@@ -250,6 +314,13 @@ export function FormCheckInboxPage() {
               Back to {planTier.toUpperCase()} athletes
             </button>
             <div className="flex flex-wrap items-center gap-2">
+              {selectedAthlete ? (
+                <FormCheckHandlerBadge
+                  formCheckHandler={selectedAthlete.formCheckHandler}
+                  formCheckCoachName={selectedAthlete.formCheckCoachName}
+                  size="md"
+                />
+              ) : null}
               <Link
                 to={`/users/${selectedUserId}`}
                 className="text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
@@ -290,28 +361,37 @@ export function FormCheckInboxPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <ReviewFilterBar
-            filter={reviewFilter}
-            onChange={handleReviewFilterChange}
-            pendingCount={planTier === "mega" ? megaPending : ultraPending}
-          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <HandlerFilterBar
+              filter={handlerFilter}
+              onChange={setHandlerFilter}
+              counts={handlerCounts}
+            />
+            <ReviewFilterBar
+              filter={reviewFilter}
+              onChange={handleReviewFilterChange}
+              pendingCount={planTier === "mega" ? megaPending : ultraPending}
+            />
+          </div>
 
           {athletesLoading ? (
             <div className="flex justify-center py-16">
               <Spinner />
             </div>
-          ) : tierAthletes.length === 0 ? (
+          ) : filteredTierAthletes.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
               <User className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />
               <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-                {reviewFilter === "pending"
-                  ? `No ${planTier.toUpperCase()} athletes with videos waiting for review.`
-                  : `No ${planTier.toUpperCase()} athletes with form-check videos yet.`}
+                {handlerFilter !== "all"
+                  ? `No ${planTier.toUpperCase()} athletes in this handler queue.`
+                  : reviewFilter === "pending"
+                    ? `No ${planTier.toUpperCase()} athletes with videos waiting for review.`
+                    : `No ${planTier.toUpperCase()} athletes with form-check videos yet.`}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {tierAthletes.map((athlete) => (
+              {filteredTierAthletes.map((athlete) => (
                 <AthleteRow
                   key={athlete.userId}
                   athlete={athlete}

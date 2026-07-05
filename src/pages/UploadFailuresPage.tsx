@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { CheckCheck, Upload, User } from "lucide-react";
+import toast from "react-hot-toast";
+import { CheckCheck, Trash2, Upload, User } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Shimmer } from "@/components/ui/Shimmer";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
+import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { Button } from "@/components/ui/Button";
 import { notificationService } from "@/services/notificationService";
 import type { AdminNotification } from "@/types/user";
@@ -71,6 +73,9 @@ export function UploadFailuresPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminNotification | null>(
+    null,
+  );
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["upload-failures", unreadOnly],
@@ -105,6 +110,25 @@ export function UploadFailuresPage() {
       queryClient.invalidateQueries({
         queryKey: ["notifications-unread-list"],
       });
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => notificationService.remove(id),
+    onSuccess: (_data, deletedId) => {
+      toast.success("Upload failure report deleted");
+      queryClient.invalidateQueries({ queryKey: ["upload-failures"] });
+      queryClient.invalidateQueries({
+        queryKey: ["notification-unread-count"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications-unread-list"],
+      });
+      setDeleteTarget(null);
+      setSelectedId((current) => (current === deletedId ? null : current));
+    },
+    onError: () => {
+      toast.error("Could not delete upload failure report");
     },
   });
 
@@ -218,38 +242,50 @@ export function UploadFailuresPage() {
                 const step = payloadString(p, "step") ?? "unknown";
                 return (
                   <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => openItem(item)}
+                    <div
                       className={cn(
-                        "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40",
+                        "group flex w-full items-start gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40",
                         selectedId === item.id &&
                           "bg-primary-50/70 dark:bg-primary-900/20",
                       )}
                     >
-                      <div className="mt-0.5 rounded-lg bg-red-50 p-2 text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                        <Upload className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                            {email}
-                          </p>
-                          {!item.readAt && (
-                            <span className="h-2 w-2 shrink-0 rounded-full bg-primary-500" />
-                          )}
+                      <button
+                        type="button"
+                        onClick={() => openItem(item)}
+                        className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                      >
+                        <div className="mt-0.5 rounded-lg bg-red-50 p-2 text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                          <Upload className="h-4 w-4" />
                         </div>
-                        <p className="mt-0.5 line-clamp-2 text-xs text-gray-600 dark:text-gray-300">
-                          {payloadString(p, "message") ?? item.message}
-                        </p>
-                        <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
-                          {exercise
-                            ? `${exercise}${setNumber != null ? ` · set ${setNumber}` : ""} · `
-                            : ""}
-                          {step} · {timeAgo(item.createdAt)}
-                        </p>
-                      </div>
-                    </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                              {email}
+                            </p>
+                            {!item.readAt && (
+                              <span className="h-2 w-2 shrink-0 rounded-full bg-primary-500" />
+                            )}
+                          </div>
+                          <p className="mt-0.5 line-clamp-2 text-xs text-gray-600 dark:text-gray-300">
+                            {payloadString(p, "message") ?? item.message}
+                          </p>
+                          <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+                            {exercise
+                              ? `${exercise}${setNumber != null ? ` · set ${setNumber}` : ""} · `
+                              : ""}
+                            {step} · {timeAgo(item.createdAt)}
+                          </p>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(item)}
+                        className="mt-0.5 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </li>
                 );
               })}
@@ -332,24 +368,50 @@ export function UploadFailuresPage() {
                 </p>
               )}
 
-              {payloadString(selected.payload, "userId") && (
+              <div className="flex flex-wrap gap-2">
+                {payloadString(selected.payload, "userId") && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      navigate(
+                        `/users/${payloadString(selected.payload, "userId")}`,
+                      )
+                    }
+                  >
+                    <User className="h-4 w-4" />
+                    Open athlete profile
+                  </Button>
+                )}
                 <Button
-                  variant="secondary"
+                  variant="danger"
                   size="sm"
-                  onClick={() =>
-                    navigate(
-                      `/users/${payloadString(selected.payload, "userId")}`,
-                    )
-                  }
+                  onClick={() => setDeleteTarget(selected)}
                 >
-                  <User className="h-4 w-4" />
-                  Open athlete profile
+                  <Trash2 className="h-4 w-4" />
+                  Delete
                 </Button>
-              )}
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete upload failure"
+        message={`Remove this upload failure report from ${
+          payloadString(deleteTarget?.payload ?? {}, "userEmail") ??
+          payloadString(deleteTarget?.payload ?? {}, "userName") ??
+          "this athlete"
+        }? This cannot be undone.`}
+        confirmLabel="Delete"
+        isLoading={deleteMut.isPending}
+        onConfirm={() => {
+          if (deleteTarget) deleteMut.mutate(deleteTarget.id);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

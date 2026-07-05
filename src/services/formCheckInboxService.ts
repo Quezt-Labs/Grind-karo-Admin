@@ -52,6 +52,9 @@ export interface FormCheckInboxAthlete {
   totalCount: number;
   pendingCount: number;
   latestVideoAt: string | null;
+  formCheckHandler: "assistant_coach" | "admin";
+  formCheckCoachId: string | null;
+  formCheckCoachName: string | null;
 }
 
 export interface FormCheckInboxAthletesByPlan {
@@ -91,6 +94,23 @@ export const formCheckInboxService = {
     const { data } = await api.get("/admin/form-check-videos/athletes", {
       params,
     });
-    return data.data ?? data;
+    const payload = data.data ?? data;
+    const normalize = (
+      row: Partial<FormCheckInboxAthlete>,
+    ): FormCheckInboxAthlete => ({
+      userId: row.userId!,
+      userName: row.userName ?? null,
+      userEmail: row.userEmail!,
+      totalCount: row.totalCount ?? 0,
+      pendingCount: row.pendingCount ?? 0,
+      latestVideoAt: row.latestVideoAt ?? null,
+      formCheckHandler: row.formCheckHandler ?? "admin",
+      formCheckCoachId: row.formCheckCoachId ?? null,
+      formCheckCoachName: row.formCheckCoachName ?? null,
+    });
+    return {
+      mega: (payload.mega ?? []).map(normalize),
+      ultra: (payload.ultra ?? []).map(normalize),
+    };
   },
 };

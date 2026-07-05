@@ -36,4 +36,8 @@ export const notificationService = {
     const { data } = await api.post("/admin/notifications/read-all");
     return data;
   },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/admin/notifications/${id}`);
+  },
 };
