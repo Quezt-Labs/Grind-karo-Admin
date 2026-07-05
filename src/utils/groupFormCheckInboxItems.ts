@@ -10,16 +10,69 @@ export interface FormCheckInboxGroup {
 
 /** Stable key for grouping set videos that belong to the same logged exercise. */
 export function formCheckExerciseGroupKey(video: FormCheckInboxItem): string {
+  if (video.programExerciseId) {
+    return `program-ex:${video.userId}:${video.programExerciseId}`;
+  }
+  if (video.programId && video.weekNumber != null && video.dayNumber != null) {
+    return `program-day:${video.userId}:${video.programId}:W${video.weekNumber}D${video.dayNumber}:${video.exerciseName}`;
+  }
   if (video.exerciseLogId) {
     return `program:${video.exerciseLogId}`;
   }
   return `video:${video.id}`;
 }
 
+/** Drop duplicate inbox rows (same id or same exercise + set from re-logs). */
+export function dedupeFormCheckInboxItems(
+  items: FormCheckInboxItem[],
+): FormCheckInboxItem[] {
+  const byKey = new Map<string, FormCheckInboxItem>();
+
+  for (const item of items) {
+    const key =
+      item.programExerciseId != null
+        ? `${item.userId}:${item.programExerciseId}:${item.setNumber}`
+        : item.exerciseLogId != null
+          ? `${item.userId}:${item.exerciseLogId}:${item.setNumber}`
+          : item.videoUrl
+            ? `${item.userId}:${item.videoUrl}:${item.setNumber}`
+            : item.id;
+    const existing = byKey.get(key);
+    if (
+      !existing ||
+      new Date(item.createdAt).getTime() >
+        new Date(existing.createdAt).getTime()
+    ) {
+      byKey.set(key, item);
+    }
+  }
+
+  return [...byKey.values()];
+}
+
+function dedupeVideosInGroup(
+  videos: FormCheckInboxItem[],
+): FormCheckInboxItem[] {
+  const bySet = new Map<number, FormCheckInboxItem>();
+  for (const video of videos) {
+    const existing = bySet.get(video.setNumber);
+    if (
+      !existing ||
+      new Date(video.createdAt).getTime() >
+        new Date(existing.createdAt).getTime()
+    ) {
+      bySet.set(video.setNumber, video);
+    }
+  }
+  return [...bySet.values()].sort((a, b) => a.setNumber - b.setNumber);
+}
+
 export function groupFormCheckInboxItems(
   items: FormCheckInboxItem[],
 ): FormCheckInboxGroup[] {
-  const programItems = items.filter((item) => item.source === "program");
+  const programItems = dedupeFormCheckInboxItems(
+    items.filter((item) => item.source === "program"),
+  );
   const byKey = new Map<string, FormCheckInboxItem[]>();
 
   for (const item of programItems) {
@@ -32,7 +85,7 @@ export function groupFormCheckInboxItems(
   const groups: FormCheckInboxGroup[] = [];
 
   for (const [key, videos] of byKey) {
-    const sorted = [...videos].sort((a, b) => a.setNumber - b.setNumber);
+    const sorted = dedupeVideosInGroup(videos);
     const pendingCount = sorted.filter((v) => !v.reviewed).length;
     const reviewedCount = sorted.length - pendingCount;
     groups.push({

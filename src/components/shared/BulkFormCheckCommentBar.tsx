@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2, MessageSquare } from "lucide-react";
 import toast from "react-hot-toast";
-import { FORM_CHECK_PASS_COMMENT } from "@/constants/formCheckComments";
+import { FormCheckPresetCommentChips } from "@/components/shared/FormCheckPresetCommentChips";
 import type { BulkCommentResult } from "@/utils/bulkFormCheckComments";
 import { cn } from "@/utils/cn";
 
@@ -63,20 +63,15 @@ export function BulkFormCheckCommentBar({
         className,
       )}
     >
-      <div className="mb-1.5 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-          <MessageSquare className="h-3 w-3" />
-          Bulk comment
-        </div>
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => setComment(FORM_CHECK_PASS_COMMENT)}
-          className="rounded-full border border-indigo-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
-        >
-          Pass
-        </button>
+      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+        <MessageSquare className="h-3 w-3" />
+        Bulk comment
       </div>
+      <FormCheckPresetCommentChips
+        className="mb-2"
+        disabled={saving}
+        onSelect={setComment}
+      />
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}

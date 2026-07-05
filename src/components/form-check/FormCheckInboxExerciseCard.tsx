@@ -12,7 +12,7 @@ import {
 import toast from "react-hot-toast";
 import { FormCheckAthleteNotesBlocks } from "@/components/shared/FormCheckAthleteNotesBlocks";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
-import { FORM_CHECK_PASS_COMMENT } from "@/constants/formCheckComments";
+import { FormCheckPresetCommentChips } from "@/components/shared/FormCheckPresetCommentChips";
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import {
@@ -248,20 +248,15 @@ function SetCommentPanelWithBulk({
 
   return (
     <div className="flex h-full flex-col p-3 lg:p-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-          <MessageSquare className="h-3 w-3" />
-          Coach comment
-        </div>
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => setComment(FORM_CHECK_PASS_COMMENT)}
-          className="rounded-full border border-indigo-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-        >
-          Pass
-        </button>
+      <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+        <MessageSquare className="h-3 w-3" />
+        Coach comment
       </div>
+      <FormCheckPresetCommentChips
+        className="mb-2"
+        disabled={saving}
+        onSelect={setComment}
+      />
 
       {(video.setNotes?.trim() || video.athleteNotes?.trim()) && (
         <div className="mb-3">

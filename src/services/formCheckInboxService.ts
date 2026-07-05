@@ -22,6 +22,7 @@ export interface FormCheckInboxItem {
   /** @deprecated use exerciseNotes + setNotes */
   athleteNotes?: string | null;
   exerciseLogId?: string;
+  programExerciseId?: string | null;
   programId?: string;
   workoutLogId?: string;
   programName?: string | null;
