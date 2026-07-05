@@ -271,7 +271,8 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
                     blockWeeks,
                     col.weekNumber,
                     dayNumber,
-                    row.prescriptionSlotId ?? index,
+                    row,
+                    index,
                   )
                 : null
             }

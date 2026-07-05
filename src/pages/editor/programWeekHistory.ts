@@ -23,11 +23,18 @@ export function buildPriorWeekColumns(
     }));
 }
 
+function sortedDayExercises(day: { exercises: ExerciseRow[] }): ExerciseRow[] {
+  return [...day.exercises].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id),
+  );
+}
+
 export function getPriorWeekExercise(
   blockWeeks: WeekTree[],
   weekNumber: number,
   dayNumber: number,
-  slotOrIndex: string | number,
+  currentRow: ExerciseRow,
+  rowIndex: number,
 ): ExerciseRow | null {
   const week = sortedWeeks(blockWeeks).find((w) => w.weekNumber === weekNumber);
   if (!week) return null;
@@ -35,16 +42,20 @@ export function getPriorWeekExercise(
   const day = sortedDays(week.days).find((d) => d.dayNumber === dayNumber);
   if (!day) return null;
 
-  if (typeof slotOrIndex === "string") {
-    return (
-      day.exercises.find((e) => e.prescriptionSlotId === slotOrIndex) ?? null
+  const exercises = sortedDayExercises(day);
+
+  if (currentRow.prescriptionSlotId) {
+    const bySlot = exercises.find(
+      (e) => e.prescriptionSlotId === currentRow.prescriptionSlotId,
     );
+    if (bySlot) return bySlot;
   }
 
-  const exercises = [...day.exercises].sort(
-    (a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id),
+  return (
+    exercises.find((e) => e.sortOrder === currentRow.sortOrder) ??
+    exercises[rowIndex] ??
+    null
   );
-  return exercises[slotOrIndex] ?? null;
 }
 
 /** Compact history cell split across two lines for readability */
