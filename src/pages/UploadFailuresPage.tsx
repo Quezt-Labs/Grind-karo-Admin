@@ -76,6 +76,7 @@ export function UploadFailuresPage() {
   const [deleteTarget, setDeleteTarget] = useState<AdminNotification | null>(
     null,
   );
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["upload-failures", unreadOnly],
@@ -129,6 +130,30 @@ export function UploadFailuresPage() {
     },
     onError: () => {
       toast.error("Could not delete upload failure report");
+    },
+  });
+
+  const deleteAllMut = useMutation({
+    mutationFn: () => notificationService.removeByType("CLIENT_UPLOAD_FAILED"),
+    onSuccess: (deletedCount) => {
+      toast.success(
+        deletedCount === 1
+          ? "1 upload failure deleted"
+          : `${deletedCount} upload failures deleted`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["upload-failures"] });
+      queryClient.invalidateQueries({
+        queryKey: ["notification-unread-count"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications-unread-list"],
+      });
+      setDeleteAllOpen(false);
+      setDeleteTarget(null);
+      setSelectedId(null);
+    },
+    onError: () => {
+      toast.error("Could not delete upload failures");
     },
   });
 
@@ -201,6 +226,17 @@ export function UploadFailuresPage() {
             >
               <CheckCheck className="h-4 w-4" />
               Mark all read
+            </Button>
+          )}
+          {total > 0 && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setDeleteAllOpen(true)}
+              disabled={deleteAllMut.isPending}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete all
             </Button>
           )}
         </div>
@@ -411,6 +447,16 @@ export function UploadFailuresPage() {
           if (deleteTarget) deleteMut.mutate(deleteTarget.id);
         }}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmModal
+        open={deleteAllOpen}
+        title="Delete all upload failures"
+        message={`Remove all ${total} upload failure report${total === 1 ? "" : "s"}? This cannot be undone.`}
+        confirmLabel="Delete all"
+        isLoading={deleteAllMut.isPending}
+        onConfirm={() => deleteAllMut.mutate()}
+        onCancel={() => setDeleteAllOpen(false)}
       />
     </div>
   );

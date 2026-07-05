@@ -40,4 +40,11 @@ export const notificationService = {
   async remove(id: string): Promise<void> {
     await api.delete(`/admin/notifications/${id}`);
   },
+
+  async removeByType(type: NotificationType): Promise<number> {
+    const { data } = await api.post("/admin/notifications/bulk-delete", {
+      type,
+    });
+    return data.deletedCount ?? 0;
+  },
 };
