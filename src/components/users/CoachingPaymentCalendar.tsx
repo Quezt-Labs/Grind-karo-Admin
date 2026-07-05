@@ -49,6 +49,7 @@ const ADJUSTMENT_LABEL: Record<CoachingBillingAdjustment["type"], string> = {
   WAIVE: "Fee waived / hold",
   MANUAL_PAYMENT: "Manual payment recorded",
   DATE_CORRECTION: "Dates corrected",
+  FEE_CORRECTION: "Lifter fee updated",
 };
 
 function coachingMilestones(
