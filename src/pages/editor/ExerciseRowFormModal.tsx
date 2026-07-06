@@ -20,12 +20,12 @@ import { showPrescriptionPropagationToasts } from "./propagatePrescriptionToast"
 import { usePropagateForwardStore } from "@/store/propagateForwardStore";
 import { useProgramPreview } from "./useProgramPreview";
 import { autoLoadPatchForFormRow } from "@/utils/programEditorLoadSync";
+import { PerSetPrescriptionGrid } from "./PerSetPrescriptionGrid";
 import {
-  PerSetPrescriptionGrid,
   defaultPerSetDrafts,
   perSetDraftToPayload,
   type PerSetDraft,
-} from "./PerSetPrescriptionGrid";
+} from "./perSetPrescriptionDraft";
 
 export type PrescriptionStyle = "simple" | "per-set";
 

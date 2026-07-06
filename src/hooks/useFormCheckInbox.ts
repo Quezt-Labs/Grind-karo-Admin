@@ -5,7 +5,10 @@ import {
   formCheckKeys,
 } from "@/hooks/formCheckQueryKeys";
 import type { ReviewFilter } from "@/hooks/useFormCheckInboxRoute";
-import { formCheckInboxService } from "@/services/formCheckInboxService";
+import {
+  formCheckInboxService,
+  type FormCheckInboxAthlete,
+} from "@/services/formCheckInboxService";
 import { groupFormCheckInboxItems } from "@/utils/groupFormCheckInboxItems";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
 import {
@@ -13,13 +16,36 @@ import {
   collectProgramWeekOptions,
 } from "@/utils/formCheckWeekUtils";
 
+function filterVideosByReview<T extends { reviewed: boolean }>(
+  items: T[],
+  reviewFilter: ReviewFilter,
+): T[] {
+  if (reviewFilter === "reviewed") {
+    return items.filter((item) => item.reviewed);
+  }
+  return items;
+}
+
+function filterAthletesByReview(
+  athletes: FormCheckInboxAthlete[],
+  reviewFilter: ReviewFilter,
+): FormCheckInboxAthlete[] {
+  if (reviewFilter !== "reviewed") return athletes;
+  return athletes.filter((a) => a.totalCount > a.pendingCount);
+}
+
 export function useFormCheckAthletes(reviewFilter: ReviewFilter) {
   return useQuery({
     queryKey: formCheckKeys.athletes(reviewFilter),
-    queryFn: () =>
-      formCheckInboxService.listAthletes({
+    queryFn: async () => {
+      const data = await formCheckInboxService.listAthletes({
         uncommentedOnly: reviewFilter === "pending",
-      }),
+      });
+      return {
+        mega: filterAthletesByReview(data.mega, reviewFilter),
+        ultra: filterAthletesByReview(data.ultra, reviewFilter),
+      };
+    },
   });
 }
 
@@ -39,7 +65,9 @@ export function useFormCheckVideoWeeks(opts: {
         uncommentedOnly: reviewFilter === "pending",
         limit: FORM_CHECK_VIDEO_LIMIT,
       });
-      return collectProgramWeekOptions(data.items);
+      return collectProgramWeekOptions(
+        filterVideosByReview(data.items, reviewFilter),
+      );
     },
     enabled: enabled && !!userId,
   });
@@ -63,7 +91,10 @@ export function useFormCheckVideoDays(opts: {
         weekNumber: weekNumber ?? undefined,
         limit: FORM_CHECK_VIDEO_LIMIT,
       });
-      return collectProgramDayOptions(data.items, weekNumber);
+      return collectProgramDayOptions(
+        filterVideosByReview(data.items, reviewFilter),
+        weekNumber,
+      );
     },
     enabled: enabled && !!userId,
   });
@@ -102,7 +133,10 @@ export function useFormCheckVideos(opts: {
     enabled: enabled && !!userId,
   });
 
-  const videos = useMemo(() => query.data?.items ?? [], [query.data?.items]);
+  const videos = useMemo(
+    () => filterVideosByReview(query.data?.items ?? [], reviewFilter),
+    [query.data?.items, reviewFilter],
+  );
 
   const exerciseGroups = useMemo(
     () => groupFormCheckInboxItems(videos),

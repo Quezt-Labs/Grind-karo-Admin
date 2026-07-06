@@ -157,6 +157,11 @@ export function FormCheckInboxPage() {
           ? `${pendingTargets.length} set video${pendingTargets.length === 1 ? "" : "s"} across ${exercises} exercise${exercises === 1 ? "" : "s"}${scopeLabel}`
           : `No videos waiting for review${scopeLabel}`;
       }
+      if (reviewFilter === "reviewed") {
+        return totalSetCount > 0
+          ? `${totalSetCount} reviewed set video${totalSetCount === 1 ? "" : "s"}${scopeLabel}`
+          : `No reviewed videos${scopeLabel}`;
+      }
       return `${totalSetCount || selectedAthlete.totalCount} form-check video${(totalSetCount || selectedAthlete.totalCount) === 1 ? "" : "s"}${scopeLabel}`;
     }
     if (globalPending === 0) {
@@ -257,23 +262,32 @@ export function FormCheckInboxPage() {
                   : "this athlete"}
                 .
               </p>
-              {nextAthleteInQueue ? (
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={goToNextAthlete}
-                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                  onClick={() => setReviewFilter("reviewed")}
+                  className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:bg-gray-900 dark:text-indigo-300"
                 >
-                  Next in queue — {athleteLabel(nextAthleteInQueue)}
+                  View reviewed feedback
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={clearAthleteSelection}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-                >
-                  Back to athlete list
-                </button>
-              )}
+                {nextAthleteInQueue ? (
+                  <button
+                    type="button"
+                    onClick={goToNextAthlete}
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                  >
+                    Next in queue — {athleteLabel(nextAthleteInQueue)}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={clearAthleteSelection}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                  >
+                    Back to athlete list
+                  </button>
+                )}
+              </div>
             </div>
           ) : null}
 
@@ -289,9 +303,13 @@ export function FormCheckInboxPage() {
                   ? weekNumber != null || dayNumber != null
                     ? `No videos waiting for review${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
                     : "No videos waiting for review for this athlete."
-                  : weekNumber != null || dayNumber != null
-                    ? `No form-check videos${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
-                    : "No form-check videos for this athlete yet."}
+                  : reviewFilter === "reviewed"
+                    ? weekNumber != null || dayNumber != null
+                      ? `No reviewed videos${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
+                      : "No reviewed form-check videos for this athlete yet."
+                    : weekNumber != null || dayNumber != null
+                      ? `No form-check videos${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
+                      : "No form-check videos for this athlete yet."}
               </p>
             </div>
           ) : (

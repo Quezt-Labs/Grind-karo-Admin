@@ -1,4 +1,4 @@
-import { memo, useEffect, useState, type CSSProperties } from "react";
+import { memo, useState, type CSSProperties } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { DraggableAttributes } from "@dnd-kit/core";
 import {
@@ -96,11 +96,8 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   const hasSets = hasPerSetPrescription(row);
   const setCount = row.exerciseSets?.length ?? 0;
   const setSummary = formatExerciseSetSummary(row);
-  const [expanded, setExpanded] = useState(hasSets || forceExpanded);
-
-  useEffect(() => {
-    if (forceExpanded) setExpanded(true);
-  }, [forceExpanded]);
+  const [userExpanded, setUserExpanded] = useState(hasSets || forceExpanded);
+  const expanded = forceExpanded || userExpanded;
 
   const updateMut = useMutation({
     mutationFn: (payload: UpdateExerciseRowPayload) =>
@@ -445,7 +442,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
         <TableCell className={cellPy}>
           <div className="flex items-center justify-center gap-0.5">
             <button
-              onClick={() => setExpanded((v) => !v)}
+              onClick={() => setUserExpanded((v) => !v)}
               className={cn(
                 "relative rounded p-1 transition-colors",
                 expanded

@@ -16,6 +16,7 @@ export interface FormCheckInboxItem {
   createdAt: string;
   coachComment: string | null;
   coachCommentId: string | null;
+  coachCommentUpdatedAt?: string | null;
   reviewed: boolean;
   exerciseNotes?: string | null;
   setNotes?: string | null;

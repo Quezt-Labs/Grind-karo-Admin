@@ -48,6 +48,18 @@ function ReviewFilterBar({
       </button>
       <button
         type="button"
+        onClick={() => onChange("reviewed")}
+        className={cn(
+          "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+          filter === "reviewed"
+            ? "bg-indigo-600 text-white"
+            : "border border-gray-200 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200",
+        )}
+      >
+        Reviewed
+      </button>
+      <button
+        type="button"
         onClick={() => onChange("all")}
         className={cn(
           "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",

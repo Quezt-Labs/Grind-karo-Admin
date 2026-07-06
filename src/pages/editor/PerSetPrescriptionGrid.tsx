@@ -1,30 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/utils/cn";
-
-export interface PerSetDraft {
-  percentOneRm: string;
-  reps: string;
-  repScheme: string;
-  targetRpe: string;
-  absoluteWeightKg: string;
-  notes: string;
-}
-
-export function emptyPerSetDraft(): PerSetDraft {
-  return {
-    percentOneRm: "",
-    reps: "",
-    repScheme: "",
-    targetRpe: "",
-    absoluteWeightKg: "",
-    notes: "",
-  };
-}
-
-export function defaultPerSetDrafts(count = 3): PerSetDraft[] {
-  return Array.from({ length: count }, () => emptyPerSetDraft());
-}
+import { emptyPerSetDraft, type PerSetDraft } from "./perSetPrescriptionDraft";
 
 interface PerSetPrescriptionGridProps {
   sets: PerSetDraft[];
@@ -157,27 +134,4 @@ export function PerSetPrescriptionGrid({
       </p>
     </div>
   );
-}
-
-export function perSetDraftToPayload(
-  setNumber: number,
-  draft: PerSetDraft,
-): import("@/types/programs").CreateExerciseSetPayload {
-  const parseNum = (v: string) => {
-    const n = parseFloat(v);
-    return v && !Number.isNaN(n) ? n : null;
-  };
-  const parseIntVal = (v: string) => {
-    const n = Number.parseInt(v, 10);
-    return v && !Number.isNaN(n) ? n : null;
-  };
-  return {
-    setNumber,
-    percentOneRm: parseNum(draft.percentOneRm),
-    reps: parseIntVal(draft.reps),
-    repScheme: draft.repScheme || null,
-    targetRpe: parseNum(draft.targetRpe),
-    absoluteWeightKg: parseNum(draft.absoluteWeightKg),
-    notes: draft.notes || null,
-  };
 }

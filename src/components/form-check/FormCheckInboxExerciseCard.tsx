@@ -152,6 +152,63 @@ function ExerciseContextChips({ video }: { video: FormCheckInboxItem }) {
   );
 }
 
+function formatReviewDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function SavedCoachFeedback({
+  comment,
+  updatedAt,
+  fromPriorUpload = false,
+}: {
+  comment: string;
+  updatedAt?: string | null;
+  fromPriorUpload?: boolean;
+}) {
+  const reviewDate = formatReviewDate(updatedAt);
+  return (
+    <div
+      className={cn(
+        "mb-3 rounded-lg border px-3 py-2.5",
+        fromPriorUpload
+          ? "border-amber-200 bg-amber-50/90 dark:border-amber-800/50 dark:bg-amber-950/30"
+          : "border-indigo-200 bg-indigo-50/90 dark:border-indigo-800/50 dark:bg-indigo-950/30",
+      )}
+    >
+      <div
+        className={cn(
+          "mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide",
+          fromPriorUpload
+            ? "text-amber-800 dark:text-amber-300"
+            : "text-indigo-700 dark:text-indigo-300",
+        )}
+      >
+        <CheckCircle2 className="h-3 w-3" />
+        {fromPriorUpload ? "Earlier feedback" : "Saved coach feedback"}
+        {reviewDate ? (
+          <span className="font-normal normal-case text-gray-500 dark:text-gray-400">
+            · {reviewDate}
+          </span>
+        ) : null}
+      </div>
+      <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
+        {comment}
+      </p>
+      {fromPriorUpload ? (
+        <p className="mt-1.5 text-[10px] text-amber-700 dark:text-amber-400">
+          From a previous upload of this set — latest video still needs review.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function SetCommentPanelWithBulk({
   video,
   allVideos,
@@ -175,6 +232,15 @@ function SetCommentPanelWithBulk({
   const initialComment =
     draftByVideoId.current.get(video.id) ?? video.coachComment ?? "";
   const [comment, setComment] = useState(initialComment);
+  const savedComment = video.coachComment?.trim() ?? "";
+  const showSavedFeedback = savedComment.length > 0;
+  const feedbackFromPriorUpload = showSavedFeedback && !video.reviewed;
+
+  useEffect(() => {
+    setComment(
+      draftByVideoId.current.get(video.id) ?? video.coachComment ?? "",
+    );
+  }, [video.id, video.coachComment, draftByVideoId]);
 
   const pendingTargets = useMemo(
     () => pendingTargetsForVideos(allVideos),
@@ -216,6 +282,14 @@ function SetCommentPanelWithBulk({
         onSelect={updateComment}
       />
 
+      {showSavedFeedback ? (
+        <SavedCoachFeedback
+          comment={savedComment}
+          updatedAt={video.coachCommentUpdatedAt}
+          fromPriorUpload={feedbackFromPriorUpload}
+        />
+      ) : null}
+
       {(video.setNotes?.trim() || video.athleteNotes?.trim()) && (
         <div className="mb-3">
           <FormCheckAthleteNotesBlocks
@@ -239,7 +313,11 @@ function SetCommentPanelWithBulk({
         value={comment}
         onChange={(e) => updateComment(e.target.value)}
         rows={4}
-        placeholder={`Feedback for ${exerciseName}, set ${video.setNumber}…`}
+        placeholder={
+          showSavedFeedback
+            ? `Edit feedback for ${exerciseName}, set ${video.setNumber}…`
+            : `Feedback for ${exerciseName}, set ${video.setNumber}…`
+        }
         className="min-h-[88px] w-full flex-1 resize-y rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
       />
 

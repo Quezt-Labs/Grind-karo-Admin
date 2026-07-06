@@ -3,11 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import { useIsAssistantCoach } from "@/hooks/useRole";
 
 export type PlanTier = "mega" | "ultra";
-export type ReviewFilter = "pending" | "all";
+export type ReviewFilter = "pending" | "reviewed" | "all";
 export type HandlerFilter = "all" | "assistant_coach" | "admin";
 
 const TIER_VALUES: PlanTier[] = ["mega", "ultra"];
-const REVIEW_VALUES: ReviewFilter[] = ["pending", "all"];
+const REVIEW_VALUES: ReviewFilter[] = ["pending", "reviewed", "all"];
 const HANDLER_VALUES: HandlerFilter[] = ["all", "assistant_coach", "admin"];
 
 function parseTier(value: string | null): PlanTier {

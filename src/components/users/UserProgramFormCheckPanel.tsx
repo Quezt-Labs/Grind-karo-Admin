@@ -19,12 +19,13 @@ import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import type { FormCheckQuota, Purchase } from "@/types/user";
 import { FormCheckBillingControls } from "@/components/users/FormCheckBillingControls";
 import type { FormCheckHandlerInfo } from "@/utils/formCheckHandler";
+import type { ReviewFilter } from "@/hooks/useFormCheckInboxRoute";
 import {
   formatProgramDayLabel,
   formatProgramWeekLabel,
 } from "@/utils/formCheckWeekUtils";
 
-type ReviewFilter = "pending" | "all";
+type UserReviewFilter = ReviewFilter;
 
 function resolveFormCheckHandlerFromAssignment(
   assignment: Awaited<
@@ -66,7 +67,7 @@ export function UserProgramFormCheckPanel({
   showBilling = false,
   onBillingUpdated,
 }: UserProgramFormCheckPanelProps) {
-  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("pending");
+  const [reviewFilter, setReviewFilter] = useState<UserReviewFilter>("pending");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(null);
 
@@ -135,10 +136,11 @@ export function UserProgramFormCheckPanel({
             className="h-8 w-36 text-xs"
             options={[
               { value: "pending", label: "Needs review" },
+              { value: "reviewed", label: "Reviewed" },
               { value: "all", label: "All videos" },
             ]}
             value={reviewFilter}
-            onValueChange={(v) => setReviewFilter(v as ReviewFilter)}
+            onValueChange={(v) => setReviewFilter(v as UserReviewFilter)}
           />
         </div>
       </div>
@@ -179,9 +181,13 @@ export function UserProgramFormCheckPanel({
             ? weekNumber != null || dayNumber != null
               ? `No videos waiting for review${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
               : "No program form-check videos waiting for review."
-            : weekNumber != null || dayNumber != null
-              ? `No form-check videos${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
-              : "No program form-check videos uploaded yet."}
+            : reviewFilter === "reviewed"
+              ? weekNumber != null || dayNumber != null
+                ? `No reviewed videos${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
+                : "No reviewed form-check videos yet."
+              : weekNumber != null || dayNumber != null
+                ? `No form-check videos${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
+                : "No program form-check videos uploaded yet."}
         </div>
       ) : (
         <FormCheckInboxExerciseList
