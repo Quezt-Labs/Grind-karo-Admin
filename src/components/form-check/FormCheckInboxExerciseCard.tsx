@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  forwardRef,
+  type MutableRefObject,
+} from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -9,16 +16,12 @@ import {
   Loader2,
   MessageSquare,
 } from "lucide-react";
-import toast from "react-hot-toast";
 import { FormCheckAthleteNotesBlocks } from "@/components/shared/FormCheckAthleteNotesBlocks";
+import { FormCheckWeekBadge } from "@/components/form-check/FormCheckWeekFilterBar";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { FormCheckPresetCommentChips } from "@/components/shared/FormCheckPresetCommentChips";
+import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
-import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
-import {
-  bulkUpsertFormCheckComments,
-  type BulkCommentResult,
-} from "@/utils/bulkFormCheckComments";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
 import { cn } from "@/utils/cn";
 
@@ -72,7 +75,11 @@ function PrescribedMetric({
 
 function PrescribedValues({ video }: { video: FormCheckInboxItem }) {
   const sets =
-    video.prescriptionSets != null ? String(video.prescriptionSets) : null;
+    video.prescriptionSets != null
+      ? video.prescriptionSets === 1
+        ? `Set ${video.setNumber}`
+        : String(video.prescriptionSets)
+      : null;
   const reps = video.repScheme?.trim() || null;
   const load = formatPrescribedIntensity(video);
   const rpe = video.targetRpe?.trim() || null;
@@ -95,34 +102,6 @@ function PrescribedValues({ video }: { video: FormCheckInboxItem }) {
         <PrescribedMetric label="Load" value={load} />
         <PrescribedMetric label="RPE" value={rpe} />
       </div>
-    </div>
-  );
-}
-
-function PrescribedValuesPanel({ video }: { video: FormCheckInboxItem }) {
-  const sets =
-    video.prescriptionSets != null ? String(video.prescriptionSets) : null;
-  const reps = video.repScheme?.trim() || null;
-  const load = formatPrescribedIntensity(video);
-  const rpe = video.targetRpe?.trim() || null;
-
-  const hasRx = sets != null || reps != null || load != null || rpe != null;
-
-  if (!hasRx) return null;
-
-  return (
-    <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50/80 px-3 py-2 dark:border-indigo-900/50 dark:bg-indigo-950/30">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-800 dark:text-indigo-300">
-        Prescribed
-      </p>
-      <p className="mt-0.5 text-sm font-semibold text-indigo-950 dark:text-indigo-100">
-        {video.exerciseName}
-      </p>
-      <p className="mt-1 font-mono text-sm tabular-nums text-indigo-900 dark:text-indigo-100">
-        {[sets != null ? `${sets} sets` : null, reps, load, rpe]
-          .filter(Boolean)
-          .join(" · ")}
-      </p>
     </div>
   );
 }
@@ -155,13 +134,6 @@ function ExerciseContextChips({ video }: { video: FormCheckInboxItem }) {
   const chips: string[] = [];
 
   if (video.programName) chips.push(video.programName);
-  if (video.weekNumber != null && video.dayNumber != null) {
-    const day =
-      video.dayLabel != null && video.dayLabel !== ""
-        ? `Day ${video.dayNumber} · ${video.dayLabel}`
-        : `Day ${video.dayNumber}`;
-    chips.push(`W${video.weekNumber}`, day);
-  }
   if (video.exerciseCategory) chips.push(video.exerciseCategory);
 
   if (chips.length === 0) return null;
@@ -184,67 +156,53 @@ function SetCommentPanelWithBulk({
   video,
   allVideos,
   exerciseName,
+  draftByVideoId,
+  userId,
+  onGoToNextExercise,
+  hasNextPendingExercise,
 }: {
   video: FormCheckInboxItem;
   allVideos: FormCheckInboxItem[];
   exerciseName: string;
+  draftByVideoId: MutableRefObject<Map<string, string>>;
+  userId: string;
+  onGoToNextExercise?: () => void;
+  hasNextPendingExercise?: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const [comment, setComment] = useState(video.coachComment ?? "");
+  const { saveCommentMutation, bulkApplyMutation } =
+    useFormCheckMutations(userId);
+
+  const initialComment =
+    draftByVideoId.current.get(video.id) ?? video.coachComment ?? "";
+  const [comment, setComment] = useState(initialComment);
+
   const pendingTargets = useMemo(
     () => pendingTargetsForVideos(allVideos),
     [allVideos],
   );
   const pendingSiblings = pendingTargets.length;
 
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
-    void queryClient.invalidateQueries({
-      queryKey: ["form-check-inbox-athletes"],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ["form-check-pending-count"],
-    });
+  const updateComment = (next: string) => {
+    setComment(next);
+    if (next.trim()) draftByVideoId.current.set(video.id, next);
+    else draftByVideoId.current.delete(video.id);
   };
 
-  const saveMutation = useMutation({
-    mutationFn: () => {
-      const trimmed = comment.trim();
-      if (!video.exerciseLogId) throw new Error("Missing exercise log");
-      return workoutVideoCommentService.upsert({
-        exerciseLogId: video.exerciseLogId,
-        setNumber: video.setNumber,
-        comment: trimmed,
-      });
-    },
-    onSuccess: () => {
-      toast.success(`Set ${video.setNumber} saved`);
-      invalidate();
-    },
-    onError: () => toast.error("Failed to save comment"),
-  });
+  const handleSaveSuccess = () => {
+    draftByVideoId.current.delete(video.id);
+    const exercisePendingLeft = allVideos.filter(
+      (v) => !v.reviewed && v.id !== video.id,
+    ).length;
+    if (
+      exercisePendingLeft === 0 &&
+      hasNextPendingExercise &&
+      onGoToNextExercise
+    ) {
+      onGoToNextExercise();
+    }
+  };
 
-  const bulkMutation = useMutation({
-    mutationFn: (text: string) =>
-      bulkUpsertFormCheckComments(pendingTargets, text),
-    onSuccess: (result: BulkCommentResult) => {
-      if (result.failed === 0 && result.succeeded > 0) {
-        toast.success(
-          `${result.succeeded} set comment${result.succeeded === 1 ? "" : "s"} saved`,
-        );
-        invalidate();
-        return;
-      }
-      if (result.succeeded > 0) {
-        toast.error(`${result.succeeded} saved · ${result.failed} failed`);
-        invalidate();
-        return;
-      }
-      toast.error("Failed to save comments");
-    },
-  });
-
-  const saving = saveMutation.isPending || bulkMutation.isPending;
+  const saving = saveCommentMutation.isPending || bulkApplyMutation.isPending;
 
   return (
     <div className="flex h-full flex-col p-3 lg:p-4">
@@ -255,7 +213,7 @@ function SetCommentPanelWithBulk({
       <FormCheckPresetCommentChips
         className="mb-2"
         disabled={saving}
-        onSelect={setComment}
+        onSelect={updateComment}
       />
 
       {(video.setNotes?.trim() || video.athleteNotes?.trim()) && (
@@ -268,8 +226,6 @@ function SetCommentPanelWithBulk({
         </div>
       )}
 
-      <PrescribedValuesPanel video={video} />
-
       {(video.actualSets != null ||
         video.actualReps != null ||
         video.actualLoad != null ||
@@ -281,7 +237,7 @@ function SetCommentPanelWithBulk({
 
       <textarea
         value={comment}
-        onChange={(e) => setComment(e.target.value)}
+        onChange={(e) => updateComment(e.target.value)}
         rows={4}
         placeholder={`Feedback for ${exerciseName}, set ${video.setNumber}…`}
         className="min-h-[88px] w-full flex-1 resize-y rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
@@ -294,11 +250,22 @@ function SetCommentPanelWithBulk({
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          disabled={!comment.trim() || saving}
-          onClick={() => saveMutation.mutate()}
+          disabled={!comment.trim() || saving || !video.exerciseLogId}
+          onClick={() => {
+            if (!video.exerciseLogId) return;
+            saveCommentMutation.mutate(
+              {
+                exerciseLogId: video.exerciseLogId,
+                setNumber: video.setNumber,
+                comment,
+                setLabel: `Set ${video.setNumber}`,
+              },
+              { onSuccess: handleSaveSuccess },
+            );
+          }}
           className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
         >
-          {saveMutation.isPending && (
+          {saveCommentMutation.isPending && (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           )}
           Save this set
@@ -307,13 +274,35 @@ function SetCommentPanelWithBulk({
           <button
             type="button"
             disabled={!comment.trim() || saving}
-            onClick={() => bulkMutation.mutate(comment.trim())}
+            onClick={() =>
+              bulkApplyMutation.mutate(
+                { targets: pendingTargets, comment: comment.trim() },
+                {
+                  onSuccess: () => {
+                    draftByVideoId.current.clear();
+                    if (hasNextPendingExercise && onGoToNextExercise) {
+                      onGoToNextExercise();
+                    }
+                  },
+                },
+              )
+            }
             className="inline-flex items-center gap-1 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
           >
-            {bulkMutation.isPending && (
+            {bulkApplyMutation.isPending && (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             )}
             Apply to all {pendingSiblings} pending sets
+          </button>
+        ) : null}
+        {hasNextPendingExercise && onGoToNextExercise ? (
+          <button
+            type="button"
+            onClick={onGoToNextExercise}
+            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+          >
+            Next exercise
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
         ) : null}
       </div>
@@ -321,13 +310,29 @@ function SetCommentPanelWithBulk({
   );
 }
 
-export function FormCheckInboxExerciseCard({
-  videos,
-  showAthleteLink = true,
-}: {
-  videos: FormCheckInboxItem[];
-  showAthleteLink?: boolean;
-}) {
+export const FormCheckInboxExerciseCard = forwardRef<
+  HTMLElement,
+  {
+    id?: string;
+    videos: FormCheckInboxItem[];
+    showAthleteLink?: boolean;
+    isNavActive?: boolean;
+    onGoToNextExercise?: () => void;
+    hasNextPendingExercise?: boolean;
+  }
+>(function FormCheckInboxExerciseCard(
+  {
+    id,
+    videos,
+    showAthleteLink = true,
+    isNavActive = false,
+    onGoToNextExercise,
+    hasNextPendingExercise = false,
+  },
+  forwardedRef,
+) {
+  const cardRef = useRef<HTMLElement>(null);
+  const draftByVideoId = useRef(new Map<string, string>());
   const head = videos[0];
   const multiSet = videos.length > 1;
   const reviewedCount = videos.filter((v) => v.reviewed).length;
@@ -358,11 +363,20 @@ export function FormCheckInboxExerciseCard({
   };
 
   useEffect(() => {
-    if (!multiSet) return;
+    if (!multiSet || !isNavActive) return;
+    const el = cardRef.current;
+    if (!el) return;
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (
         event.target instanceof HTMLTextAreaElement ||
         event.target instanceof HTMLInputElement
+      ) {
+        return;
+      }
+      if (
+        !el.contains(document.activeElement) &&
+        document.activeElement !== el
       ) {
         return;
       }
@@ -376,17 +390,28 @@ export function FormCheckInboxExerciseCard({
         setActiveVideoId(videos[next]?.id ?? null);
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [multiSet, videos.length, activeIndex, videos]);
+
+    el.addEventListener("keydown", onKeyDown);
+    return () => el.removeEventListener("keydown", onKeyDown);
+  }, [multiSet, isNavActive, activeIndex, videos]);
 
   const active = videos[activeIndex] ?? head;
   const athleteName = head.userName ?? head.userEmail;
 
+  const setArticleRef = (el: HTMLElement | null) => {
+    cardRef.current = el;
+    if (typeof forwardedRef === "function") forwardedRef(el);
+    else if (forwardedRef) forwardedRef.current = el;
+  };
+
   return (
     <article
+      ref={setArticleRef}
+      id={id}
+      tabIndex={isNavActive ? 0 : -1}
       className={cn(
-        "overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-gray-800",
+        "overflow-hidden rounded-2xl border bg-white shadow-sm scroll-mt-52 dark:bg-gray-800",
+        isNavActive && "ring-2 ring-indigo-400/60",
         pendingCount > 0
           ? "border-amber-200/80 dark:border-amber-800/50"
           : "border-gray-200 dark:border-gray-700",
@@ -403,7 +428,14 @@ export function FormCheckInboxExerciseCard({
                 {athleteName}
               </Link>
             ) : null}
-            <h3 className="text-lg font-bold leading-tight text-gray-900 dark:text-white">
+            <div className="mt-1.5">
+              <FormCheckWeekBadge
+                weekNumber={active.weekNumber}
+                dayNumber={active.dayNumber}
+                dayLabel={active.dayLabel}
+              />
+            </div>
+            <h3 className="mt-1.5 text-lg font-bold leading-tight text-gray-900 dark:text-white">
               {head.exerciseName}
             </h3>
             <ExerciseContextChips video={active} />
@@ -516,9 +548,13 @@ export function FormCheckInboxExerciseCard({
             video={active}
             allVideos={videos}
             exerciseName={head.exerciseName}
+            draftByVideoId={draftByVideoId}
+            userId={head.userId}
+            onGoToNextExercise={onGoToNextExercise}
+            hasNextPendingExercise={hasNextPendingExercise}
           />
         </div>
       </div>
     </article>
   );
-}
+});

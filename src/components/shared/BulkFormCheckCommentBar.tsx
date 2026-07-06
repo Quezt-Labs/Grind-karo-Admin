@@ -9,6 +9,10 @@ interface BulkFormCheckCommentBarProps {
   pendingCount: number;
   onApply: (comment: string) => Promise<BulkCommentResult>;
   className?: string;
+  /** Pin below the page scroll top while reviewing (e.g. under tier tabs). */
+  sticky?: boolean;
+  /** Tailwind top offset when sticky — default clears tier tabs on inbox. */
+  stickyTopClassName?: string;
 }
 
 function showBulkResultToast(result: BulkCommentResult) {
@@ -34,6 +38,8 @@ export function BulkFormCheckCommentBar({
   pendingCount,
   onApply,
   className,
+  sticky = false,
+  stickyTopClassName = "top-0",
 }: BulkFormCheckCommentBarProps) {
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
@@ -58,8 +64,16 @@ export function BulkFormCheckCommentBar({
 
   return (
     <div
+      data-form-check-bulk-bar={sticky ? "" : undefined}
       className={cn(
         "rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-800/60 dark:bg-indigo-900/20",
+        sticky && [
+          "sticky z-30",
+          stickyTopClassName,
+          "border-indigo-200/90 bg-indigo-50/95 shadow-md backdrop-blur-md",
+          "dark:border-indigo-800/80 dark:bg-indigo-950/95",
+          "supports-[backdrop-filter]:bg-indigo-50/90 dark:supports-[backdrop-filter]:bg-indigo-950/90",
+        ],
         className,
       )}
     >

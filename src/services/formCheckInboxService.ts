@@ -68,6 +68,7 @@ export const formCheckInboxService = {
   async list(params?: {
     uncommentedOnly?: boolean;
     weekNumber?: number;
+    dayNumber?: number;
     userId?: string;
     limit?: number;
     offset?: number;

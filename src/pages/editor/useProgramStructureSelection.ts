@@ -3,6 +3,7 @@ import {
   type BlockTree,
   type ProgramSelectionAnchor,
   findDayLocation,
+  pickDayByNumber,
   resolveProgramStructureSelection,
   sortedDays,
   sortedWeeks,
@@ -34,11 +35,11 @@ export function useProgramStructureSelection(blocks: BlockTree[]) {
     if (!current) return;
     const week = current.selectedBlock.weeks.find((w) => w.id === weekId);
     if (!week) return;
-    const days = sortedDays(week.days);
+    const day = pickDayByNumber(week.days, current.selectedDay?.dayNumber);
     setAnchor({
       blockId: current.selectedBlock.id,
       weekId,
-      dayId: days[0]?.id ?? null,
+      dayId: day?.id ?? null,
     });
   }
 

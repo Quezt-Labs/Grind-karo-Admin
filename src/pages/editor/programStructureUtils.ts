@@ -81,6 +81,17 @@ export function sortedDays(days: DayTree[]) {
   return [...days].sort((a, b) => a.dayNumber - b.dayNumber);
 }
 
+/** Keep the same day number when switching weeks (e.g. Day 3 → Day 3). */
+export function pickDayByNumber(
+  days: DayTree[],
+  preferredDayNumber: number | null | undefined,
+): DayTree | null {
+  const sorted = sortedDays(days);
+  if (sorted.length === 0) return null;
+  if (preferredDayNumber == null) return sorted[0] ?? null;
+  return sorted.find((d) => d.dayNumber === preferredDayNumber) ?? sorted[0];
+}
+
 export function findFirstSelection(
   blocks: BlockTree[],
 ): ProgramDayLocation | null {

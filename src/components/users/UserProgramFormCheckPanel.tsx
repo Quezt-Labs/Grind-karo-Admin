@@ -1,18 +1,28 @@
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Video } from "lucide-react";
 import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
 import { FormCheckHandlerBadge } from "@/components/form-check/FormCheckHandlerBadge";
+import { FormCheckQuotaBanner } from "@/components/form-check/FormCheckQuotaBanner";
+import { FormCheckWeekFilterBar } from "@/components/form-check/FormCheckWeekFilterBar";
+import { FormCheckDayFilterBar } from "@/components/form-check/FormCheckDayFilterBar";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
-import { formCheckInboxService } from "@/services/formCheckInboxService";
+import { formCheckKeys } from "@/hooks/formCheckQueryKeys";
+import {
+  useFormCheckVideoDays,
+  useFormCheckVideoWeeks,
+  useFormCheckVideos,
+} from "@/hooks/useFormCheckInbox";
+import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
 import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import type { FormCheckQuota, Purchase } from "@/types/user";
 import { FormCheckBillingControls } from "@/components/users/FormCheckBillingControls";
-import { bulkUpsertFormCheckComments } from "@/utils/bulkFormCheckComments";
-import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
-import { groupFormCheckInboxItems } from "@/utils/groupFormCheckInboxItems";
 import type { FormCheckHandlerInfo } from "@/utils/formCheckHandler";
+import {
+  formatProgramDayLabel,
+  formatProgramWeekLabel,
+} from "@/utils/formCheckWeekUtils";
 
 type ReviewFilter = "pending" | "all";
 
@@ -51,26 +61,38 @@ interface UserProgramFormCheckPanelProps {
 
 export function UserProgramFormCheckPanel({
   userId,
-  formCheckQuota,
+  formCheckQuota: formCheckQuotaProp,
   purchases = [],
   showBilling = false,
   onBillingUpdated,
 }: UserProgramFormCheckPanelProps) {
-  const queryClient = useQueryClient();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("pending");
+  const [weekNumber, setWeekNumber] = useState<number | null>(null);
+  const [dayNumber, setDayNumber] = useState<number | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["form-check-inbox", reviewFilter, userId],
-    queryFn: () =>
-      formCheckInboxService.list({
-        userId,
-        uncommentedOnly: reviewFilter === "pending",
-        limit: 100,
-      }),
+  const { data: weekOptions = [] } = useFormCheckVideoWeeks({
+    userId,
+    reviewFilter,
   });
 
+  const { data: dayOptions = [] } = useFormCheckVideoDays({
+    userId,
+    reviewFilter,
+    weekNumber,
+  });
+
+  const { isLoading, videos, exerciseGroups, pendingTargets, hasMore } =
+    useFormCheckVideos({
+      userId,
+      reviewFilter,
+      weekNumber,
+      dayNumber,
+    });
+
+  const { bulkApply } = useFormCheckMutations(userId);
+
   const { data: assignment } = useQuery({
-    queryKey: ["athlete-assignment", userId],
+    queryKey: formCheckKeys.assignment(userId),
     queryFn: () => athleteAssignmentService.getByAthleteId(userId),
   });
 
@@ -79,42 +101,10 @@ export function UserProgramFormCheckPanel({
     [assignment],
   );
 
-  const videos = useMemo(
-    () => (data?.items ?? []).filter((item) => item.source === "program"),
-    [data?.items],
-  );
+  const handleBulkApply = async (comment: string) =>
+    bulkApply(pendingTargets, comment);
 
-  const exerciseGroups = useMemo(
-    () => groupFormCheckInboxItems(videos),
-    [videos],
-  );
-
-  const pendingTargets = useMemo(
-    () => pendingTargetsForVideos(videos),
-    [videos],
-  );
-
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
-    void queryClient.invalidateQueries({
-      queryKey: ["form-check-inbox-athletes"],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ["form-check-pending-count"],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ["form-check-inbox-pending-user", userId],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ["admin-user-purchases", userId],
-    });
-  };
-
-  const handleBulkApply = async (comment: string) => {
-    const result = await bulkUpsertFormCheckComments(pendingTargets, comment);
-    if (result.succeeded > 0) invalidate();
-    return result;
-  };
+  const quota = formCheckQuotaProp;
 
   return (
     <div>
@@ -131,7 +121,7 @@ export function UserProgramFormCheckPanel({
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
           Form-check review
         </h2>
-        {data ? (
+        {!isLoading ? (
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
             {videos.length}
             {reviewFilter === "all" && pendingTargets.length > 0
@@ -153,25 +143,29 @@ export function UserProgramFormCheckPanel({
         </div>
       </div>
 
-      {formCheckQuota?.weeklyLimit != null ? (
-        <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
-          Form checks this 4-week block ({formCheckQuota.weekStart}):{" "}
-          <span className="font-semibold">
-            {formCheckQuota.usedThisWeek}/{formCheckQuota.weeklyLimit}
-          </span>{" "}
-          program weeks reviewed
-          {formCheckQuota.remainingThisWeek != null &&
-          formCheckQuota.remainingThisWeek > 0
-            ? ` · ${formCheckQuota.remainingThisWeek} remaining`
-            : formCheckQuota.remainingThisWeek === 0
-              ? " · limit reached"
-              : ""}
-          {formCheckQuota.formCheckWeekAllowed === false
-            ? ` · Not a form-check week (sub week ${formCheckQuota.subscriptionWeek ?? "?"})`
-            : formCheckQuota.formCheckWeekAllowed === true &&
-                formCheckQuota.subscriptionWeek != null
-              ? ` · Form-check week (sub week ${formCheckQuota.subscriptionWeek})`
-              : ""}
+      {quota?.weeklyLimit != null ? (
+        <div className="mb-3">
+          <FormCheckQuotaBanner quota={quota} />
+        </div>
+      ) : null}
+
+      {weekOptions.length > 0 ? (
+        <div className="mb-4">
+          <FormCheckWeekFilterBar
+            weeks={weekOptions}
+            selectedWeek={weekNumber}
+            onChange={setWeekNumber}
+          />
+        </div>
+      ) : null}
+
+      {dayOptions.length > 0 ? (
+        <div className="mb-4">
+          <FormCheckDayFilterBar
+            days={dayOptions}
+            selectedDay={dayNumber}
+            onChange={setDayNumber}
+          />
         </div>
       ) : null}
 
@@ -182,15 +176,21 @@ export function UserProgramFormCheckPanel({
       ) : videos.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
           {reviewFilter === "pending"
-            ? "No program form-check videos waiting for review."
-            : "No program form-check videos uploaded yet."}
+            ? weekNumber != null || dayNumber != null
+              ? `No videos waiting for review${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
+              : "No program form-check videos waiting for review."
+            : weekNumber != null || dayNumber != null
+              ? `No form-check videos${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
+              : "No program form-check videos uploaded yet."}
         </div>
       ) : (
         <FormCheckInboxExerciseList
-          listKey={`${userId}-${reviewFilter}`}
+          listKey={`${userId}-${reviewFilter}-${weekNumber ?? "all"}-${dayNumber ?? "all"}`}
           exerciseGroups={exerciseGroups}
           pendingCount={pendingTargets.length}
           onBulkApply={handleBulkApply}
+          hasMore={hasMore}
+          bulkBarStickyTopClassName="top-0"
         />
       )}
     </div>

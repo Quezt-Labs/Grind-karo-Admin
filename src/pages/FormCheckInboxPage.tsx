@@ -1,23 +1,34 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronRight, User, Video } from "lucide-react";
+import { useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, Video } from "lucide-react";
+import toast from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
-import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
-import { FormCheckHandlerBadge } from "@/components/form-check/FormCheckHandlerBadge";
 import {
-  formCheckInboxService,
-  type FormCheckInboxAthlete,
-} from "@/services/formCheckInboxService";
-import { bulkUpsertFormCheckComments } from "@/utils/bulkFormCheckComments";
-import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
-import { groupFormCheckInboxItems } from "@/utils/groupFormCheckInboxItems";
-import { cn } from "@/utils/cn";
-
-type PlanTier = "mega" | "ultra";
-type ReviewFilter = "pending" | "all";
-type HandlerFilter = "all" | "assistant_coach" | "admin";
+  FormCheckInboxAthleteList,
+  FormCheckInboxTierTabs,
+} from "@/components/form-check/FormCheckInboxAthleteList";
+import { FormCheckInboxAthleteHeader } from "@/components/form-check/FormCheckInboxAthleteHeader";
+import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
+import { FormCheckQuotaBanner } from "@/components/form-check/FormCheckQuotaBanner";
+import { FormCheckWeekFilterBar } from "@/components/form-check/FormCheckWeekFilterBar";
+import { FormCheckDayFilterBar } from "@/components/form-check/FormCheckDayFilterBar";
+import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
+import { formCheckKeys } from "@/hooks/formCheckQueryKeys";
+import {
+  useFormCheckAthletes,
+  useFormCheckVideoDays,
+  useFormCheckVideoWeeks,
+  useFormCheckVideos,
+} from "@/hooks/useFormCheckInbox";
+import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
+import { useFormCheckInboxRoute } from "@/hooks/useFormCheckInboxRoute";
+import type { FormCheckInboxAthlete } from "@/services/formCheckInboxService";
+import { userService } from "@/services/userService";
+import {
+  formatProgramDayLabel,
+  formatProgramWeekLabel,
+} from "@/utils/formCheckWeekUtils";
 
 function athleteLabel(
   athlete: Pick<FormCheckInboxAthlete, "userName" | "userEmail">,
@@ -25,148 +36,71 @@ function athleteLabel(
   return athlete.userName?.trim() || athlete.userEmail;
 }
 
-function ReviewFilterBar({
-  filter,
-  onChange,
-  pendingCount,
-}: {
-  filter: ReviewFilter;
-  onChange: (next: ReviewFilter) => void;
-  pendingCount?: number;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => onChange("pending")}
-        className={cn(
-          "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-          filter === "pending"
-            ? "bg-indigo-600 text-white"
-            : "border border-gray-200 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200",
-        )}
-      >
-        Needs review
-        {pendingCount != null && pendingCount > 0 && (
-          <span className="ml-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px]">
-            {pendingCount}
-          </span>
-        )}
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("all")}
-        className={cn(
-          "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-          filter === "all"
-            ? "bg-indigo-600 text-white"
-            : "border border-gray-200 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200",
-        )}
-      >
-        All videos
-      </button>
-    </div>
-  );
-}
-
-function AthleteRow({
-  athlete,
-  onSelect,
-}: {
-  athlete: FormCheckInboxAthlete;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
-        <User className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-          {athleteLabel(athlete)}
-        </p>
-        <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-          {athlete.userEmail}
-        </p>
-        <div className="mt-1.5">
-          <FormCheckHandlerBadge
-            formCheckHandler={athlete.formCheckHandler}
-            formCheckCoachName={athlete.formCheckCoachName}
-          />
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {athlete.pendingCount > 0 ? (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-            {athlete.pendingCount} pending
-          </span>
-        ) : (
-          <span className="text-[11px] text-gray-500 dark:text-gray-400">
-            {athlete.totalCount} video{athlete.totalCount === 1 ? "" : "s"}
-          </span>
-        )}
-        <ChevronRight className="h-4 w-4 text-gray-400" />
-      </div>
-    </button>
-  );
-}
-
-function HandlerFilterBar({
-  filter,
-  onChange,
-  counts,
-}: {
-  filter: HandlerFilter;
-  onChange: (next: HandlerFilter) => void;
-  counts: { all: number; assistant_coach: number; admin: number };
-}) {
-  const options: { value: HandlerFilter; label: string }[] = [
-    { value: "all", label: `All (${counts.all})` },
-    {
-      value: "assistant_coach",
-      label: `Assistant coach (${counts.assistant_coach})`,
-    },
-    { value: "admin", label: `Admin (${counts.admin})` },
-  ];
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-            filter === opt.value
-              ? "bg-violet-600 text-white"
-              : "border border-gray-200 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200",
-          )}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
+function filterAthletesByHandler(
+  athletes: FormCheckInboxAthlete[],
+  handlerFilter: "all" | "assistant_coach" | "admin",
+) {
+  if (handlerFilter === "all") return athletes;
+  return athletes.filter((a) => a.formCheckHandler === handlerFilter);
 }
 
 export function FormCheckInboxPage() {
-  const queryClient = useQueryClient();
-  const [planTier, setPlanTier] = useState<PlanTier>("mega");
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("pending");
-  const [handlerFilter, setHandlerFilter] = useState<HandlerFilter>("all");
+  const route = useFormCheckInboxRoute();
+  const {
+    tier: planTier,
+    selectedUserId,
+    reviewFilter,
+    handlerFilter,
+    weekNumber,
+    dayNumber,
+    setPlanTier,
+    setSelectedUserId,
+    setReviewFilter,
+    setHandlerFilter,
+    setWeekNumber,
+    setDayNumber,
+    clearAthleteSelection,
+  } = route;
 
-  const { data: athletesData, isLoading: athletesLoading } = useQuery({
-    queryKey: ["form-check-inbox-athletes", reviewFilter],
-    queryFn: () =>
-      formCheckInboxService.listAthletes({
-        uncommentedOnly: reviewFilter === "pending",
-      }),
+  const { data: athletesData, isLoading: athletesLoading } =
+    useFormCheckAthletes(reviewFilter);
+
+  const { data: weekOptions = [] } = useFormCheckVideoWeeks({
+    userId: selectedUserId,
+    reviewFilter,
+    enabled: !!selectedUserId,
+  });
+
+  const { data: dayOptions = [] } = useFormCheckVideoDays({
+    userId: selectedUserId,
+    reviewFilter,
+    weekNumber,
+    enabled: !!selectedUserId,
+  });
+
+  const {
+    isLoading: videosLoading,
+    videos,
+    exerciseGroups,
+    pendingTargets,
+    reviewedSetCount,
+    pendingExerciseCount,
+    totalSetCount,
+    hasMore,
+  } = useFormCheckVideos({
+    userId: selectedUserId,
+    reviewFilter,
+    weekNumber,
+    dayNumber,
+    enabled: !!selectedUserId,
+  });
+
+  const { bulkApply } = useFormCheckMutations(selectedUserId ?? undefined);
+
+  const { data: purchasesData } = useQuery({
+    queryKey: formCheckKeys.purchases(selectedUserId ?? ""),
+    queryFn: () => userService.getPurchases(selectedUserId!),
+    enabled: !!selectedUserId,
   });
 
   const selectedAthlete = useMemo(() => {
@@ -175,35 +109,20 @@ export function FormCheckInboxPage() {
     return all.find((a) => a.userId === selectedUserId) ?? null;
   }, [athletesData, selectedUserId]);
 
-  const { data: videosData, isLoading: videosLoading } = useQuery({
-    queryKey: ["form-check-inbox", reviewFilter, selectedUserId],
-    queryFn: () =>
-      formCheckInboxService.list({
-        userId: selectedUserId!,
-        uncommentedOnly: reviewFilter === "pending",
-        limit: 100,
-      }),
-    enabled: !!selectedUserId,
-  });
-
   const megaAthletes = athletesData?.mega ?? [];
   const ultraAthletes = athletesData?.ultra ?? [];
   const tierAthletes = planTier === "mega" ? megaAthletes : ultraAthletes;
 
-  const handlerCounts = useMemo(() => {
-    return {
+  const handlerCounts = useMemo(
+    () => ({
       all: tierAthletes.length,
       assistant_coach: tierAthletes.filter(
         (a) => a.formCheckHandler === "assistant_coach",
       ).length,
       admin: tierAthletes.filter((a) => a.formCheckHandler === "admin").length,
-    };
-  }, [tierAthletes]);
-
-  const filteredTierAthletes = useMemo(() => {
-    if (handlerFilter === "all") return tierAthletes;
-    return tierAthletes.filter((a) => a.formCheckHandler === handlerFilter);
-  }, [tierAthletes, handlerFilter]);
+    }),
+    [tierAthletes],
+  );
 
   const megaPending = megaAthletes.reduce((sum, a) => sum + a.pendingCount, 0);
   const ultraPending = ultraAthletes.reduce(
@@ -211,27 +130,34 @@ export function FormCheckInboxPage() {
     0,
   );
   const globalPending = megaPending + ultraPending;
+  const tierPending = planTier === "mega" ? megaPending : ultraPending;
 
-  const videos = useMemo(() => videosData?.items ?? [], [videosData?.items]);
-  const exerciseGroups = useMemo(
-    () => groupFormCheckInboxItems(videos),
-    [videos],
+  const filteredQueue = useMemo(
+    () => filterAthletesByHandler(tierAthletes, handlerFilter),
+    [tierAthletes, handlerFilter],
   );
 
-  const pendingTargets = useMemo(
-    () => pendingTargetsForVideos(videos),
-    [videos],
-  );
+  const nextAthleteInQueue = useMemo(() => {
+    if (!selectedUserId) return null;
+    const index = filteredQueue.findIndex((a) => a.userId === selectedUserId);
+    if (index < 0) return filteredQueue[0] ?? null;
+    return filteredQueue[index + 1] ?? null;
+  }, [filteredQueue, selectedUserId]);
 
   const subtitle = useMemo(() => {
     if (selectedUserId && selectedAthlete) {
+      const weekLabel =
+        weekNumber != null ? ` · ${formatProgramWeekLabel(weekNumber)}` : "";
+      const dayLabel =
+        dayNumber != null ? ` · ${formatProgramDayLabel(dayNumber)}` : "";
+      const scopeLabel = `${weekLabel}${dayLabel}`;
       if (reviewFilter === "pending") {
         const exercises = exerciseGroups.length;
         return exercises > 0
-          ? `${pendingTargets.length} set video${pendingTargets.length === 1 ? "" : "s"} across ${exercises} exercise${exercises === 1 ? "" : "s"}`
-          : "No videos waiting for review";
+          ? `${pendingTargets.length} set video${pendingTargets.length === 1 ? "" : "s"} across ${exercises} exercise${exercises === 1 ? "" : "s"}${scopeLabel}`
+          : `No videos waiting for review${scopeLabel}`;
       }
-      return `${selectedAthlete.totalCount} form-check video${selectedAthlete.totalCount === 1 ? "" : "s"} total`;
+      return `${totalSetCount || selectedAthlete.totalCount} form-check video${(totalSetCount || selectedAthlete.totalCount) === 1 ? "" : "s"}${scopeLabel}`;
     }
     if (globalPending === 0) {
       return "All caught up — no videos waiting for review";
@@ -242,100 +168,114 @@ export function FormCheckInboxPage() {
     selectedAthlete,
     reviewFilter,
     globalPending,
+    weekNumber,
+    dayNumber,
     exerciseGroups.length,
     pendingTargets.length,
+    totalSetCount,
   ]);
 
-  const handlePlanChange = (tier: PlanTier) => {
-    setPlanTier(tier);
-    setSelectedUserId(null);
-    setHandlerFilter("all");
-  };
+  const handleBulkApply = useCallback(
+    (comment: string) => bulkApply(pendingTargets, comment),
+    [bulkApply, pendingTargets],
+  );
 
-  const handleReviewFilterChange = (next: ReviewFilter) => {
-    setReviewFilter(next);
-    if (next === "pending") setSelectedUserId(null);
-  };
+  const handleAllPendingReviewed = useCallback(() => {
+    const name = selectedAthlete ? athleteLabel(selectedAthlete) : "Athlete";
+    toast.success(`All caught up for ${name}`);
+  }, [selectedAthlete]);
 
-  const handleBulkApply = async (comment: string) => {
-    const result = await bulkUpsertFormCheckComments(pendingTargets, comment);
-    if (result.succeeded > 0) {
-      void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
-      void queryClient.invalidateQueries({
-        queryKey: ["form-check-inbox-athletes"],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["form-check-pending-count"],
-      });
+  const goToNextAthlete = useCallback(() => {
+    if (nextAthleteInQueue) {
+      setSelectedUserId(nextAthleteInQueue.userId);
+      return;
     }
-    return result;
-  };
+    clearAthleteSelection();
+    toast("No more athletes in this queue", { icon: "✓" });
+  }, [nextAthleteInQueue, setSelectedUserId, clearAthleteSelection]);
 
   return (
     <div>
       <PageHeader title="Form Check Inbox" description={subtitle} />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-gray-200 pb-4 dark:border-gray-700">
-        {(["mega", "ultra"] as const).map((tier) => {
-          const pending = tier === "mega" ? megaPending : ultraPending;
-          const count =
-            tier === "mega" ? megaAthletes.length : ultraAthletes.length;
-          return (
-            <button
-              key={tier}
-              type="button"
-              onClick={() => handlePlanChange(tier)}
-              className={cn(
-                "rounded-lg px-4 py-2 text-sm font-semibold uppercase tracking-wide transition-colors",
-                planTier === tier
-                  ? "bg-indigo-600 text-white"
-                  : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800",
-              )}
-            >
-              {tier}
-              <span className="ml-2 text-xs font-medium opacity-80">
-                {count} athlete{count === 1 ? "" : "s"}
-                {pending > 0 ? ` · ${pending} pending` : ""}
-              </span>
-            </button>
-          );
-        })}
+      <div className="mb-4 border-b border-gray-200 pb-4 dark:border-gray-700">
+        <FormCheckInboxTierTabs
+          planTier={planTier}
+          megaAthletes={megaAthletes}
+          ultraAthletes={ultraAthletes}
+          megaPending={megaPending}
+          ultraPending={ultraPending}
+          onPlanChange={setPlanTier}
+        />
       </div>
 
       {selectedUserId ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setSelectedUserId(null)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to {planTier.toUpperCase()} athletes
-            </button>
-            <div className="flex flex-wrap items-center gap-2">
-              {selectedAthlete ? (
-                <FormCheckHandlerBadge
-                  formCheckHandler={selectedAthlete.formCheckHandler}
-                  formCheckCoachName={selectedAthlete.formCheckCoachName}
-                  size="md"
-                />
-              ) : null}
-              <Link
-                to={`/users/${selectedUserId}`}
-                className="text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
-              >
+          <FormCheckInboxAthleteHeader
+            planTier={planTier}
+            selectedUserId={selectedUserId}
+            selectedAthlete={selectedAthlete}
+            reviewFilter={reviewFilter}
+            reviewedSetCount={reviewedSetCount}
+            totalSetCount={totalSetCount}
+            pendingExerciseCount={pendingExerciseCount}
+            totalExerciseCount={exerciseGroups.length}
+            onBack={clearAthleteSelection}
+            onReviewFilterChange={setReviewFilter}
+            selectedWeek={weekNumber}
+            selectedDay={dayNumber}
+          />
+
+          {weekOptions.length > 0 ? (
+            <FormCheckWeekFilterBar
+              weeks={weekOptions}
+              selectedWeek={weekNumber}
+              onChange={setWeekNumber}
+            />
+          ) : null}
+
+          {dayOptions.length > 0 ? (
+            <FormCheckDayFilterBar
+              days={dayOptions}
+              selectedDay={dayNumber}
+              onChange={setDayNumber}
+            />
+          ) : null}
+
+          {purchasesData?.formCheckQuota ? (
+            <FormCheckQuotaBanner quota={purchasesData.formCheckQuota} />
+          ) : null}
+
+          {pendingTargets.length === 0 &&
+          reviewFilter === "pending" &&
+          !videosLoading ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+              <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+                All caught up for{" "}
                 {selectedAthlete
                   ? athleteLabel(selectedAthlete)
-                  : "Athlete profile"}
-              </Link>
-              <ReviewFilterBar
-                filter={reviewFilter}
-                onChange={setReviewFilter}
-                pendingCount={selectedAthlete?.pendingCount}
-              />
+                  : "this athlete"}
+                .
+              </p>
+              {nextAthleteInQueue ? (
+                <button
+                  type="button"
+                  onClick={goToNextAthlete}
+                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
+                  Next in queue — {athleteLabel(nextAthleteInQueue)}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={clearAthleteSelection}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                >
+                  Back to athlete list
+                </button>
+              )}
             </div>
-          </div>
+          ) : null}
 
           {videosLoading ? (
             <div className="flex justify-center py-16">
@@ -346,61 +286,61 @@ export function FormCheckInboxPage() {
               <Video className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />
               <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                 {reviewFilter === "pending"
-                  ? "No videos waiting for review for this athlete."
-                  : "No form-check videos for this athlete yet."}
+                  ? weekNumber != null || dayNumber != null
+                    ? `No videos waiting for review${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
+                    : "No videos waiting for review for this athlete."
+                  : weekNumber != null || dayNumber != null
+                    ? `No form-check videos${weekNumber != null ? ` in ${formatProgramWeekLabel(weekNumber)}` : ""}${dayNumber != null ? ` on ${formatProgramDayLabel(dayNumber)}` : ""}.`
+                    : "No form-check videos for this athlete yet."}
               </p>
             </div>
           ) : (
-            <FormCheckInboxExerciseList
-              key={`${selectedUserId}-${reviewFilter}`}
-              exerciseGroups={exerciseGroups}
-              pendingCount={pendingTargets.length}
-              onBulkApply={handleBulkApply}
-            />
+            <>
+              {hasMore ? (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p>
+                    Showing first 100 videos. Use &ldquo;Needs review&rdquo; to
+                    narrow the list, or contact engineering if more pagination
+                    is needed.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="-mx-1 px-1 pb-2 pt-1">
+                <BulkFormCheckCommentBar
+                  pendingCount={pendingTargets.length}
+                  onApply={handleBulkApply}
+                  sticky
+                  stickyTopClassName="top-0"
+                />
+              </div>
+
+              <FormCheckInboxExerciseList
+                listKey={`${selectedUserId}-${reviewFilter}-${weekNumber ?? "all"}-${dayNumber ?? "all"}`}
+                exerciseGroups={exerciseGroups}
+                pendingCount={pendingTargets.length}
+                onBulkApply={handleBulkApply}
+                hasMore={false}
+                onAllPendingReviewed={handleAllPendingReviewed}
+                showBulkBar={false}
+              />
+            </>
           )}
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <HandlerFilterBar
-              filter={handlerFilter}
-              onChange={setHandlerFilter}
-              counts={handlerCounts}
-            />
-            <ReviewFilterBar
-              filter={reviewFilter}
-              onChange={handleReviewFilterChange}
-              pendingCount={planTier === "mega" ? megaPending : ultraPending}
-            />
-          </div>
-
-          {athletesLoading ? (
-            <div className="flex justify-center py-16">
-              <Spinner />
-            </div>
-          ) : filteredTierAthletes.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
-              <User className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />
-              <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-                {handlerFilter !== "all"
-                  ? `No ${planTier.toUpperCase()} athletes in this handler queue.`
-                  : reviewFilter === "pending"
-                    ? `No ${planTier.toUpperCase()} athletes with videos waiting for review.`
-                    : `No ${planTier.toUpperCase()} athletes with form-check videos yet.`}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {filteredTierAthletes.map((athlete) => (
-                <AthleteRow
-                  key={athlete.userId}
-                  athlete={athlete}
-                  onSelect={() => setSelectedUserId(athlete.userId)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <FormCheckInboxAthleteList
+          planTier={planTier}
+          tierAthletes={tierAthletes}
+          reviewFilter={reviewFilter}
+          handlerFilter={handlerFilter}
+          handlerCounts={handlerCounts}
+          tierPending={tierPending}
+          isLoading={athletesLoading}
+          onSelectAthlete={setSelectedUserId}
+          onReviewFilterChange={setReviewFilter}
+          onHandlerFilterChange={setHandlerFilter}
+        />
       )}
     </div>
   );

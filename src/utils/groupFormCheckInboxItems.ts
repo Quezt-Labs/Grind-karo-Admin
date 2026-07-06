@@ -8,7 +8,15 @@ export interface FormCheckInboxGroup {
   reviewedCount: number;
 }
 
-/** Stable key for grouping set videos that belong to the same logged exercise. */
+/** Safe HTML id for scroll targets (group keys may contain spaces/colons). */
+export function formCheckExerciseDomId(groupKey: string): string {
+  const encoded = btoa(encodeURIComponent(groupKey))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+  return `form-check-exercise-${encoded}`;
+}
+
 export function formCheckExerciseGroupKey(video: FormCheckInboxItem): string {
   if (video.programExerciseId) {
     return `program-ex:${video.userId}:${video.programExerciseId}`;
