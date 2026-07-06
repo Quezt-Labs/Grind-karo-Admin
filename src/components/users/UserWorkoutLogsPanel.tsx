@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
@@ -126,16 +126,6 @@ function SetVideoCommentEditor({
   const [comment, setComment] = useState(() =>
     hadComment ? "" : (video.coachComment ?? ""),
   );
-
-  useEffect(() => {
-    if (savedComment) {
-      setComment("");
-      setIsEditing(false);
-      return;
-    }
-    setComment(video.coachComment ?? "");
-    setIsEditing(true);
-  }, [video.coachComment, video.setNumber, exerciseLogId, savedComment]);
 
   const saveMutation = useMutation({
     mutationFn: () =>

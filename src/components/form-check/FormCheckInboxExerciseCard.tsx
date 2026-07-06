@@ -246,29 +246,6 @@ function SetCommentPanelWithBulk({
     return video.coachComment ?? "";
   });
 
-  useEffect(() => {
-    const draft = draftByVideoId.current.get(video.id);
-    const locked = Boolean(video.coachComment?.trim()) && video.reviewed;
-    const priorOnly = Boolean(video.coachComment?.trim()) && !video.reviewed;
-    if (draft != null) {
-      setComment(draft);
-      setIsEditing(true);
-      return;
-    }
-    if (locked) {
-      setComment("");
-      setIsEditing(false);
-      return;
-    }
-    if (priorOnly) {
-      setComment("");
-      setIsEditing(true);
-      return;
-    }
-    setComment(video.coachComment ?? "");
-    setIsEditing(true);
-  }, [video.id, video.coachComment, video.reviewed, draftByVideoId]);
-
   const startEditing = () => {
     setComment(savedComment);
     setIsEditing(true);
@@ -692,7 +669,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
         </div>
         <div className="border-t border-gray-200 lg:col-span-2 lg:border-l lg:border-t-0 dark:border-gray-700">
           <SetCommentPanelWithBulk
-            key={active.id}
+            key={`${active.id}:${active.reviewed ? "r" : "p"}:${active.coachComment ?? ""}`}
             video={active}
             allVideos={videos}
             exerciseName={head.exerciseName}
