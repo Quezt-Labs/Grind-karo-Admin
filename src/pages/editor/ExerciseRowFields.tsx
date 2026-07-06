@@ -32,6 +32,7 @@ interface ExerciseRowFieldsProps {
   movementSlots?: MovementSlot[];
   dayExercises?: ExerciseRow[];
   currentRowId?: string;
+  hidePrescriptionFields?: boolean;
 }
 
 export function ExerciseRowFields({
@@ -44,6 +45,7 @@ export function ExerciseRowFields({
   movementSlots = [],
   dayExercises = [],
   currentRowId,
+  hidePrescriptionFields = false,
 }: ExerciseRowFieldsProps) {
   const loadComputation = watch("loadComputation");
   const exerciseId = watch("exerciseId");
@@ -116,49 +118,63 @@ export function ExerciseRowFields({
         </>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Input
-          id="row-sets"
-          label="Sets"
-          type="number"
-          min={0}
-          placeholder="3"
-          {...register("sets")}
-        />
-        <Input
-          id="row-reps"
-          label="Rep Scheme"
-          placeholder="5-8"
-          {...register("repScheme")}
-        />
-        <Input
-          id="row-rpe"
-          label="Target RPE"
-          placeholder="@7"
-          {...register("targetRpe")}
-        />
-      </div>
+      {!hidePrescriptionFields && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input
+              id="row-sets"
+              label="Sets"
+              type="number"
+              min={0}
+              placeholder="3"
+              {...register("sets")}
+            />
+            <Input
+              id="row-reps"
+              label="Rep Scheme"
+              placeholder="5-8"
+              {...register("repScheme")}
+            />
+            <Input
+              id="row-rpe"
+              label="Target RPE"
+              placeholder="@7"
+              {...register("targetRpe")}
+            />
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Input
-          id="row-pct"
-          label="% of 1RM"
-          type="number"
-          min={0}
-          max={100}
-          step={0.5}
-          placeholder="53"
-          {...register("percentOneRmDisplay")}
-        />
-        <Input
-          id="row-load-kg"
-          label="Load (kg)"
-          type="number"
-          min={0}
-          step={0.5}
-          placeholder="60"
-          {...register("loadKg")}
-        />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input
+              id="row-pct"
+              label="% of 1RM"
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              placeholder="53"
+              {...register("percentOneRmDisplay")}
+            />
+            <Input
+              id="row-load-kg"
+              label="Load (kg)"
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="60"
+              {...register("loadKg")}
+            />
+            <Input
+              id="row-order"
+              label="Sort Order"
+              type="number"
+              min={0}
+              {...register("sortOrder")}
+            />
+          </div>
+        </>
+      )}
+
+      {hidePrescriptionFields && (
         <Input
           id="row-order"
           label="Sort Order"
@@ -166,7 +182,7 @@ export function ExerciseRowFields({
           min={0}
           {...register("sortOrder")}
         />
-      </div>
+      )}
 
       {slotOptions.length > 0 && (
         <Controller

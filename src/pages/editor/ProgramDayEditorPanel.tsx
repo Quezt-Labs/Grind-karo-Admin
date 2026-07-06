@@ -18,6 +18,8 @@ export interface ProgramDayEditorPanelProps {
   ) => void;
   onDeleteExercise: (row: ExerciseRow) => void;
   onRefresh: () => void;
+  expandExerciseRowId?: string | null;
+  onExpandConsumed?: () => void;
 }
 
 export function ProgramDayEditorPanel({
@@ -28,6 +30,8 @@ export function ProgramDayEditorPanel({
   onEditExercise,
   onDeleteExercise,
   onRefresh,
+  expandExerciseRowId,
+  onExpandConsumed,
 }: ProgramDayEditorPanelProps) {
   const { day } = selection;
 
@@ -46,6 +50,8 @@ export function ProgramDayEditorPanel({
         onEditExercise={(row) => onEditExercise(row, day.id, day.exercises)}
         onDeleteExercise={onDeleteExercise}
         onRefresh={onRefresh}
+        expandExerciseRowId={expandExerciseRowId}
+        onExpandConsumed={onExpandConsumed}
       />
     </div>
   );

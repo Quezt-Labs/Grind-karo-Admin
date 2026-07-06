@@ -32,6 +32,8 @@ import { SortableExerciseTableRow } from "./SortableExerciseTableRow";
 import { buildPriorWeekColumns } from "./programWeekHistory";
 import type { WeekTree } from "./programStructureUtils";
 import { sortDayExercises } from "@/utils/exerciseSortOrder";
+import { detectDuplicateExerciseGroups } from "./detectDuplicateExerciseGroups";
+import { MergeExerciseRowsModal } from "./MergeExerciseRowsModal";
 
 interface ExerciseTableProps {
   programId: string;
@@ -49,6 +51,8 @@ interface ExerciseTableProps {
   ) => void;
   onDeleteExercise: (row: ExerciseRow) => void;
   onRefresh: () => void;
+  expandExerciseRowId?: string | null;
+  onExpandConsumed?: () => void;
 }
 
 export const ExerciseTable = memo(function ExerciseTable({
@@ -63,6 +67,8 @@ export const ExerciseTable = memo(function ExerciseTable({
   onEditExercise,
   onDeleteExercise,
   onRefresh,
+  expandExerciseRowId,
+  onExpandConsumed,
 }: ExerciseTableProps) {
   const cellPy = compact ? "py-1.5" : "py-3";
   const headPy = compact ? "py-1.5" : "py-3";
@@ -92,10 +98,27 @@ export const ExerciseTable = memo(function ExerciseTable({
   );
 
   const [orderedRows, setOrderedRows] = useState(sortedFromProps);
+  const [mergeGroup, setMergeGroup] = useState<{
+    rowIds: string[];
+  } | null>(null);
+
+  const duplicateGroups = useMemo(
+    () => detectDuplicateExerciseGroups(exercises),
+    [exercises],
+  );
 
   useEffect(() => {
     setOrderedRows(sortedFromProps);
   }, [sortedFromProps]);
+
+  useEffect(() => {
+    if (
+      expandExerciseRowId &&
+      orderedRows.some((r) => r.id === expandExerciseRowId)
+    ) {
+      onExpandConsumed?.();
+    }
+  }, [expandExerciseRowId, orderedRows, onExpandConsumed]);
 
   const reorderMut = useMutation({
     mutationFn: (orderedIds: string[]) =>
@@ -136,6 +159,29 @@ export const ExerciseTable = memo(function ExerciseTable({
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700">
+      {duplicateGroups.length > 0 && !compact && (
+        <div className="border-b border-amber-200 bg-amber-50/80 px-3 py-2.5 dark:border-amber-800/50 dark:bg-amber-950/20 sm:px-4">
+          {duplicateGroups.map((group) => (
+            <div
+              key={group.rowIds.join("-")}
+              className="flex flex-wrap items-center justify-between gap-2"
+            >
+              <p className="text-xs text-amber-900 dark:text-amber-200">
+                <strong>{group.rowIds.length} similar</strong>{" "}
+                <span className="font-medium">{group.displayName}</span> rows —
+                merge into one exercise with per-set prescription?
+              </p>
+              <button
+                type="button"
+                onClick={() => setMergeGroup({ rowIds: group.rowIds })}
+                className="shrink-0 rounded-md bg-amber-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-amber-700"
+              >
+                Merge
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <DndContext
           sensors={sensors}
@@ -350,6 +396,7 @@ export const ExerciseTable = memo(function ExerciseTable({
                     }
                     tableColSpan={colSpan}
                     disabled={dragDisabled}
+                    forceExpanded={expandExerciseRowId === row.id}
                     onEdit={() => onEditExercise(row, dayId, exercises)}
                     onDelete={() => onDeleteExercise(row)}
                     onRefresh={onRefresh}
@@ -372,6 +419,18 @@ export const ExerciseTable = memo(function ExerciseTable({
           </SortableContext>
         </DndContext>
       </div>
+
+      {mergeGroup && (
+        <MergeExerciseRowsModal
+          programId={programId}
+          rows={orderedRows.filter((r) => mergeGroup.rowIds.includes(r.id))}
+          onClose={() => setMergeGroup(null)}
+          onSuccess={() => {
+            setMergeGroup(null);
+            onRefresh();
+          }}
+        />
+      )}
     </div>
   );
 });

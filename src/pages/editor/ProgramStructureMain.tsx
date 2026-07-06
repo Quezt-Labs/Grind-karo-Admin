@@ -1,5 +1,6 @@
 import type { Block, Week, Day, ExerciseRow } from "@/types/programs";
 import { ChevronLeft } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { ProgramWeekStrip } from "./ProgramWeekStrip";
 import { ProgramDayTabs } from "./ProgramDayTabs";
@@ -14,6 +15,8 @@ import type {
 } from "./programStructureUtils";
 import { computeBlockDateRange, formatWeekDateRange } from "@/utils/weekDates";
 import { nextExerciseSortOrder } from "@/utils/exerciseSortOrder";
+import { ProgramWeekCompareModal } from "./ProgramWeekCompareModal";
+import { weekLabel, weekStats } from "./programCompareUtils";
 
 export interface ProgramStructureMainProps {
   programId: string;
@@ -46,6 +49,8 @@ export interface ProgramStructureMainProps {
   ) => void;
   onDeleteExercise: (row: ExerciseRow) => void;
   onRefresh: () => void;
+  expandExerciseRowId?: string | null;
+  onExpandConsumed?: () => void;
   showMobileBack?: boolean;
   onBackToBlocks?: () => void;
 }
@@ -76,9 +81,42 @@ export function ProgramStructureMain({
   onEditExercise,
   onDeleteExercise,
   onRefresh,
+  expandExerciseRowId,
+  onExpandConsumed,
   showMobileBack = false,
   onBackToBlocks,
 }: ProgramStructureMainProps) {
+  const [weekComparePair, setWeekComparePair] = useState<{
+    leftWeekId: string;
+    rightWeekId: string;
+  } | null>(null);
+
+  const sortedWeeks = useMemo(
+    () => [...blockWeeks].sort((a, b) => a.weekNumber - b.weekNumber),
+    [blockWeeks],
+  );
+
+  const weekCompareModal = useMemo(() => {
+    if (!weekComparePair) return null;
+    const left = sortedWeeks.find((w) => w.id === weekComparePair.leftWeekId);
+    const right = sortedWeeks.find((w) => w.id === weekComparePair.rightWeekId);
+    if (!left || !right) return null;
+    return {
+      left: {
+        label: weekLabel(left, selectedBlock.name),
+        week: left,
+        stats: weekStats(left),
+        accent: "primary" as const,
+      },
+      right: {
+        label: weekLabel(right, selectedBlock.name),
+        week: right,
+        stats: weekStats(right),
+        accent: "amber" as const,
+      },
+    };
+  }, [weekComparePair, sortedWeeks, selectedBlock.name]);
+
   const blockRange = computeBlockDateRange(selectedBlock.weeks);
   const blockRangeLabel = blockRange
     ? formatWeekDateRange(blockRange.weekStart, blockRange.weekEnd)
@@ -127,6 +165,16 @@ export function ProgramStructureMain({
           onEditWeek={onEditWeek}
           onCloneWeek={onCloneWeek}
           onDeleteWeek={onDeleteWeek}
+          onCompareToPrevWeek={(week) => {
+            const idx = sortedWeeks.findIndex((w) => w.id === week.id);
+            const prev = idx > 0 ? sortedWeeks[idx - 1] : null;
+            if (prev) {
+              setWeekComparePair({
+                leftWeekId: prev.id,
+                rightWeekId: week.id,
+              });
+            }
+          }}
         />
 
         <ProgramDayTabs
@@ -172,6 +220,17 @@ export function ProgramStructureMain({
           onEditExercise={onEditExercise}
           onDeleteExercise={onDeleteExercise}
           onRefresh={onRefresh}
+          expandExerciseRowId={expandExerciseRowId}
+          onExpandConsumed={onExpandConsumed}
+        />
+      )}
+
+      {weekCompareModal && (
+        <ProgramWeekCompareModal
+          title="Compare to previous week"
+          left={weekCompareModal.left}
+          right={weekCompareModal.right}
+          onClose={() => setWeekComparePair(null)}
         />
       )}
     </div>

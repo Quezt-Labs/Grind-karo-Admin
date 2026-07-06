@@ -1,4 +1,4 @@
-import { memo, useState, type CSSProperties } from "react";
+import { memo, useEffect, useState, type CSSProperties } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { DraggableAttributes } from "@dnd-kit/core";
 import {
@@ -42,6 +42,10 @@ import {
   syncLoadComputationFromPercent,
   withAutoComputedLoad,
 } from "@/utils/programEditorLoadSync";
+import {
+  formatExerciseSetSummary,
+  hasPerSetPrescription,
+} from "./exerciseSetSummary";
 
 export interface ExerciseRowSortableProps {
   setNodeRef: (node: HTMLTableRowElement | null) => void;
@@ -64,6 +68,7 @@ export interface ExerciseTableRowProps {
   priorWeekColumns?: PriorWeekColumn[];
   tableColSpan?: number;
   sortable?: ExerciseRowSortableProps;
+  forceExpanded?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onRefresh: () => void;
@@ -81,14 +86,21 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
   priorWeekColumns,
   tableColSpan = 9,
   sortable,
+  forceExpanded = false,
   onEdit,
   onDelete,
   onRefresh,
 }: ExerciseTableRowProps) {
   const preview = useProgramPreview();
   const propagateForward = usePropagateForwardStore((s) => s.enabled);
-  const hasSets = (row.exerciseSets?.length ?? 0) > 0;
-  const [expanded, setExpanded] = useState(hasSets);
+  const hasSets = hasPerSetPrescription(row);
+  const setCount = row.exerciseSets?.length ?? 0;
+  const setSummary = formatExerciseSetSummary(row);
+  const [expanded, setExpanded] = useState(hasSets || forceExpanded);
+
+  useEffect(() => {
+    if (forceExpanded) setExpanded(true);
+  }, [forceExpanded]);
 
   const updateMut = useMutation({
     mutationFn: (payload: UpdateExerciseRowPayload) =>
@@ -246,6 +258,11 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
               {exerciseName}
             </span>
           </div>
+          {setSummary && !compact && (
+            <p className="mt-0.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+              {setSummary}
+            </p>
+          )}
           {hasNotes && !compact && (
             <p className="mt-1 text-xs leading-tight text-gray-400 dark:text-gray-500">
               {(previewRow?.loadNote ?? row.loadNote) && (
@@ -430,17 +447,28 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
             <button
               onClick={() => setExpanded((v) => !v)}
               className={cn(
-                "rounded p-1 transition-colors",
+                "relative rounded p-1 transition-colors",
                 expanded
                   ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400"
                   : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600",
               )}
-              title={expanded ? "Hide per-set config" : "Show per-set config"}
+              title={
+                expanded
+                  ? "Hide per-set config"
+                  : hasSets
+                    ? "Per-set prescription"
+                    : "Show per-set config"
+              }
             >
               {expanded ? (
                 <ChevronDown className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
               ) : (
                 <ChevronRight className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+              )}
+              {setCount > 0 && !expanded && (
+                <span className="absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-indigo-500 px-0.5 text-[9px] font-bold text-white">
+                  {setCount}
+                </span>
               )}
             </button>
             <div className="flex items-center gap-0.5 opacity-100 sm:opacity-60 sm:group-hover:opacity-100">
@@ -448,7 +476,7 @@ export const ExerciseTableRow = memo(function ExerciseTableRow({
                 onClick={() => cloneMut.mutate()}
                 disabled={cloneMut.isPending}
                 className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-600 dark:hover:text-primary-400 disabled:opacity-50"
-                title="Clone exercise"
+                title="Clone whole exercise — for ramp sets, use per-set mode instead"
               >
                 <Copy className={compact ? "h-3 w-3" : "h-4 w-4"} />
               </button>

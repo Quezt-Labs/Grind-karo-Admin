@@ -1,4 +1,4 @@
-import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, GitCompare, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/Button";
 import type { Week } from "@/types/programs";
@@ -14,6 +14,7 @@ interface ProgramWeekStripProps {
   onEditWeek: (week: Week) => void;
   onCloneWeek?: (week: Week) => void;
   onDeleteWeek?: (week: Week) => void;
+  onCompareToPrevWeek?: (week: Week) => void;
 }
 
 const ICON_BTN_CLASS = "h-7 w-7 shrink-0 p-0 text-gray-400";
@@ -26,6 +27,7 @@ export function ProgramWeekStrip({
   onEditWeek,
   onCloneWeek,
   onDeleteWeek,
+  onCompareToPrevWeek,
 }: ProgramWeekStripProps) {
   const sorted = [...weeks].sort((a, b) => a.weekNumber - b.weekNumber);
 
@@ -67,8 +69,9 @@ export function ProgramWeekStrip({
         </Button>
       </div>
       <div className="flex items-center gap-2 overflow-x-auto px-3 pb-3 pt-1 snap-x snap-mandatory scrollbar-thin sm:px-4">
-        {sorted.map((week) => {
+        {sorted.map((week, weekIndex) => {
           const selected = week.id === selectedWeekId;
+          const hasPrevWeek = weekIndex > 0;
           const dateRange = formatWeekDateRange(week.weekStart, week.weekEnd);
           const dayCount = week.days.length;
           const exerciseCount = week.days.reduce(
@@ -98,7 +101,7 @@ export function ProgramWeekStrip({
               )}
             >
               <div
-                className={cn("flex items-center gap-2", selected && "pr-16")}
+                className={cn("flex items-center gap-2", selected && "pr-20")}
               >
                 <span
                   className={cn(
@@ -149,6 +152,24 @@ export function ProgramWeekStrip({
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
+                  {onCompareToPrevWeek && hasPrevWeek && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCompareToPrevWeek(week);
+                      }}
+                      className={cn(
+                        ICON_BTN_CLASS,
+                        "hover:text-primary-600 dark:hover:text-primary-400",
+                      )}
+                      title="Compare to previous week"
+                    >
+                      <GitCompare className="h-3 w-3" />
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="ghost"

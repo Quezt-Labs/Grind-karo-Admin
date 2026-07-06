@@ -1,5 +1,6 @@
-import type { ExerciseRow } from "@/types/programs";
+import type { ExerciseRow, ExerciseSet } from "@/types/programs";
 import { formatPercent } from "./programConstants";
+import { formatExerciseSetSummary } from "./exerciseSetSummary";
 import {
   sortedBlocks,
   sortedDays,
@@ -15,6 +16,9 @@ export function exerciseDisplayName(row: ExerciseRow): string {
 }
 
 export function exercisePrescription(row: ExerciseRow): string {
+  const setSummary = formatExerciseSetSummary(row);
+  if (setSummary) return setSummary;
+
   const parts: string[] = [];
   if (row.sets != null) parts.push(`${row.sets} sets`);
   if (row.repScheme) parts.push(row.repScheme);
@@ -22,6 +26,17 @@ export function exercisePrescription(row: ExerciseRow): string {
   else if (row.targetRpe) parts.push(`RPE ${row.targetRpe}`);
   else if (row.loadKg != null) parts.push(`${row.loadKg} kg`);
   return parts.length ? parts.join(" · ") : "—";
+}
+
+function normalizeExerciseSets(sets: ExerciseSet[] | undefined): string {
+  if (!sets?.length) return "";
+  return [...sets]
+    .sort((a, b) => a.setNumber - b.setNumber)
+    .map(
+      (s) =>
+        `${s.setNumber}:${s.reps ?? ""}:${s.repScheme ?? ""}:${s.targetRpe ?? ""}:${s.percentOneRm ?? ""}:${s.absoluteWeightKg ?? ""}`,
+    )
+    .join("|");
 }
 
 export interface WeekStats {
@@ -151,6 +166,11 @@ function exercisesDiffer(
   right: ExerciseRow | null,
 ): boolean {
   if (!left || !right) return true;
+  const leftSets = normalizeExerciseSets(left.exerciseSets);
+  const rightSets = normalizeExerciseSets(right.exerciseSets);
+  if (leftSets || rightSets) {
+    return leftSets !== rightSets;
+  }
   return (
     exerciseDisplayName(left) !== exerciseDisplayName(right) ||
     left.sets !== right.sets ||

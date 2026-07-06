@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { GitCompare } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 import type { ProgramTree } from "@/types/programs";
 import { BLOCK_TYPE_COLORS } from "./programConstants";
 import {
@@ -9,9 +11,12 @@ import {
   sortedBlocks,
   sortedDays,
   sortedWeeks,
+  weekLabel,
   weekStats,
 } from "./programCompareUtils";
 import { computeBlockDateRange, formatWeekDateRange } from "@/utils/weekDates";
+import { ProgramWeekCompareModal } from "./ProgramWeekCompareModal";
+import type { WeekCompareSide } from "./ProgramWeekCompareContent";
 
 interface ProgramBlockCompareViewProps {
   tree: ProgramTree;
@@ -30,6 +35,12 @@ export function ProgramBlockCompareView({
   const rightBlock = blocks.find((b) => b.id === rightBlockId) ?? blocks[1];
 
   const blockOptions = blocks.map((b) => ({ value: b.id, label: b.name }));
+
+  const [weekCompareModal, setWeekCompareModal] = useState<{
+    weekNumber: number;
+    left: WeekCompareSide;
+    right: WeekCompareSide;
+  } | null>(null);
 
   const weekPairs = useMemo(() => {
     if (!leftBlock || !rightBlock) return [];
@@ -95,6 +106,7 @@ export function ProgramBlockCompareView({
               <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 {rightBlock?.name ?? "Block B"}
               </th>
+              <th className="w-12 px-2 py-2.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
@@ -106,6 +118,9 @@ export function ProgramBlockCompareView({
                 leftS?.exercises !== rightS?.exercises ||
                 !left ||
                 !right;
+              const canCompare = Boolean(
+                left && right && leftBlock && rightBlock,
+              );
 
               return (
                 <tr
@@ -123,12 +138,56 @@ export function ProgramBlockCompareView({
                   <td className="px-4 py-3">
                     <WeekCell week={right} stats={rightS} />
                   </td>
+                  <td className="px-2 py-3 text-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={!canCompare}
+                      className="h-8 w-8 p-0 text-gray-400 hover:text-primary-600 disabled:opacity-30"
+                      title={
+                        canCompare
+                          ? `Compare week ${weekNumber} exercises`
+                          : "Week missing on one block"
+                      }
+                      onClick={() => {
+                        if (!left || !right || !leftBlock || !rightBlock)
+                          return;
+                        setWeekCompareModal({
+                          weekNumber,
+                          left: {
+                            label: weekLabel(left, leftBlock.name),
+                            week: left,
+                            stats: leftS,
+                            accent: "primary",
+                          },
+                          right: {
+                            label: weekLabel(right, rightBlock.name),
+                            week: right,
+                            stats: rightS,
+                            accent: "amber",
+                          },
+                        });
+                      }}
+                    >
+                      <GitCompare className="h-4 w-4" />
+                    </Button>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {weekCompareModal && (
+        <ProgramWeekCompareModal
+          title={`Week ${weekCompareModal.weekNumber} — exercise comparison`}
+          left={weekCompareModal.left}
+          right={weekCompareModal.right}
+          onClose={() => setWeekCompareModal(null)}
+        />
+      )}
     </div>
   );
 }

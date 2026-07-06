@@ -73,6 +73,9 @@ export function ProgramEditorPage() {
     nextSortOrder?: number;
   }>({ open: false });
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [expandExerciseRowId, setExpandExerciseRowId] = useState<string | null>(
+    null,
+  );
   const isAssistantCoach = useIsAssistantCoach();
 
   // ---- data -------------------------------------------------------------
@@ -332,6 +335,8 @@ export function ProgramEditorPage() {
         })
       }
       onRefresh={refresh}
+      expandExerciseRowId={expandExerciseRowId}
+      onExpandConsumed={() => setExpandExerciseRowId(null)}
     />
   );
 
@@ -506,8 +511,11 @@ export function ProgramEditorPage() {
             nextSortOrder={exerciseModal.nextSortOrder}
             movementSlots={movementSlots}
             onClose={() => setExerciseModal({ open: false })}
-            onSuccess={() => {
+            onSuccess={(result) => {
               setExerciseModal({ open: false });
+              if (result?.expandSets) {
+                setExpandExerciseRowId(result.rowId);
+              }
               refresh();
             }}
           />

@@ -43,6 +43,8 @@ export interface ProgramStructureEditorProps {
   ) => void;
   onDeleteExercise: (row: ExerciseRow) => void;
   onRefresh: () => void;
+  expandExerciseRowId?: string | null;
+  onExpandConsumed?: () => void;
 }
 
 export function ProgramStructureEditor({
@@ -63,6 +65,8 @@ export function ProgramStructureEditor({
   onAddExercise,
   onDeleteExercise,
   onRefresh,
+  expandExerciseRowId,
+  onExpandConsumed,
 }: ProgramStructureEditorProps) {
   const blocks = tree.blocks;
   const {
@@ -160,6 +164,8 @@ export function ProgramStructureEditor({
             onEditExercise={onEditExercise}
             onDeleteExercise={onDeleteExercise}
             onRefresh={onRefresh}
+            expandExerciseRowId={expandExerciseRowId}
+            onExpandConsumed={onExpandConsumed}
             showMobileBack={!isLgUp}
             onBackToBlocks={() => setMobilePanel("blocks")}
           />
