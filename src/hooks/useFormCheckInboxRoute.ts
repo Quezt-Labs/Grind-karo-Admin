@@ -4,10 +4,12 @@ import { useIsAssistantCoach } from "@/hooks/useRole";
 
 export type PlanTier = "mega" | "ultra";
 export type ReviewFilter = "pending" | "reviewed" | "all";
+export type InboxLayout = "videos" | "feedback";
 export type HandlerFilter = "all" | "assistant_coach" | "admin";
 
 const TIER_VALUES: PlanTier[] = ["mega", "ultra"];
 const REVIEW_VALUES: ReviewFilter[] = ["pending", "reviewed", "all"];
+const LAYOUT_VALUES: InboxLayout[] = ["videos", "feedback"];
 const HANDLER_VALUES: HandlerFilter[] = ["all", "assistant_coach", "admin"];
 
 function parseTier(value: string | null): PlanTier {
@@ -18,6 +20,16 @@ function parseReview(value: string | null): ReviewFilter {
   return REVIEW_VALUES.includes(value as ReviewFilter)
     ? (value as ReviewFilter)
     : "pending";
+}
+
+function parseLayout(
+  value: string | null,
+  reviewFilter: ReviewFilter,
+): InboxLayout {
+  if (LAYOUT_VALUES.includes(value as InboxLayout)) {
+    return value as InboxLayout;
+  }
+  return reviewFilter === "reviewed" ? "feedback" : "videos";
 }
 
 function parseHandler(value: string | null): HandlerFilter | null {
@@ -46,6 +58,7 @@ export function useFormCheckInboxRoute() {
   const tier = parseTier(searchParams.get("tier"));
   const selectedUserId = searchParams.get("userId");
   const reviewFilter = parseReview(searchParams.get("review"));
+  const layout = parseLayout(searchParams.get("layout"), reviewFilter);
   const weekNumber = parseWeek(searchParams.get("week"));
   const dayNumber = parseDay(searchParams.get("day"));
 
@@ -99,7 +112,22 @@ export function useFormCheckInboxRoute() {
 
   const setReviewFilter = useCallback(
     (next: ReviewFilter) => {
-      patchParams({ review: next });
+      patchParams({
+        review: next,
+        layout:
+          next === "pending"
+            ? "videos"
+            : next === "reviewed"
+              ? "feedback"
+              : undefined,
+      });
+    },
+    [patchParams],
+  );
+
+  const setLayout = useCallback(
+    (next: InboxLayout) => {
+      patchParams({ layout: next });
     },
     [patchParams],
   );
@@ -134,12 +162,14 @@ export function useFormCheckInboxRoute() {
       tier,
       selectedUserId,
       reviewFilter,
+      layout,
       handlerFilter,
       weekNumber,
       dayNumber,
       setPlanTier,
       setSelectedUserId,
       setReviewFilter,
+      setLayout,
       setHandlerFilter,
       setWeekNumber,
       setDayNumber,
@@ -149,12 +179,14 @@ export function useFormCheckInboxRoute() {
       tier,
       selectedUserId,
       reviewFilter,
+      layout,
       handlerFilter,
       weekNumber,
       dayNumber,
       setPlanTier,
       setSelectedUserId,
       setReviewFilter,
+      setLayout,
       setHandlerFilter,
       setWeekNumber,
       setDayNumber,

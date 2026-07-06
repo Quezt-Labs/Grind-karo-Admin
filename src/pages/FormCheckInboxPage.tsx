@@ -13,6 +13,7 @@ import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInb
 import { FormCheckQuotaBanner } from "@/components/form-check/FormCheckQuotaBanner";
 import { FormCheckWeekFilterBar } from "@/components/form-check/FormCheckWeekFilterBar";
 import { FormCheckDayFilterBar } from "@/components/form-check/FormCheckDayFilterBar";
+import { FormCheckFeedbackHistory } from "@/components/form-check/FormCheckFeedbackHistory";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
 import { formCheckKeys } from "@/hooks/formCheckQueryKeys";
 import {
@@ -29,6 +30,7 @@ import {
   formatProgramDayLabel,
   formatProgramWeekLabel,
 } from "@/utils/formCheckWeekUtils";
+import { sortFeedbackVideos } from "@/utils/formCheckReview";
 
 function athleteLabel(
   athlete: Pick<FormCheckInboxAthlete, "userName" | "userEmail">,
@@ -50,12 +52,14 @@ export function FormCheckInboxPage() {
     tier: planTier,
     selectedUserId,
     reviewFilter,
+    layout,
     handlerFilter,
     weekNumber,
     dayNumber,
     setPlanTier,
     setSelectedUserId,
     setReviewFilter,
+    setLayout,
     setHandlerFilter,
     setWeekNumber,
     setDayNumber,
@@ -96,6 +100,13 @@ export function FormCheckInboxPage() {
   });
 
   const { bulkApply } = useFormCheckMutations(selectedUserId ?? undefined);
+
+  const feedbackCount = useMemo(
+    () => sortFeedbackVideos(videos).length,
+    [videos],
+  );
+
+  const showFeedbackLog = reviewFilter !== "pending" && layout === "feedback";
 
   const { data: purchasesData } = useQuery({
     queryKey: formCheckKeys.purchases(selectedUserId ?? ""),
@@ -229,6 +240,9 @@ export function FormCheckInboxPage() {
             onReviewFilterChange={setReviewFilter}
             selectedWeek={weekNumber}
             selectedDay={dayNumber}
+            layout={layout}
+            feedbackCount={feedbackCount}
+            onLayoutChange={setLayout}
           />
 
           {weekOptions.length > 0 ? (
@@ -265,7 +279,10 @@ export function FormCheckInboxPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setReviewFilter("reviewed")}
+                  onClick={() => {
+                    setReviewFilter("reviewed");
+                    setLayout("feedback");
+                  }}
                   className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:bg-gray-900 dark:text-indigo-300"
                 >
                   View reviewed feedback
@@ -295,6 +312,16 @@ export function FormCheckInboxPage() {
             <div className="flex justify-center py-16">
               <Spinner />
             </div>
+          ) : showFeedbackLog ? (
+            <FormCheckFeedbackHistory
+              videos={videos}
+              onWatchVideo={() => setLayout("videos")}
+              emptyMessage={
+                reviewFilter === "reviewed"
+                  ? "No coach feedback for this athlete yet."
+                  : "No coach comments in the current filter."
+              }
+            />
           ) : videos.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
               <Video className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />

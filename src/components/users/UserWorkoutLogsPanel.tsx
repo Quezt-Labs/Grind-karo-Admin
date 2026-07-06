@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ClipboardList,
   Dumbbell,
+  CheckCircle2,
   Loader2,
   MessageSquare,
 } from "lucide-react";
@@ -119,8 +120,22 @@ function SetVideoCommentEditor({
   queryKey: unknown[];
 }) {
   const queryClient = useQueryClient();
-  const [comment, setComment] = useState(video.coachComment ?? "");
-  const hadComment = Boolean(video.coachComment?.trim());
+  const savedComment = video.coachComment?.trim() ?? "";
+  const hadComment = savedComment.length > 0;
+  const [isEditing, setIsEditing] = useState(() => !hadComment);
+  const [comment, setComment] = useState(() =>
+    hadComment ? "" : (video.coachComment ?? ""),
+  );
+
+  useEffect(() => {
+    if (savedComment) {
+      setComment("");
+      setIsEditing(false);
+      return;
+    }
+    setComment(video.coachComment ?? "");
+    setIsEditing(true);
+  }, [video.coachComment, video.setNumber, exerciseLogId, savedComment]);
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -141,6 +156,10 @@ function SetVideoCommentEditor({
         });
         void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
       }
+      if (hadComment) {
+        setComment("");
+        setIsEditing(false);
+      }
     },
   });
 
@@ -150,22 +169,75 @@ function SetVideoCommentEditor({
         <MessageSquare className="h-3 w-3" />
         Coach comment
       </div>
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        rows={2}
-        placeholder="Form-check feedback for the client…"
-        className="w-full resize-y rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-      />
-      <button
-        type="button"
-        disabled={!comment.trim() || saveMutation.isPending}
-        onClick={() => saveMutation.mutate()}
-        className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
-      >
-        {saveMutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
-        Save comment
-      </button>
+      {savedComment && !isEditing ? (
+        <div className="mb-2 rounded-lg border border-indigo-200 bg-indigo-50/90 px-2.5 py-2 dark:border-indigo-800/50 dark:bg-indigo-950/30">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+            <CheckCircle2 className="h-3 w-3" />
+            Saved coach feedback
+            {video.coachCommentUpdatedAt ? (
+              <span className="font-normal normal-case text-gray-500 dark:text-gray-400">
+                ·{" "}
+                {new Date(video.coachCommentUpdatedAt).toLocaleString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-xs leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
+            {savedComment}
+          </p>
+        </div>
+      ) : null}
+      {hadComment && !isEditing ? (
+        <button
+          type="button"
+          onClick={() => {
+            setComment(savedComment);
+            setIsEditing(true);
+          }}
+          className="mb-2 rounded-md border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
+        >
+          Edit feedback
+        </button>
+      ) : (
+        <>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={2}
+            placeholder="Form-check feedback for the client…"
+            className="w-full resize-y rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+          />
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!comment.trim() || saveMutation.isPending}
+              onClick={() => saveMutation.mutate()}
+              className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+            >
+              {saveMutation.isPending && (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              )}
+              Save comment
+            </button>
+            {hadComment ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setComment("");
+                  setIsEditing(false);
+                }}
+                className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+              >
+                Cancel
+              </button>
+            ) : null}
+          </div>
+        </>
+      )}
     </div>
   );
 }

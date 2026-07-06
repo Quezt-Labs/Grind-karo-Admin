@@ -12,19 +12,13 @@ import {
 import { groupFormCheckInboxItems } from "@/utils/groupFormCheckInboxItems";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
 import {
+  filterVideosByReview,
+  formCheckInboxListParams,
+} from "@/utils/formCheckReview";
+import {
   collectProgramDayOptions,
   collectProgramWeekOptions,
 } from "@/utils/formCheckWeekUtils";
-
-function filterVideosByReview<T extends { reviewed: boolean }>(
-  items: T[],
-  reviewFilter: ReviewFilter,
-): T[] {
-  if (reviewFilter === "reviewed") {
-    return items.filter((item) => item.reviewed);
-  }
-  return items;
-}
 
 function filterAthletesByReview(
   athletes: FormCheckInboxAthlete[],
@@ -62,7 +56,7 @@ export function useFormCheckVideoWeeks(opts: {
     queryFn: async () => {
       const data = await formCheckInboxService.list({
         userId: userId!,
-        uncommentedOnly: reviewFilter === "pending",
+        ...formCheckInboxListParams(reviewFilter),
         limit: FORM_CHECK_VIDEO_LIMIT,
       });
       return collectProgramWeekOptions(
@@ -87,7 +81,7 @@ export function useFormCheckVideoDays(opts: {
     queryFn: async () => {
       const data = await formCheckInboxService.list({
         userId: userId!,
-        uncommentedOnly: reviewFilter === "pending",
+        ...formCheckInboxListParams(reviewFilter),
         weekNumber: weekNumber ?? undefined,
         limit: FORM_CHECK_VIDEO_LIMIT,
       });
@@ -125,7 +119,7 @@ export function useFormCheckVideos(opts: {
     queryFn: () =>
       formCheckInboxService.list({
         userId: userId!,
-        uncommentedOnly: reviewFilter === "pending",
+        ...formCheckInboxListParams(reviewFilter),
         weekNumber: weekNumber ?? undefined,
         dayNumber: dayNumber ?? undefined,
         limit: FORM_CHECK_VIDEO_LIMIT,
@@ -149,7 +143,9 @@ export function useFormCheckVideos(opts: {
   );
 
   const reviewedSetCount = useMemo(
-    () => videos.filter((v) => v.reviewed).length,
+    () =>
+      videos.filter((v) => v.reviewed || Boolean(v.coachComment?.trim()))
+        .length,
     [videos],
   );
 

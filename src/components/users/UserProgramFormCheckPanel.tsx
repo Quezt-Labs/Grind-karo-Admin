@@ -6,6 +6,10 @@ import { FormCheckHandlerBadge } from "@/components/form-check/FormCheckHandlerB
 import { FormCheckQuotaBanner } from "@/components/form-check/FormCheckQuotaBanner";
 import { FormCheckWeekFilterBar } from "@/components/form-check/FormCheckWeekFilterBar";
 import { FormCheckDayFilterBar } from "@/components/form-check/FormCheckDayFilterBar";
+import {
+  FormCheckFeedbackHistory,
+  FormCheckInboxLayoutToggle,
+} from "@/components/form-check/FormCheckFeedbackHistory";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { formCheckKeys } from "@/hooks/formCheckQueryKeys";
@@ -19,11 +23,12 @@ import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import type { FormCheckQuota, Purchase } from "@/types/user";
 import { FormCheckBillingControls } from "@/components/users/FormCheckBillingControls";
 import type { FormCheckHandlerInfo } from "@/utils/formCheckHandler";
-import type { ReviewFilter } from "@/hooks/useFormCheckInboxRoute";
+import type { InboxLayout, ReviewFilter } from "@/hooks/useFormCheckInboxRoute";
 import {
   formatProgramDayLabel,
   formatProgramWeekLabel,
 } from "@/utils/formCheckWeekUtils";
+import { sortFeedbackVideos } from "@/utils/formCheckReview";
 
 type UserReviewFilter = ReviewFilter;
 
@@ -68,8 +73,15 @@ export function UserProgramFormCheckPanel({
   onBillingUpdated,
 }: UserProgramFormCheckPanelProps) {
   const [reviewFilter, setReviewFilter] = useState<UserReviewFilter>("pending");
+  const [layout, setLayout] = useState<InboxLayout>("videos");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(null);
+
+  const handleReviewFilterChange = (next: UserReviewFilter) => {
+    setReviewFilter(next);
+    if (next === "pending") setLayout("videos");
+    else if (next === "reviewed") setLayout("feedback");
+  };
 
   const { data: weekOptions = [] } = useFormCheckVideoWeeks({
     userId,
@@ -105,6 +117,12 @@ export function UserProgramFormCheckPanel({
   const handleBulkApply = async (comment: string) =>
     bulkApply(pendingTargets, comment);
 
+  const feedbackCount = useMemo(
+    () => sortFeedbackVideos(videos).length,
+    [videos],
+  );
+  const showFeedbackLog = reviewFilter !== "pending" && layout === "feedback";
+
   const quota = formCheckQuotaProp;
 
   return (
@@ -131,7 +149,14 @@ export function UserProgramFormCheckPanel({
           </span>
         ) : null}
         <FormCheckHandlerBadge {...handlerInfo} size="md" />
-        <div className="ml-auto">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {reviewFilter !== "pending" ? (
+            <FormCheckInboxLayoutToggle
+              layout={layout}
+              onChange={setLayout}
+              feedbackCount={feedbackCount}
+            />
+          ) : null}
           <Select
             className="h-8 w-36 text-xs"
             options={[
@@ -140,7 +165,9 @@ export function UserProgramFormCheckPanel({
               { value: "all", label: "All videos" },
             ]}
             value={reviewFilter}
-            onValueChange={(v) => setReviewFilter(v as UserReviewFilter)}
+            onValueChange={(v) =>
+              handleReviewFilterChange(v as UserReviewFilter)
+            }
           />
         </div>
       </div>
@@ -175,6 +202,12 @@ export function UserProgramFormCheckPanel({
         <div className="flex justify-center py-8">
           <Spinner />
         </div>
+      ) : showFeedbackLog ? (
+        <FormCheckFeedbackHistory
+          videos={videos}
+          onWatchVideo={() => setLayout("videos")}
+          emptyMessage="No coach feedback for this athlete yet."
+        />
       ) : videos.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
           {reviewFilter === "pending"

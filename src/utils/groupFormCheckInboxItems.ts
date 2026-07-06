@@ -1,4 +1,5 @@
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
+import { hasFormCheckFeedback } from "@/utils/formCheckReview";
 
 export interface FormCheckInboxGroup {
   key: string;
@@ -17,9 +18,22 @@ export function formCheckExerciseDomId(groupKey: string): string {
   return `form-check-exercise-${encoded}`;
 }
 
+function programExerciseDedupeKey(item: FormCheckInboxItem): string | null {
+  if (item.programExerciseId == null) return null;
+  const week = item.weekNumber != null ? `:w${item.weekNumber}` : "";
+  const day = item.dayNumber != null ? `:d${item.dayNumber}` : "";
+  return `${item.userId}:${item.programExerciseId}:${item.setNumber}${week}${day}`;
+}
+
 export function formCheckExerciseGroupKey(video: FormCheckInboxItem): string {
-  if (video.programExerciseId) {
-    return `program-ex:${video.userId}:${video.programExerciseId}`;
+  const programKey = programExerciseDedupeKey(video);
+  if (programKey) {
+    const base = video.programExerciseId!;
+    const weekDay =
+      video.weekNumber != null && video.dayNumber != null
+        ? `:w${video.weekNumber}d${video.dayNumber}`
+        : "";
+    return `program-ex:${video.userId}:${base}${weekDay}`;
   }
   if (video.programId && video.weekNumber != null && video.dayNumber != null) {
     return `program-day:${video.userId}:${video.programId}:W${video.weekNumber}D${video.dayNumber}:${video.exerciseName}`;
@@ -38,13 +52,12 @@ export function dedupeFormCheckInboxItems(
 
   for (const item of items) {
     const key =
-      item.programExerciseId != null
-        ? `${item.userId}:${item.programExerciseId}:${item.setNumber}`
-        : item.exerciseLogId != null
-          ? `${item.userId}:${item.exerciseLogId}:${item.setNumber}`
-          : item.videoUrl
-            ? `${item.userId}:${item.videoUrl}:${item.setNumber}`
-            : item.id;
+      programExerciseDedupeKey(item) ??
+      (item.exerciseLogId != null
+        ? `${item.userId}:${item.exerciseLogId}:${item.setNumber}`
+        : item.videoUrl
+          ? `${item.userId}:${item.videoUrl}:${item.setNumber}`
+          : item.id);
     const existing = byKey.get(key);
     if (
       !existing ||
@@ -95,7 +108,7 @@ export function groupFormCheckInboxItems(
   for (const [key, videos] of byKey) {
     const sorted = dedupeVideosInGroup(videos);
     const pendingCount = sorted.filter((v) => !v.reviewed).length;
-    const reviewedCount = sorted.length - pendingCount;
+    const reviewedCount = sorted.filter((v) => hasFormCheckFeedback(v)).length;
     groups.push({
       key,
       videos: sorted,

@@ -68,6 +68,7 @@ export interface FormCheckInboxAthletesByPlan {
 export const formCheckInboxService = {
   async list(params?: {
     uncommentedOnly?: boolean;
+    commentedOnly?: boolean;
     weekNumber?: number;
     dayNumber?: number;
     userId?: string;
@@ -81,9 +82,31 @@ export const formCheckInboxService = {
     const response = data.data ?? data;
     return {
       ...response,
-      items: (response.items ?? []).filter(
-        (item: FormCheckInboxItem) => item.source === "program",
-      ),
+      items: (response.items ?? [])
+        .filter((item: FormCheckInboxItem) => item.source === "program")
+        .map((item: FormCheckInboxItem & Record<string, unknown>) => ({
+          ...item,
+          coachComment:
+            (item.coachComment as string | null | undefined) ??
+            (item.coach_comment as string | null | undefined) ??
+            null,
+          coachCommentId:
+            (item.coachCommentId as string | null | undefined) ??
+            (item.coach_comment_id as string | null | undefined) ??
+            null,
+          coachCommentUpdatedAt:
+            (item.coachCommentUpdatedAt as string | null | undefined) ??
+            (item.coach_comment_updated_at as string | null | undefined) ??
+            null,
+          reviewed:
+            item.reviewed ??
+            Boolean(
+              (
+                (item.coachComment as string | null | undefined) ??
+                (item.coach_comment as string | null | undefined)
+              )?.trim(),
+            ),
+        })),
     };
   },
 

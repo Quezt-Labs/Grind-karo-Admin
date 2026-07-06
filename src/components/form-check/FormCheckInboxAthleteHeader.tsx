@@ -3,8 +3,13 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { FormCheckHandlerBadge } from "@/components/form-check/FormCheckHandlerBadge";
 import { ReviewFilterBar } from "@/components/form-check/FormCheckInboxAthleteList";
 import type { FormCheckInboxAthlete } from "@/services/formCheckInboxService";
-import type { PlanTier, ReviewFilter } from "@/hooks/useFormCheckInboxRoute";
+import type {
+  PlanTier,
+  InboxLayout,
+  ReviewFilter,
+} from "@/hooks/useFormCheckInboxRoute";
 import { FormCheckWeekBadge } from "@/components/form-check/FormCheckWeekFilterBar";
+import { FormCheckInboxLayoutToggle } from "@/components/form-check/FormCheckFeedbackHistory";
 import {
   formatProgramDayLabel,
   formatProgramWeekLabel,
@@ -30,6 +35,9 @@ export function FormCheckInboxAthleteHeader({
   onReviewFilterChange,
   selectedWeek = null,
   selectedDay = null,
+  layout = "videos",
+  feedbackCount = 0,
+  onLayoutChange,
 }: {
   planTier: PlanTier;
   selectedUserId: string;
@@ -43,6 +51,9 @@ export function FormCheckInboxAthleteHeader({
   onReviewFilterChange: (filter: ReviewFilter) => void;
   selectedWeek?: number | null;
   selectedDay?: number | null;
+  layout?: InboxLayout;
+  feedbackCount?: number;
+  onLayoutChange?: (layout: InboxLayout) => void;
 }) {
   const progressPct =
     totalSetCount > 0
@@ -83,6 +94,13 @@ export function FormCheckInboxAthleteHeader({
             onChange={onReviewFilterChange}
             pendingCount={selectedAthlete?.pendingCount}
           />
+          {reviewFilter !== "pending" && onLayoutChange ? (
+            <FormCheckInboxLayoutToggle
+              layout={layout}
+              onChange={onLayoutChange}
+              feedbackCount={feedbackCount}
+            />
+          ) : null}
         </div>
       </div>
 

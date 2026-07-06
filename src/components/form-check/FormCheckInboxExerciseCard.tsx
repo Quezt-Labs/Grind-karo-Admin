@@ -229,18 +229,57 @@ function SetCommentPanelWithBulk({
   const { saveCommentMutation, bulkApplyMutation } =
     useFormCheckMutations(userId);
 
-  const initialComment =
-    draftByVideoId.current.get(video.id) ?? video.coachComment ?? "";
-  const [comment, setComment] = useState(initialComment);
   const savedComment = video.coachComment?.trim() ?? "";
   const showSavedFeedback = savedComment.length > 0;
   const feedbackFromPriorUpload = showSavedFeedback && !video.reviewed;
+  const feedbackLocked = showSavedFeedback && video.reviewed;
+  const [isEditing, setIsEditing] = useState(() => {
+    const draft = draftByVideoId.current.get(video.id);
+    const locked = Boolean(video.coachComment?.trim()) && video.reviewed;
+    if (locked) return draft != null;
+    return true;
+  });
+  const [comment, setComment] = useState(() => {
+    const draft = draftByVideoId.current.get(video.id);
+    if (draft != null) return draft;
+    if (feedbackLocked || feedbackFromPriorUpload) return "";
+    return video.coachComment ?? "";
+  });
 
   useEffect(() => {
-    setComment(
-      draftByVideoId.current.get(video.id) ?? video.coachComment ?? "",
-    );
-  }, [video.id, video.coachComment, draftByVideoId]);
+    const draft = draftByVideoId.current.get(video.id);
+    const locked = Boolean(video.coachComment?.trim()) && video.reviewed;
+    const priorOnly = Boolean(video.coachComment?.trim()) && !video.reviewed;
+    if (draft != null) {
+      setComment(draft);
+      setIsEditing(true);
+      return;
+    }
+    if (locked) {
+      setComment("");
+      setIsEditing(false);
+      return;
+    }
+    if (priorOnly) {
+      setComment("");
+      setIsEditing(true);
+      return;
+    }
+    setComment(video.coachComment ?? "");
+    setIsEditing(true);
+  }, [video.id, video.coachComment, video.reviewed, draftByVideoId]);
+
+  const startEditing = () => {
+    setComment(savedComment);
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    if (!feedbackLocked) return;
+    draftByVideoId.current.delete(video.id);
+    setComment("");
+    setIsEditing(false);
+  };
 
   const pendingTargets = useMemo(
     () => pendingTargetsForVideos(allVideos),
@@ -256,6 +295,10 @@ function SetCommentPanelWithBulk({
 
   const handleSaveSuccess = () => {
     draftByVideoId.current.delete(video.id);
+    if (feedbackLocked) {
+      setComment("");
+      setIsEditing(false);
+    }
     const exercisePendingLeft = allVideos.filter(
       (v) => !v.reviewed && v.id !== video.id,
     ).length;
@@ -278,11 +321,11 @@ function SetCommentPanelWithBulk({
       </div>
       <FormCheckPresetCommentChips
         className="mb-2"
-        disabled={saving}
+        disabled={saving || (feedbackLocked && !isEditing)}
         onSelect={updateComment}
       />
 
-      {showSavedFeedback ? (
+      {showSavedFeedback && (!isEditing || feedbackFromPriorUpload) ? (
         <SavedCoachFeedback
           comment={savedComment}
           updatedAt={video.coachCommentUpdatedAt}
@@ -309,81 +352,108 @@ function SetCommentPanelWithBulk({
         </div>
       )}
 
-      <textarea
-        value={comment}
-        onChange={(e) => updateComment(e.target.value)}
-        rows={4}
-        placeholder={
-          showSavedFeedback
-            ? `Edit feedback for ${exerciseName}, set ${video.setNumber}…`
-            : `Feedback for ${exerciseName}, set ${video.setNumber}…`
-        }
-        className="min-h-[88px] w-full flex-1 resize-y rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-      />
-
-      <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">
-        Uploaded {formatUploadedAt(video.createdAt)}
-      </p>
-
-      <div className="mt-3 flex flex-wrap gap-2">
+      {feedbackLocked && !isEditing ? (
         <button
           type="button"
-          disabled={!comment.trim() || saving || !video.exerciseLogId}
-          onClick={() => {
-            if (!video.exerciseLogId) return;
-            saveCommentMutation.mutate(
-              {
-                exerciseLogId: video.exerciseLogId,
-                setNumber: video.setNumber,
-                comment,
-                setLabel: `Set ${video.setNumber}`,
-              },
-              { onSuccess: handleSaveSuccess },
-            );
-          }}
-          className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          onClick={startEditing}
+          className="mt-1 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
         >
-          {saveCommentMutation.isPending && (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          )}
-          Save this set
+          Edit feedback
         </button>
-        {pendingSiblings > 1 ? (
-          <button
-            type="button"
-            disabled={!comment.trim() || saving}
-            onClick={() =>
-              bulkApplyMutation.mutate(
-                { targets: pendingTargets, comment: comment.trim() },
-                {
-                  onSuccess: () => {
-                    draftByVideoId.current.clear();
-                    if (hasNextPendingExercise && onGoToNextExercise) {
-                      onGoToNextExercise();
-                    }
-                  },
-                },
-              )
+      ) : (
+        <>
+          <textarea
+            value={comment}
+            onChange={(e) => updateComment(e.target.value)}
+            rows={4}
+            placeholder={
+              feedbackFromPriorUpload
+                ? `New feedback for ${exerciseName}, set ${video.setNumber}…`
+                : `Feedback for ${exerciseName}, set ${video.setNumber}…`
             }
-            className="inline-flex items-center gap-1 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
-          >
-            {bulkApplyMutation.isPending && (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            )}
-            Apply to all {pendingSiblings} pending sets
-          </button>
-        ) : null}
-        {hasNextPendingExercise && onGoToNextExercise ? (
-          <button
-            type="button"
-            onClick={onGoToNextExercise}
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-          >
-            Next exercise
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        ) : null}
-      </div>
+            className="min-h-[88px] w-full flex-1 resize-y rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+          />
+
+          <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">
+            Uploaded {formatUploadedAt(video.createdAt)}
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!comment.trim() || saving || !video.exerciseLogId}
+              onClick={() => {
+                if (!video.exerciseLogId) return;
+                saveCommentMutation.mutate(
+                  {
+                    exerciseLogId: video.exerciseLogId,
+                    setNumber: video.setNumber,
+                    comment,
+                    setLabel: `Set ${video.setNumber}`,
+                  },
+                  { onSuccess: handleSaveSuccess },
+                );
+              }}
+              className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              {saveCommentMutation.isPending && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              )}
+              Save this set
+            </button>
+            {pendingSiblings > 1 ? (
+              <button
+                type="button"
+                disabled={!comment.trim() || saving}
+                onClick={() =>
+                  bulkApplyMutation.mutate(
+                    { targets: pendingTargets, comment: comment.trim() },
+                    {
+                      onSuccess: () => {
+                        draftByVideoId.current.clear();
+                        if (hasNextPendingExercise && onGoToNextExercise) {
+                          onGoToNextExercise();
+                        }
+                      },
+                    },
+                  )
+                }
+                className="inline-flex items-center gap-1 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
+              >
+                {bulkApplyMutation.isPending && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                )}
+                Apply to all {pendingSiblings} pending sets
+              </button>
+            ) : null}
+            {feedbackLocked ? (
+              <button
+                type="button"
+                onClick={cancelEditing}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+              >
+                Cancel
+              </button>
+            ) : null}
+            {hasNextPendingExercise && onGoToNextExercise ? (
+              <button
+                type="button"
+                onClick={onGoToNextExercise}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+              >
+                Next exercise
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+        </>
+      )}
+
+      {feedbackLocked && !isEditing ? (
+        <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">
+          Uploaded {formatUploadedAt(video.createdAt)}
+        </p>
+      ) : null}
     </div>
   );
 }
