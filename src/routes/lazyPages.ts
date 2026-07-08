@@ -105,6 +105,10 @@ export const FormCheckInboxPage = lazyPage(
   () => import("@/pages/FormCheckInboxPage"),
   "FormCheckInboxPage",
 );
+export const CoachingRenewalsPage = lazyPage(
+  () => import("@/pages/CoachingRenewalsPage"),
+  "CoachingRenewalsPage",
+);
 export const ChatPage = lazyPage(() => import("@/pages/ChatPage"), "ChatPage");
 export const AssistantCoachesPage = lazyPage(
   () => import("@/pages/AssistantCoachesPage"),

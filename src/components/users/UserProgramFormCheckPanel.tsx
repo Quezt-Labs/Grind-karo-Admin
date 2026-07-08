@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Video } from "lucide-react";
 import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
@@ -12,7 +12,10 @@ import {
 } from "@/components/form-check/FormCheckFeedbackHistory";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
-import { formCheckKeys } from "@/hooks/formCheckQueryKeys";
+import {
+  FORM_CHECK_VIDEO_LIMIT,
+  formCheckKeys,
+} from "@/hooks/formCheckQueryKeys";
 import {
   useFormCheckVideoDays,
   useFormCheckVideoWeeks,
@@ -63,6 +66,11 @@ interface UserProgramFormCheckPanelProps {
   purchases?: Purchase[];
   showBilling?: boolean;
   onBillingUpdated?: () => void;
+  /**
+   * Incremented by the parent ("Review now") to snap the panel back to the
+   * pending queue even if the coach had switched to reviewed/all.
+   */
+  pendingSignal?: number;
 }
 
 export function UserProgramFormCheckPanel({
@@ -71,11 +79,24 @@ export function UserProgramFormCheckPanel({
   purchases = [],
   showBilling = false,
   onBillingUpdated,
+  pendingSignal,
 }: UserProgramFormCheckPanelProps) {
   const [reviewFilter, setReviewFilter] = useState<UserReviewFilter>("pending");
   const [layout, setLayout] = useState<InboxLayout>("videos");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(null);
+  const [pageSize, setPageSize] = useState(FORM_CHECK_VIDEO_LIMIT);
+
+  useEffect(() => {
+    if (pendingSignal === undefined) return;
+    setReviewFilter("pending");
+    setLayout("videos");
+  }, [pendingSignal]);
+
+  // Reset pagination whenever the filter/scope changes.
+  useEffect(() => {
+    setPageSize(FORM_CHECK_VIDEO_LIMIT);
+  }, [reviewFilter, weekNumber, dayNumber, userId]);
 
   const handleReviewFilterChange = (next: UserReviewFilter) => {
     setReviewFilter(next);
@@ -94,13 +115,20 @@ export function UserProgramFormCheckPanel({
     weekNumber,
   });
 
-  const { isLoading, videos, exerciseGroups, pendingTargets, hasMore } =
-    useFormCheckVideos({
-      userId,
-      reviewFilter,
-      weekNumber,
-      dayNumber,
-    });
+  const {
+    isLoading,
+    isFetching,
+    videos,
+    exerciseGroups,
+    pendingTargets,
+    hasMore,
+  } = useFormCheckVideos({
+    userId,
+    reviewFilter,
+    weekNumber,
+    dayNumber,
+    limit: pageSize,
+  });
 
   const { bulkApply } = useFormCheckMutations(userId);
 
@@ -229,6 +257,8 @@ export function UserProgramFormCheckPanel({
           pendingCount={pendingTargets.length}
           onBulkApply={handleBulkApply}
           hasMore={hasMore}
+          onLoadMore={() => setPageSize((n) => n + FORM_CHECK_VIDEO_LIMIT)}
+          isLoadingMore={isFetching}
           bulkBarStickyTopClassName="top-0"
         />
       )}

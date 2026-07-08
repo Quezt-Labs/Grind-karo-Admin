@@ -120,7 +120,13 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       return;
     }
     if (n.type === "FORM_CHECK_VIDEO_UPLOAD") {
-      navigate("/form-checks");
+      // Deep-link straight to the athlete's pending queue instead of the
+      // generic inbox, so the coach lands on the exact video to review.
+      navigate(
+        userId
+          ? `/form-checks?userId=${userId}&review=pending`
+          : "/form-checks",
+      );
       onClose();
       return;
     }

@@ -28,6 +28,7 @@ import {
   ClipboardCheck,
   PlayCircle,
   LayoutList,
+  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -95,6 +96,11 @@ const NAV_SECTIONS: NavSection[] = [
       { path: "/plans", label: "Plans", icon: CreditCard },
       { path: "/addons", label: "Coaching Add-ons", icon: Puzzle },
       { path: "/subscriptions", label: "Subscriptions", icon: Award },
+      {
+        path: "/coaching-renewals",
+        label: "Renewals & overdue",
+        icon: CalendarClock,
+      },
       { path: "/reviews", label: "Coaching Reviews", icon: MessageSquare },
       { path: "/big-lift-pr", label: "Big 3 PRs", icon: Dumbbell },
       { path: "/announcements", label: "Announcements", icon: Megaphone },
@@ -124,6 +130,11 @@ const COACH_NAV_SECTIONS: NavSection[] = [
       { path: "/coach/ops-board", label: "Daily ops", icon: ClipboardCheck },
       { path: "/coach/locations", label: "Locations", icon: MapPin },
       { path: "/form-checks", label: "Form checks", icon: Video },
+      {
+        path: "/coaching-renewals",
+        label: "Renewals & overdue",
+        icon: CalendarClock,
+      },
       { path: "/chat", label: "Chat", icon: MessageCircle },
     ],
   },

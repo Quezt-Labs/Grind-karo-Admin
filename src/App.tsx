@@ -22,6 +22,7 @@ import {
   CoachAthletesPage,
   CoachAthletesLocationPage,
   FormCheckInboxPage,
+  CoachingRenewalsPage,
   CoachOpsBoardPage,
   ChatPage,
   ContactSubmissionsPage,
@@ -93,6 +94,10 @@ export default function App() {
                   element={<CoachAthleteDetailPage />}
                 />
                 <Route path="/form-checks" element={<FormCheckInboxPage />} />
+                <Route
+                  path="/coaching-renewals"
+                  element={<CoachingRenewalsPage />}
+                />
                 <Route path="/chat" element={<ChatPage />} />
 
                 {/* Retail template editor vs per-athlete coaching editor */}

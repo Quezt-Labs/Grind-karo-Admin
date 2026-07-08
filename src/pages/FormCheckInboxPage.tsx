@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Video } from "lucide-react";
 import toast from "react-hot-toast";
@@ -15,7 +15,10 @@ import { FormCheckWeekFilterBar } from "@/components/form-check/FormCheckWeekFil
 import { FormCheckDayFilterBar } from "@/components/form-check/FormCheckDayFilterBar";
 import { FormCheckFeedbackHistory } from "@/components/form-check/FormCheckFeedbackHistory";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
-import { formCheckKeys } from "@/hooks/formCheckQueryKeys";
+import {
+  FORM_CHECK_VIDEO_LIMIT,
+  formCheckKeys,
+} from "@/hooks/formCheckQueryKeys";
 import {
   useFormCheckAthletes,
   useFormCheckVideoDays,
@@ -66,6 +69,11 @@ export function FormCheckInboxPage() {
     clearAthleteSelection,
   } = route;
 
+  const [pageSize, setPageSize] = useState(FORM_CHECK_VIDEO_LIMIT);
+  useEffect(() => {
+    setPageSize(FORM_CHECK_VIDEO_LIMIT);
+  }, [reviewFilter, weekNumber, dayNumber, selectedUserId]);
+
   const { data: athletesData, isLoading: athletesLoading } =
     useFormCheckAthletes(reviewFilter);
 
@@ -84,6 +92,7 @@ export function FormCheckInboxPage() {
 
   const {
     isLoading: videosLoading,
+    isFetching: videosFetching,
     videos,
     exerciseGroups,
     pendingTargets,
@@ -96,6 +105,7 @@ export function FormCheckInboxPage() {
     reviewFilter,
     weekNumber,
     dayNumber,
+    limit: pageSize,
     enabled: !!selectedUserId,
   });
 
@@ -342,13 +352,24 @@ export function FormCheckInboxPage() {
           ) : (
             <>
               {hasMore ? (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <p>
-                    Showing first 100 videos. Use &ldquo;Needs review&rdquo; to
-                    narrow the list, or contact engineering if more pagination
-                    is needed.
-                  </p>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p>
+                      More videos available. Use &ldquo;Needs review&rdquo; to
+                      narrow the list, or load more.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPageSize((n) => n + FORM_CHECK_VIDEO_LIMIT)
+                    }
+                    disabled={videosFetching}
+                    className="shrink-0 rounded-md border border-amber-300 bg-white px-2.5 py-1 font-semibold text-amber-900 transition-colors hover:bg-amber-100 disabled:opacity-60 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-100 dark:hover:bg-amber-900/70"
+                  >
+                    {videosFetching ? "Loading…" : "Load more"}
+                  </button>
                 </div>
               ) : null}
 

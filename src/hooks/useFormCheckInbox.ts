@@ -99,6 +99,7 @@ export function useFormCheckVideos(opts: {
   reviewFilter: ReviewFilter;
   weekNumber?: number | null;
   dayNumber?: number | null;
+  limit?: number;
   enabled?: boolean;
 }) {
   const {
@@ -106,6 +107,7 @@ export function useFormCheckVideos(opts: {
     reviewFilter,
     weekNumber = null,
     dayNumber = null,
+    limit = FORM_CHECK_VIDEO_LIMIT,
     enabled = true,
   } = opts;
 
@@ -115,6 +117,7 @@ export function useFormCheckVideos(opts: {
       userId ?? "",
       weekNumber,
       dayNumber,
+      limit,
     ),
     queryFn: () =>
       formCheckInboxService.list({
@@ -122,7 +125,7 @@ export function useFormCheckVideos(opts: {
         ...formCheckInboxListParams(reviewFilter),
         weekNumber: weekNumber ?? undefined,
         dayNumber: dayNumber ?? undefined,
-        limit: FORM_CHECK_VIDEO_LIMIT,
+        limit,
       }),
     enabled: enabled && !!userId,
   });
@@ -154,7 +157,12 @@ export function useFormCheckVideos(opts: {
     [exerciseGroups],
   );
 
-  const hasMore = (query.data?.items.length ?? 0) >= FORM_CHECK_VIDEO_LIMIT;
+  // Raw server rows fetched (pre client-side review filter). More exist on the
+  // server when the total for this filter exceeds what we've pulled so far.
+  const fetchedCount = query.data?.items.length ?? 0;
+  const serverTotal = query.data?.total ?? 0;
+  const hasMore =
+    serverTotal > 0 ? serverTotal > fetchedCount : fetchedCount >= limit;
 
   return {
     ...query,
@@ -164,6 +172,8 @@ export function useFormCheckVideos(opts: {
     reviewedSetCount,
     pendingExerciseCount,
     totalSetCount: videos.length,
+    serverTotal,
+    fetchedCount,
     hasMore,
   };
 }

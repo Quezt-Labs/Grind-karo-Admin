@@ -50,6 +50,7 @@ import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
 import { CoachingIntakePanel } from "@/components/users/CoachingIntakePanel";
 import { CoachingPaymentCalendar } from "@/components/users/CoachingPaymentCalendar";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
 import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
 import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
@@ -128,6 +129,9 @@ export function UserDetailPage() {
 
   const [activitySection, setActivitySection] =
     useState<AthleteActivitySection>("videos");
+  // Bumped when the coach clicks "Review now" so the form-check panel snaps
+  // back to the pending queue even if it was left on reviewed/all.
+  const [reviewPendingSignal, setReviewPendingSignal] = useState(0);
 
   const subscriptionIdParam = searchParams.get("subscriptionId") ?? undefined;
 
@@ -440,29 +444,41 @@ export function UserDetailPage() {
             purchases={purchases}
           />
 
-          <CoachingPaymentCalendar
-            purchases={purchases}
-            userId={user.id}
-            showDateEditor={isStaff}
-            onUpdated={invalidatePurchases}
-          />
-          <CoachingFeeAdjustmentsPanel
-            userId={user.id}
-            purchases={purchases}
-            onUpdated={invalidatePurchases}
-          />
-          <ProgramGrantPanel
-            userId={user.id}
-            purchases={purchases}
-            onUpdated={invalidatePurchases}
-          />
-          {isAdmin && isPurchaser && (
-            <AthleteAssignmentSection
-              athleteId={user.id}
-              defaultFormCheckEnabled={defaultFormCheckForAssignment}
+          <CollapsibleCard
+            title="Billing & payments"
+            description="Payment history, renewals timeline and negotiated fee"
+            defaultOpen
+          >
+            <CoachingPaymentCalendar
+              purchases={purchases}
+              userId={user.id}
+              showDateEditor={isStaff}
+              onUpdated={invalidatePurchases}
             />
-          )}
-          <UserPushPanel userId={user.id} />
+            <CoachingFeeAdjustmentsPanel
+              userId={user.id}
+              purchases={purchases}
+              onUpdated={invalidatePurchases}
+            />
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            title="Advanced controls"
+            description="Program grants, coach assignment and push notifications"
+          >
+            <ProgramGrantPanel
+              userId={user.id}
+              purchases={purchases}
+              onUpdated={invalidatePurchases}
+            />
+            {isAdmin && isPurchaser && (
+              <AthleteAssignmentSection
+                athleteId={user.id}
+                defaultFormCheckEnabled={defaultFormCheckForAssignment}
+              />
+            )}
+            <UserPushPanel userId={user.id} />
+          </CollapsibleCard>
         </div>
       )}
 
@@ -494,6 +510,7 @@ export function UserDetailPage() {
               formCheckQuota={formCheckQuota}
               onReviewClick={() => {
                 setActivitySection("videos");
+                setReviewPendingSignal((n) => n + 1);
               }}
             />
           ) : (
@@ -545,6 +562,7 @@ export function UserDetailPage() {
                     purchases={purchases}
                     showBilling={isStaff}
                     onBillingUpdated={invalidatePurchases}
+                    pendingSignal={reviewPendingSignal}
                   />
                 )}
                 {resolvedActivitySection === "logs" && (

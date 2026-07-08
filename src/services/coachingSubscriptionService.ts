@@ -34,7 +34,47 @@ export interface CoachingFeeOverride {
   updatedAt: string;
 }
 
+export interface CoachingRenewalRow {
+  subscriptionId: string;
+  userId: string;
+  userName: string | null;
+  userEmail: string;
+  planId: string;
+  planName: string;
+  planSlug: string;
+  startDate: string;
+  expiresAt: string;
+  totalAmount: number;
+  status: "ACTIVE" | "EXPIRED" | "CANCELLED";
+  daysLeft: number;
+  daysOverdue: number;
+}
+
+export interface CoachingRenewalsResponse {
+  expiringWithinDays: number;
+  recentlyExpiredDays: number;
+  graceDays: number;
+  counts: {
+    expiringSoon: number;
+    overdueGrace: number;
+    recentlyExpired: number;
+  };
+  expiringSoon: CoachingRenewalRow[];
+  overdueGrace: CoachingRenewalRow[];
+  recentlyExpired: CoachingRenewalRow[];
+}
+
 export const coachingSubscriptionService = {
+  async listRenewals(params?: {
+    expiringWithinDays?: number;
+    recentlyExpiredDays?: number;
+  }): Promise<CoachingRenewalsResponse> {
+    const { data } = await api.get("/admin/coaching/subscriptions/renewals", {
+      params,
+    });
+    return data.data ?? data;
+  },
+
   async listFeeOverrides(userId: string): Promise<CoachingFeeOverride[]> {
     const { data } = await api.get(
       `/admin/coaching/subscriptions/users/${userId}/fee-overrides`,

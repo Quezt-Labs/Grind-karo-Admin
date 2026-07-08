@@ -17,6 +17,7 @@ export const formCheckKeys = {
     userId: string,
     weekNumber?: number | null,
     dayNumber?: number | null,
+    limit?: number,
   ) =>
     [
       "form-check-inbox",
@@ -24,6 +25,7 @@ export const formCheckKeys = {
       userId,
       weekNumber ?? "all",
       dayNumber ?? "all",
+      limit ?? FORM_CHECK_VIDEO_LIMIT,
     ] as const,
   videoWeeks: (review: ReviewFilter, userId: string) =>
     ["form-check-inbox-weeks", review, userId] as const,

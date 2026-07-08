@@ -14,6 +14,8 @@ export function FormCheckInboxExerciseList({
   onBulkApply,
   listKey,
   hasMore,
+  onLoadMore,
+  isLoadingMore = false,
   onAllPendingReviewed,
   showBulkBar = true,
   bulkBarSticky = true,
@@ -24,6 +26,8 @@ export function FormCheckInboxExerciseList({
   onBulkApply: (comment: string) => Promise<BulkCommentResult>;
   listKey?: string;
   hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
   onAllPendingReviewed?: () => void;
   showBulkBar?: boolean;
   bulkBarSticky?: boolean;
@@ -82,12 +86,24 @@ export function FormCheckInboxExerciseList({
   return (
     <div key={listKey} className="space-y-3">
       {hasMore ? (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            Showing first 100 videos. Use &ldquo;Needs review&rdquo; to narrow
-            the list, or contact engineering if more pagination is needed.
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              More videos available. Use &ldquo;Needs review&rdquo; to narrow
+              the list, or load more below.
+            </p>
+          </div>
+          {onLoadMore ? (
+            <button
+              type="button"
+              onClick={onLoadMore}
+              disabled={isLoadingMore}
+              className="shrink-0 rounded-md border border-amber-300 bg-white px-2.5 py-1 font-semibold text-amber-900 transition-colors hover:bg-amber-100 disabled:opacity-60 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-100 dark:hover:bg-amber-900/70"
+            >
+              {isLoadingMore ? "Loading…" : "Load more"}
+            </button>
+          ) : null}
         </div>
       ) : null}
 
