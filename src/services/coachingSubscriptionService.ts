@@ -143,7 +143,7 @@ export const coachingSubscriptionService = {
     planId: string;
     totalAmount?: number;
     reason: string;
-    feeCoversMonths?: 1 | 3;
+    feeCoversMonths?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
     startDate?: string;
     expiresAt?: string;
   }) {

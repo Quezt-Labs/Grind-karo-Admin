@@ -4,9 +4,10 @@ import type { AssistantCoach } from "@/types/athleteAssignment";
 import type { CreateAdminUserPayload } from "@/types/user";
 import { planGrantsFormCheck } from "@/utils/coachingPlanCapabilities";
 import {
-  addBillingPeriodsToDateInput,
+  addMonthsToDateInput,
   defaultFeeCoversMonths,
   todayDateInput,
+  type FeeCoversMonths,
 } from "@/utils/coachingBilling";
 
 export type BulkImportLookups = {
@@ -41,10 +42,13 @@ function parseBool(value: string | undefined): boolean | undefined {
   return undefined;
 }
 
-function parseFeeMonths(value: string | undefined): 1 | 3 | undefined {
+function parseFeeMonths(
+  value: string | undefined,
+): FeeCoversMonths | undefined {
   if (!value?.trim()) return undefined;
   const n = Number.parseInt(value.trim(), 10);
-  return n === 1 || n === 3 ? n : undefined;
+  if (n >= 1 && n <= 12) return n as FeeCoversMonths;
+  return undefined;
 }
 
 function toIsoStart(date: string | undefined): string | undefined {
@@ -204,7 +208,7 @@ function mapRowToPayload(
       todayDateInput();
     const endDate =
       rowValue(row, "coaching_end_date", "coaching_end") ??
-      addBillingPeriodsToDateInput(startDate, feeMonths);
+      addMonthsToDateInput(startDate, feeMonths);
     const amountRaw = rowValue(row, "coaching_amount", "coaching_price");
     const amount = amountRaw ? Number(amountRaw) : undefined;
     if (amountRaw && (!Number.isFinite(amount) || (amount ?? 0) <= 0)) {

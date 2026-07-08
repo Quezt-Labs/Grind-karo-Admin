@@ -21,7 +21,7 @@ export type CreateAdminUserRole = "USER" | "ASSISTANT_COACH";
 export interface CreateAdminUserCoachingPayload {
   planId: string;
   totalAmount?: number;
-  feeCoversMonths?: 1 | 3;
+  feeCoversMonths?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
   startDate?: string;
   expiresAt?: string;
 }

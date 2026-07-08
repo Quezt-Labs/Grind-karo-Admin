@@ -7,35 +7,13 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
 import { programPurchaseService } from "@/services/programPurchaseService";
+import { addMonthsToDateInput } from "@/utils/coachingBilling";
 import type { Purchase } from "@/types/user";
 
 function isoToDateInput(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toISOString().slice(0, 10);
-}
-
-/**
- * Add whole calendar months to a "YYYY-MM-DD" value, clamping the day so month
- * overflow (e.g. 31 Jan + 1 month) stays inside the target month instead of
- * rolling into the next one. Returns "" for invalid input.
- */
-function addMonthsToDateInput(dateInput: string, months: number): string {
-  if (!dateInput) return "";
-  const d = new Date(`${dateInput}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return "";
-  const day = d.getDate();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + months);
-  const daysInTargetMonth = new Date(
-    d.getFullYear(),
-    d.getMonth() + 1,
-    0,
-  ).getDate();
-  d.setDate(Math.min(day, daysInTargetMonth));
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
 }
 
 const END_DATE_PRESETS = Array.from({ length: 12 }, (_, i) => {

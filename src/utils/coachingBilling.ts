@@ -1,10 +1,11 @@
 import type { CoachingPlan } from "@/types/program";
-import {
-  billingPeriodDays,
-  formatBillingPeriodLabel,
-} from "@/utils/coachingBillingPeriod";
+import { formatBillingPeriodLabel } from "@/utils/coachingBillingPeriod";
 
-export type FeeCoversMonths = 1 | 3;
+export const FEE_COVERS_MONTH_OPTIONS = [
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+] as const;
+
+export type FeeCoversMonths = (typeof FEE_COVERS_MONTH_OPTIONS)[number];
 
 export type CoachingBillingState = {
   feeCoversMonths: FeeCoversMonths;
@@ -18,36 +19,45 @@ export function defaultFeeCoversMonths(
   plan: CoachingPlan | undefined,
 ): FeeCoversMonths {
   if (!plan) return 3;
-  return plan.validityMonths <= 1 ? 1 : 3;
+  const months = plan.validityMonths <= 1 ? 1 : 3;
+  return Math.min(12, Math.max(1, months)) as FeeCoversMonths;
 }
 
 function todayDateInput(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addDaysToDateInput(dateInput: string, days: number): string {
-  const base = dateInput ? new Date(`${dateInput}T12:00:00`) : new Date();
-  if (Number.isNaN(base.getTime())) return todayDateInput();
-  base.setDate(base.getDate() + days);
-  return base.toISOString().slice(0, 10);
-}
-
-function addBillingPeriodsToDateInput(
+/** Add whole calendar months to a "YYYY-MM-DD" value, clamping day overflow. */
+export function addMonthsToDateInput(
   dateInput: string,
-  periodCount: number,
+  months: number,
 ): string {
-  return addDaysToDateInput(dateInput, billingPeriodDays(periodCount));
+  if (!dateInput) return "";
+  const d = new Date(`${dateInput}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const daysInTargetMonth = new Date(
+    d.getFullYear(),
+    d.getMonth() + 1,
+    0,
+  ).getDate();
+  d.setDate(Math.min(day, daysInTargetMonth));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
 }
 
 export function initialCoachingBillingState(
   plan?: CoachingPlan,
 ): CoachingBillingState {
   const start = todayDateInput();
-  const periods = defaultFeeCoversMonths(plan);
+  const months = defaultFeeCoversMonths(plan);
   return {
-    feeCoversMonths: periods,
+    feeCoversMonths: months,
     startDate: start,
-    endDate: addBillingPeriodsToDateInput(start, periods),
+    endDate: addMonthsToDateInput(start, months),
     endDateTouched: false,
     lifterFee: "",
   };
@@ -85,8 +95,4 @@ export function coachingBillingPayload(
   };
 }
 
-export {
-  todayDateInput,
-  addBillingPeriodsToDateInput,
-  formatBillingPeriodLabel,
-};
+export { todayDateInput, formatBillingPeriodLabel };

@@ -10,8 +10,9 @@ import {
 import type { CoachingPlan } from "@/types/program";
 import { formatINR } from "@/pages/users/usersConstants";
 import {
-  addBillingPeriodsToDateInput,
+  addMonthsToDateInput,
   defaultFeeCoversMonths,
+  FEE_COVERS_MONTH_OPTIONS,
   isLifterFeeInputInvalid,
   todayDateInput,
   type FeeCoversMonths,
@@ -65,7 +66,7 @@ export function CoachingBillingFields({
 
   useEffect(() => {
     if (endDateTouched) return;
-    const computed = addBillingPeriodsToDateInput(
+    const computed = addMonthsToDateInput(
       startDate || todayDateInput(),
       feeCoversMonths,
     );
@@ -94,12 +95,15 @@ export function CoachingBillingFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">4 weeks (28 days)</SelectItem>
-            <SelectItem value="3">12 weeks (84 days)</SelectItem>
+            {FEE_COVERS_MONTH_OPTIONS.map((months) => (
+              <SelectItem key={months} value={String(months)}>
+                {months} {months === 1 ? "month" : "months"}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-          How long this payment grants access — each block is 4 weeks (28 days).
+          How long this payment grants access (calendar months).
         </p>
       </div>
       {showLifterFee ? (
