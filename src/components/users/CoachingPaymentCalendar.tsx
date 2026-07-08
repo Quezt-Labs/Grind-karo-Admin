@@ -31,6 +31,7 @@ function addDays(date: Date, days: number): Date {
 type MilestoneStatus =
   | "paid"
   | "upcoming"
+  | "estimated"
   | "expired"
   | "waived"
   | "extended"
@@ -42,7 +43,11 @@ type Milestone = {
   amount?: number;
   status: MilestoneStatus;
   note?: string;
+  /** When true, the amount is inferred (e.g. auto-renewal), not a recorded payment. */
+  amountEstimated?: boolean;
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ADJUSTMENT_LABEL: Record<CoachingBillingAdjustment["type"], string> = {
   EXTEND: "Access extended (admin)",
@@ -74,38 +79,8 @@ function coachingMilestones(
     },
   ];
 
-  if (isMonthly) {
-    let cursor = addDays(start, COACHING_DAYS_PER_BILLING_PERIOD);
-    let installment = 2;
-    while (cursor < end) {
-      const waived = subAdjustments.some((row) => {
-        if (row.type !== "WAIVE" || !row.periodStart || !row.periodEnd)
-          return false;
-        const periodStart = new Date(row.periodStart).getTime();
-        const periodEnd = new Date(row.periodEnd).getTime();
-        const due = cursor.getTime();
-        return due >= periodStart && due <= periodEnd;
-      });
-
-      milestones.push({
-        label: waived
-          ? `Renewal ${installment} (waived)`
-          : `Renewal ${installment}`,
-        date: cursor.toISOString(),
-        amount: waived ? undefined : sub.totalAmount,
-        status: waived ? "waived" : cursor <= now ? "paid" : "upcoming",
-      });
-      cursor = addDays(cursor, COACHING_DAYS_PER_BILLING_PERIOD);
-      installment += 1;
-    }
-  }
-
-  milestones.push({
-    label: sub.status === "ACTIVE" ? "Plan expires" : "Expired",
-    date: sub.expiresAt,
-    status: end < now || sub.status !== "ACTIVE" ? "expired" : "upcoming",
-  });
-
+  // Real admin actions (manual payments, waives, extends, corrections) are the
+  // source of truth — render each as its own honest milestone.
   for (const row of subAdjustments) {
     milestones.push({
       label: ADJUSTMENT_LABEL[row.type],
@@ -121,6 +96,74 @@ function coachingMilestones(
     });
   }
 
+  // Dates already accounted for by a recorded payment/waive, so we don't
+  // duplicate them with an estimated marker.
+  const recordedDates = subAdjustments
+    .filter((row) => row.type === "MANUAL_PAYMENT" || row.type === "WAIVE")
+    .flatMap((row) =>
+      [row.periodStart, row.periodEnd, row.createdAt]
+        .filter((d): d is string => !!d)
+        .map((d) => new Date(d).getTime()),
+    );
+  const hasRecordedNear = (time: number) =>
+    recordedDates.some(
+      (d) => Math.abs(d - time) < COACHING_DAYS_PER_BILLING_PERIOD * DAY_MS,
+    );
+
+  // Auto-renewals (Razorpay) don't leave a per-payment record. Rather than
+  // fabricate exact "Renewal N" payments, we infer how many billing blocks the
+  // access window spans and surface them as clearly-labelled ESTIMATES. Using a
+  // rounded block count avoids spurious markers when the window is only a few
+  // days longer than one block (e.g. a 30-day window ≈ 1 block, not 2).
+  if (isMonthly) {
+    const spanDays = (end.getTime() - start.getTime()) / DAY_MS;
+    const blocks = Math.max(
+      1,
+      Math.round(spanDays / COACHING_DAYS_PER_BILLING_PERIOD),
+    );
+    for (let i = 1; i < blocks; i += 1) {
+      const cursor = addDays(start, i * COACHING_DAYS_PER_BILLING_PERIOD);
+      if (hasRecordedNear(cursor.getTime())) continue;
+
+      const waived = subAdjustments.some((row) => {
+        if (row.type !== "WAIVE" || !row.periodStart || !row.periodEnd)
+          return false;
+        const periodStart = new Date(row.periodStart).getTime();
+        const periodEnd = new Date(row.periodEnd).getTime();
+        const due = cursor.getTime();
+        return due >= periodStart && due <= periodEnd;
+      });
+      if (waived) continue;
+
+      milestones.push({
+        label: `Renewal ${i + 1} (est.)`,
+        date: cursor.toISOString(),
+        amount: sub.totalAmount,
+        amountEstimated: true,
+        status: "estimated",
+      });
+    }
+  }
+
+  const expired = end < now || sub.status !== "ACTIVE";
+  if (!expired && isMonthly) {
+    // Active monthly plan: the end date is when the next renewal is due.
+    milestones.push({
+      label: "Renewal due (est.)",
+      date: sub.expiresAt,
+      amount: sub.totalAmount,
+      amountEstimated: true,
+      status: "estimated",
+      note: "Access ends this day unless renewed",
+    });
+  } else {
+    milestones.push({
+      label: expired ? "Expired" : "Plan expires",
+      date: sub.expiresAt,
+      status: expired ? "expired" : "upcoming",
+    });
+  }
+
   return milestones.sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
@@ -130,18 +173,33 @@ function dotClass(status: MilestoneStatus): string {
   switch (status) {
     case "paid":
       return "bg-green-500";
+    case "manual":
+      return "bg-emerald-500";
     case "waived":
       return "bg-sky-500";
     case "extended":
       return "bg-violet-500";
-    case "manual":
-      return "bg-emerald-500";
+    case "estimated":
+      return "border-2 border-dashed border-amber-500 bg-white dark:bg-gray-900";
     case "expired":
       return "bg-gray-400";
     default:
       return "bg-amber-400";
   }
 }
+
+const LEGEND: { label: string; className: string }[] = [
+  { label: "Paid", className: "bg-green-500" },
+  { label: "Manual payment", className: "bg-emerald-500" },
+  {
+    label: "Estimated",
+    className:
+      "border-2 border-dashed border-amber-500 bg-white dark:bg-gray-900",
+  },
+  { label: "Waived / hold", className: "bg-sky-500" },
+  { label: "Extended", className: "bg-violet-500" },
+  { label: "Expired", className: "bg-gray-400" },
+];
 
 type Props = {
   purchases: Purchase[];
@@ -163,10 +221,15 @@ export function CoachingPaymentCalendar({
     enabled: !!userId,
   });
 
-  const coachingSubs = purchases.filter(
-    (p): p is Extract<Purchase, { kind: "coaching_subscription" }> =>
-      p.kind === "coaching_subscription",
-  );
+  const coachingSubs = purchases
+    .filter(
+      (p): p is Extract<Purchase, { kind: "coaching_subscription" }> =>
+        p.kind === "coaching_subscription",
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    );
   const programPayments = purchases.filter(
     (p): p is Extract<Purchase, { kind: "program_purchase" }> =>
       p.kind === "program_purchase" && p.status === "PAID" && !!p.paidAt,
@@ -185,8 +248,23 @@ export function CoachingPaymentCalendar({
         </h2>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        {LEGEND.map((item) => (
+          <span
+            key={item.label}
+            className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400"
+          >
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${item.className}`}
+              aria-hidden
+            />
+            {item.label}
+          </span>
+        ))}
+      </div>
+
       <div className="space-y-5">
-        {coachingSubs.map((sub) => {
+        {coachingSubs.map((sub, subIndex) => {
           const milestones = coachingMilestones(sub, adjustments);
           return (
             <section
@@ -196,6 +274,11 @@ export function CoachingPaymentCalendar({
               <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {coachingSubs.length > 1 && (
+                      <span className="mr-1.5 text-gray-400 dark:text-gray-500">
+                        #{subIndex + 1}
+                      </span>
+                    )}
                     {sub.planName}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -218,7 +301,10 @@ export function CoachingPaymentCalendar({
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {formatDate(m.date)}
-                      {m.amount != null && ` · ${formatINR(m.amount)}`}
+                      {m.amount != null &&
+                        (m.amountEstimated
+                          ? ` · ~${formatINR(m.amount)} est.`
+                          : ` · ${formatINR(m.amount)}`)}
                     </p>
                     {m.note && (
                       <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
