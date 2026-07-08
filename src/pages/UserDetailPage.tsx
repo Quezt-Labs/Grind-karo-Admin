@@ -887,12 +887,24 @@ function CoachingEntitlementsSection({
   formCheckQuota,
   purchases,
 }: CoachingEntitlementsSectionProps) {
-  const [enabled, setEnabled] = useState(initialEnabled);
+  const queryClient = useQueryClient();
   const activePlans = activeCoachingPlans(purchases);
   const hasActiveCoaching = activePlans.length > 0;
   const miniOnly =
     hasActiveCoaching &&
     activePlans.every((p) => p.planSlug.toLowerCase() === "mini");
+  const megaUltraActive = hasActiveCoaching && !miniOnly;
+  const [enabled, setEnabled] = useState(
+    megaUltraActive ? true : initialEnabled,
+  );
+
+  useEffect(() => {
+    if (megaUltraActive) {
+      setEnabled(true);
+      return;
+    }
+    setEnabled(initialEnabled);
+  }, [megaUltraActive, initialEnabled]);
 
   const computedFormCheckSource = formCheckEnabled
     ? miniOnly && adminFlag === true
@@ -913,14 +925,17 @@ function CoachingEntitlementsSection({
       userService.patchWorkoutSetVideos(userId, next),
     onSuccess: (res) => {
       setEnabled(res.workoutSetVideosEnabled);
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-user-purchases", userId],
+      });
       toast.success(
         res.workoutSetVideosEnabled
           ? "Set video uploads enabled for this athlete"
           : "Set video uploads disabled for this athlete",
       );
     },
-    onError: () => {
-      toast.error("Failed to update set video setting");
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to update set video setting");
     },
   });
 
@@ -974,15 +989,25 @@ function CoachingEntitlementsSection({
             <FormCheckQuotaSummary quota={formCheckQuota} />
           )}
         </div>
-        <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/40">
+        <label
+          className={cn(
+            "inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/40",
+            megaUltraActive ? "opacity-90" : "cursor-pointer",
+          )}
+          title={
+            megaUltraActive
+              ? "Always enabled with active MEGA/ULTRA coaching"
+              : undefined
+          }
+        >
           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
             Set videos
           </span>
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            checked={enabled}
-            disabled={mutation.isPending}
+            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-70"
+            checked={megaUltraActive ? true : enabled}
+            disabled={mutation.isPending || megaUltraActive}
             onChange={(e) => mutation.mutate(e.target.checked)}
           />
           {mutation.isPending && (
