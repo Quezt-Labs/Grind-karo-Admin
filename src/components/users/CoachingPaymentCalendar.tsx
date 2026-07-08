@@ -386,22 +386,18 @@ export function CoachingPaymentCalendar({
                 ))}
               </ol>
               {showDateEditor && userId && (
-                <div className="mt-2 space-y-2">
-                  {chain.map((sub) => (
-                    <div key={sub.id}>
-                      {chain.length > 1 && (
-                        <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
-                          {formatDate(sub.startDate)} –{" "}
-                          {formatDate(sub.expiresAt)}
-                        </p>
-                      )}
-                      <PurchaseDatesEditor
-                        userId={userId}
-                        purchase={sub}
-                        onUpdated={onUpdated}
-                      />
-                    </div>
-                  ))}
+                <div className="mt-2">
+                  {chain.length > 1 && (
+                    <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                      Editing latest period · {formatDate(last.startDate)} –{" "}
+                      {formatDate(last.expiresAt)}
+                    </p>
+                  )}
+                  <PurchaseDatesEditor
+                    userId={userId}
+                    purchase={last}
+                    onUpdated={onUpdated}
+                  />
                 </div>
               )}
             </section>
