@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Video } from "lucide-react";
 import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
@@ -87,16 +87,25 @@ export function UserProgramFormCheckPanel({
   const [dayNumber, setDayNumber] = useState<number | null>(null);
   const [pageSize, setPageSize] = useState(FORM_CHECK_VIDEO_LIMIT);
 
-  useEffect(() => {
-    if (pendingSignal === undefined) return;
-    setReviewFilter("pending");
-    setLayout("videos");
-  }, [pendingSignal]);
+  // "Review now" nudge: snap back to the pending queue when the parent bumps
+  // the signal. Handled during render (not an effect) to avoid a cascading
+  // re-render — see react.dev "You Might Not Need an Effect".
+  const [prevPendingSignal, setPrevPendingSignal] = useState(pendingSignal);
+  if (pendingSignal !== prevPendingSignal) {
+    setPrevPendingSignal(pendingSignal);
+    if (pendingSignal !== undefined) {
+      setReviewFilter("pending");
+      setLayout("videos");
+    }
+  }
 
   // Reset pagination whenever the filter/scope changes.
-  useEffect(() => {
+  const scopeKey = `${reviewFilter}|${weekNumber ?? "all"}|${dayNumber ?? "all"}|${userId}`;
+  const [prevScopeKey, setPrevScopeKey] = useState(scopeKey);
+  if (scopeKey !== prevScopeKey) {
+    setPrevScopeKey(scopeKey);
     setPageSize(FORM_CHECK_VIDEO_LIMIT);
-  }, [reviewFilter, weekNumber, dayNumber, userId]);
+  }
 
   const handleReviewFilterChange = (next: UserReviewFilter) => {
     setReviewFilter(next);

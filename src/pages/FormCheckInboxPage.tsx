@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Video } from "lucide-react";
 import toast from "react-hot-toast";
@@ -69,10 +69,15 @@ export function FormCheckInboxPage() {
     clearAthleteSelection,
   } = route;
 
+  // Reset pagination whenever the filter/scope changes. Handled during render
+  // (not an effect) to avoid a cascading re-render.
   const [pageSize, setPageSize] = useState(FORM_CHECK_VIDEO_LIMIT);
-  useEffect(() => {
+  const scopeKey = `${reviewFilter}|${weekNumber ?? "all"}|${dayNumber ?? "all"}|${selectedUserId ?? "none"}`;
+  const [prevScopeKey, setPrevScopeKey] = useState(scopeKey);
+  if (scopeKey !== prevScopeKey) {
+    setPrevScopeKey(scopeKey);
     setPageSize(FORM_CHECK_VIDEO_LIMIT);
-  }, [reviewFilter, weekNumber, dayNumber, selectedUserId]);
+  }
 
   const { data: athletesData, isLoading: athletesLoading } =
     useFormCheckAthletes(reviewFilter);
