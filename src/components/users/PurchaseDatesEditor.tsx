@@ -15,6 +15,35 @@ function isoToDateInput(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Add whole calendar months to a "YYYY-MM-DD" value, clamping the day so month
+ * overflow (e.g. 31 Jan + 1 month) stays inside the target month instead of
+ * rolling into the next one. Returns "" for invalid input.
+ */
+function addMonthsToDateInput(dateInput: string, months: number): string {
+  if (!dateInput) return "";
+  const d = new Date(`${dateInput}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const daysInTargetMonth = new Date(
+    d.getFullYear(),
+    d.getMonth() + 1,
+    0,
+  ).getDate();
+  d.setDate(Math.min(day, daysInTargetMonth));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+const END_DATE_PRESETS = [
+  { months: 1, label: "1 month" },
+  { months: 3, label: "3 months" },
+  { months: 6, label: "6 months" },
+] as const;
+
 type Props = {
   userId: string;
   purchase: Purchase;
@@ -184,13 +213,35 @@ export function PurchaseDatesEditor({ userId, purchase, onUpdated }: Props) {
               error={startInvalid ? "Enter a valid date" : undefined}
             />
             {isCoaching && (
-              <Input
-                label="End date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                error={endInvalid ? "Enter a valid date" : undefined}
-              />
+              <div>
+                <Input
+                  label="End date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  error={endInvalid ? "Enter a valid date" : undefined}
+                />
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    From start:
+                  </span>
+                  {END_DATE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.months}
+                      type="button"
+                      disabled={!startDate || startInvalid}
+                      onClick={() =>
+                        setEndDate(
+                          addMonthsToDateInput(startDate, preset.months),
+                        )
+                      }
+                      className="rounded-md border border-indigo-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-700 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-800 dark:bg-gray-800 dark:text-indigo-300 dark:hover:bg-gray-700"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
           <Textarea
