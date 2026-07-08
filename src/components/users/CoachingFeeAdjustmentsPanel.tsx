@@ -13,7 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/ShadSelect";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
-import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
+import type {
+  CoachingBillingAdjustment,
+  CoachingFeeOverride,
+} from "@/services/coachingSubscriptionService";
 import { planService } from "@/services/planService";
 import { formatINR } from "@/pages/users/usersConstants";
 import { CoachingBillingFields } from "@/components/users/CoachingBillingFields";
@@ -60,6 +63,8 @@ export function CoachingFeeAdjustmentsPanel({
   const [manualPlanId, setManualPlanId] = useState("");
   const [billing, setBilling] = useState(() => initialCoachingBillingState());
   const [lifterFeeDraft, setLifterFeeDraft] = useState("");
+  const [overridePlanId, setOverridePlanId] = useState("");
+  const [overrideFeeDraft, setOverrideFeeDraft] = useState("");
 
   const paidCoachingSubs = useMemo(
     () =>
@@ -92,9 +97,25 @@ export function CoachingFeeAdjustmentsPanel({
     enabled: !!userId,
   });
 
+  const { data: feeOverrides = [] } = useQuery({
+    queryKey: ["coaching-fee-overrides", userId],
+    queryFn: () => coachingSubscriptionService.listFeeOverrides(userId),
+    enabled: !!userId,
+  });
+
+  const selectedOverridePlanId =
+    overridePlanId || primarySub?.planId || manualPlanId || "";
+  const currentOverride = useMemo(
+    () => feeOverrides.find((o) => o.planId === selectedOverridePlanId) ?? null,
+    [feeOverrides, selectedOverridePlanId],
+  );
+
   const invalidate = () => {
     void queryClient.invalidateQueries({
       queryKey: ["coaching-billing-adjustments", userId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["coaching-fee-overrides", userId],
     });
     void queryClient.invalidateQueries({
       queryKey: ["admin-user-purchases", userId],
@@ -172,11 +193,48 @@ export function CoachingFeeAdjustmentsPanel({
       toast.error(err.message || "Failed to update lifter fee"),
   });
 
+  const setOverrideMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedOverridePlanId) throw new Error("Select a plan");
+      const fee = parseLifterFeeInput(overrideFeeDraft);
+      if (fee == null) throw new Error("Enter a valid renewal fee");
+      return coachingSubscriptionService.setFeeOverride(userId, {
+        planId: selectedOverridePlanId,
+        baseAmount: fee,
+        reason: reason.trim() || undefined,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Renewal fee saved — future payments will use this amount");
+      setOverrideFeeDraft("");
+      invalidate();
+    },
+    onError: (err: Error) =>
+      toast.error(err.message || "Failed to save renewal fee"),
+  });
+
+  const clearOverrideMutation = useMutation({
+    mutationFn: (planId: string) =>
+      coachingSubscriptionService.clearFeeOverride(userId, planId),
+    onSuccess: () => {
+      toast.success("Renewal fee cleared — plan price will apply");
+      invalidate();
+    },
+    onError: (err: Error) =>
+      toast.error(err.message || "Failed to clear renewal fee"),
+  });
+
   const busy =
     extendMutation.isPending ||
     waiveMutation.isPending ||
     manualMutation.isPending ||
-    feeMutation.isPending;
+    feeMutation.isPending ||
+    setOverrideMutation.isPending ||
+    clearOverrideMutation.isPending;
+
+  const overrideFeeInvalid = isLifterFeeInputInvalid(overrideFeeDraft);
+  const overridePlanName =
+    plans.find((p) => p.id === selectedOverridePlanId)?.name ?? "plan";
 
   const lifterFeeDraftInvalid = isLifterFeeInputInvalid(lifterFeeDraft);
   const lifterFeeChanged =
@@ -295,6 +353,102 @@ export function CoachingFeeAdjustmentsPanel({
               Current: {formatINR(primarySub.totalAmount)} per billing block.
               Used for payment calendar reminders and offline payment defaults.
             </p>
+          </div>
+        )}
+
+        {plans.length > 0 && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/20">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+              Renewal fee (what the athlete pays in the app)
+            </p>
+            <p className="mb-2 text-[11px] text-emerald-900/70 dark:text-emerald-200/70">
+              Sets the exact amount charged on this athlete&apos;s Razorpay
+              checkout for the selected plan. If left unset, the standard plan
+              price applies. Add-ons are charged on top.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-[1fr_160px_auto] sm:items-end">
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                  Plan
+                </label>
+                <Select
+                  value={selectedOverridePlanId}
+                  onValueChange={setOverridePlanId}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans
+                      .filter((p) => p.isActive)
+                      .map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name} ({formatINR(plan.price)})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input
+                label="Renewal fee (INR)"
+                type="number"
+                min={1}
+                value={overrideFeeDraft}
+                onChange={(e) => setOverrideFeeDraft(e.target.value)}
+                placeholder={
+                  currentOverride
+                    ? formatINR(currentOverride.baseAmount)
+                    : "e.g. 4999"
+                }
+                error={
+                  overrideFeeInvalid
+                    ? "Enter a valid amount greater than zero"
+                    : undefined
+                }
+              />
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  busy ||
+                  !selectedOverridePlanId ||
+                  overrideFeeInvalid ||
+                  !parseLifterFeeInput(overrideFeeDraft)
+                }
+                onClick={() => setOverrideMutation.mutate()}
+              >
+                {setOverrideMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <HandCoins className="h-4 w-4" />
+                )}
+                Save renewal fee
+              </Button>
+            </div>
+            {currentOverride ? (
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/70 px-2.5 py-1.5 dark:bg-gray-900/30">
+                <span className="text-[11px] text-emerald-900 dark:text-emerald-200">
+                  Active override: {overridePlanName} charges{" "}
+                  <strong>{formatINR(currentOverride.baseAmount)}</strong> on
+                  renewal (instead of plan price).
+                </span>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    clearOverrideMutation.mutate(selectedOverridePlanId)
+                  }
+                  className="text-[11px] font-semibold text-red-600 hover:text-red-800 disabled:opacity-50 dark:text-red-400"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                No renewal-fee override set — {overridePlanName} charges the
+                standard plan price.
+              </p>
+            )}
           </div>
         )}
 

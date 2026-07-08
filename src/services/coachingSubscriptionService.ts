@@ -23,7 +23,46 @@ export interface CoachingBillingAdjustment {
   createdAt: string;
 }
 
+export interface CoachingFeeOverride {
+  id: string;
+  userId: string;
+  planId: string;
+  baseAmount: number;
+  reason: string | null;
+  createdByAdminId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const coachingSubscriptionService = {
+  async listFeeOverrides(userId: string): Promise<CoachingFeeOverride[]> {
+    const { data } = await api.get(
+      `/admin/coaching/subscriptions/users/${userId}/fee-overrides`,
+    );
+    return data.data ?? data;
+  },
+
+  async setFeeOverride(
+    userId: string,
+    body: { planId: string; baseAmount: number; reason?: string },
+  ): Promise<CoachingFeeOverride> {
+    const { data } = await api.put(
+      `/admin/coaching/subscriptions/users/${userId}/fee-overrides`,
+      body,
+    );
+    return data.data ?? data;
+  },
+
+  async clearFeeOverride(
+    userId: string,
+    planId: string,
+  ): Promise<{ success: true }> {
+    const { data } = await api.delete(
+      `/admin/coaching/subscriptions/users/${userId}/fee-overrides/${planId}`,
+    );
+    return data.data ?? data;
+  },
+
   async listAdjustments(params?: {
     userId?: string;
     subscriptionId?: string;

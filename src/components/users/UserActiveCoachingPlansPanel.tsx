@@ -29,6 +29,27 @@ function formatDate(iso: string) {
   });
 }
 
+// Keep in sync with COACHING_GRACE_DAYS on the backend.
+const COACHING_GRACE_DAYS = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * For an ACTIVE row whose paid window has already ended: the athlete keeps
+ * access for a short grace window. Returns how many grace days are left, or a
+ * `pastGrace` flag if the row is stale and should already be expired.
+ */
+function overdueGraceInfo(sub: { status: string; expiresAt: string }) {
+  if (sub.status !== "ACTIVE") return null;
+  const expiresAt = new Date(sub.expiresAt).getTime();
+  const now = Date.now();
+  if (expiresAt >= now) return null; // still within paid window
+  const graceEnd = expiresAt + COACHING_GRACE_DAYS * DAY_MS;
+  const daysLeft = Math.ceil((graceEnd - now) / DAY_MS);
+  return daysLeft > 0
+    ? { daysLeft, pastGrace: false as const }
+    : { daysLeft: 0, pastGrace: true as const };
+}
+
 export function UserActiveCoachingPlansPanel({
   userId,
   purchases,
@@ -111,6 +132,7 @@ export function UserActiveCoachingPlansPanel({
       <div className="space-y-2">
         {activePlans.map((sub) => {
           const isPrimary = sub.id === pinnedId;
+          const grace = overdueGraceInfo(sub);
 
           return (
             <div
@@ -129,6 +151,16 @@ export function UserActiveCoachingPlansPanel({
                       {sub.planName}
                     </p>
                     <StatusBadge status={sub.status} />
+                    {grace &&
+                      (grace.pastGrace ? (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                          Overdue
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                          Overdue · grace · {grace.daysLeft}d left
+                        </span>
+                      ))}
                     {isPrimary && (
                       <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-200">
                         Shown in app
