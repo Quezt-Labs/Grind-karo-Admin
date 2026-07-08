@@ -169,6 +169,68 @@ function coachingMilestones(
   );
 }
 
+type CoachingSub = Extract<Purchase, { kind: "coaching_subscription" }>;
+
+/**
+ * Each renewal is its own DB row, but to the admin it's the same plan being
+ * extended. Stitch a chain of same-plan rows (sorted by start date) into one
+ * continuous timeline: the first row "Plan started", each later row becomes a
+ * "Renewed (payment)" milestone, and only the last row carries the trailing
+ * expiry / renewal-due. If two rows aren't contiguous (a real lapse then a
+ * re-join), the intermediate "Expired" is kept so the gap stays honest.
+ */
+function chainMilestones(
+  chain: CoachingSub[],
+  adjustments: CoachingBillingAdjustment[],
+): Milestone[] {
+  const out: Milestone[] = [];
+  chain.forEach((sub, idx) => {
+    const isFirst = idx === 0;
+    const isLast = idx === chain.length - 1;
+    let ms = coachingMilestones(sub, adjustments);
+
+    if (!isFirst) {
+      ms = ms.map((m) =>
+        m.label === "Plan started" ? { ...m, label: "Renewed (payment)" } : m,
+      );
+    }
+
+    if (!isLast) {
+      const next = chain[idx + 1];
+      const gapMs =
+        new Date(next.startDate).getTime() - new Date(sub.expiresAt).getTime();
+      const contiguous = Math.abs(gapMs) <= 2 * DAY_MS;
+      if (contiguous) {
+        ms = ms.filter(
+          (m) =>
+            m.label !== "Expired" &&
+            m.label !== "Plan expires" &&
+            m.label !== "Renewal due (est.)",
+        );
+      }
+    }
+
+    out.push(...ms);
+  });
+  return out.sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+}
+
+/** Group same-plan coaching rows into chains, each ordered oldest → newest. */
+function buildCoachingChains(subs: CoachingSub[]): CoachingSub[][] {
+  const byPlan = new Map<string, CoachingSub[]>();
+  for (const sub of subs) {
+    const arr = byPlan.get(sub.planId) ?? [];
+    arr.push(sub);
+    byPlan.set(sub.planId, arr);
+  }
+  return [...byPlan.values()].sort(
+    (a, b) =>
+      new Date(a[0].startDate).getTime() - new Date(b[0].startDate).getTime(),
+  );
+}
+
 function dotClass(status: MilestoneStatus): string {
   switch (status) {
     case "paid":
@@ -264,26 +326,35 @@ export function CoachingPaymentCalendar({
       </div>
 
       <div className="space-y-5">
-        {coachingSubs.map((sub, subIndex) => {
-          const milestones = coachingMilestones(sub, adjustments);
+        {buildCoachingChains(coachingSubs).map((chain) => {
+          const milestones = chainMilestones(chain, adjustments);
+          const first = chain[0];
+          const last = chain[chain.length - 1];
+          const renewalCount = chain.length - 1;
+          const totalCollected = chain.reduce(
+            (sum, s) => sum + s.totalAmount,
+            0,
+          );
           return (
             <section
-              key={sub.id}
+              key={first.id}
               className="rounded-lg border border-gray-200 bg-gray-50/80 p-4 dark:border-gray-700 dark:bg-gray-900/30"
             >
               <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {coachingSubs.length > 1 && (
-                      <span className="mr-1.5 text-gray-400 dark:text-gray-500">
-                        #{subIndex + 1}
-                      </span>
-                    )}
-                    {sub.planName}
+                    {last.planName}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatINR(sub.totalAmount)} · {sub.status}
+                    {formatDate(first.startDate)} – {formatDate(last.expiresAt)}{" "}
+                    · {last.status}
                   </p>
+                  {renewalCount > 0 && (
+                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                      {renewalCount} renewal{renewalCount > 1 ? "s" : ""} ·{" "}
+                      {formatINR(totalCollected)} collected
+                    </p>
+                  )}
                 </div>
                 <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
                   Coaching
@@ -292,7 +363,7 @@ export function CoachingPaymentCalendar({
 
               <ol className="relative space-y-3 border-l border-gray-200 pl-4 dark:border-gray-700">
                 {milestones.map((m, index) => (
-                  <li key={`${sub.id}-${index}`} className="relative">
+                  <li key={`${first.id}-${index}`} className="relative">
                     <span
                       className={`absolute -left-[1.34rem] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-gray-50 dark:ring-gray-900/30 ${dotClass(m.status)}`}
                     />
@@ -315,11 +386,23 @@ export function CoachingPaymentCalendar({
                 ))}
               </ol>
               {showDateEditor && userId && (
-                <PurchaseDatesEditor
-                  userId={userId}
-                  purchase={sub}
-                  onUpdated={onUpdated}
-                />
+                <div className="mt-2 space-y-2">
+                  {chain.map((sub) => (
+                    <div key={sub.id}>
+                      {chain.length > 1 && (
+                        <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                          {formatDate(sub.startDate)} –{" "}
+                          {formatDate(sub.expiresAt)}
+                        </p>
+                      )}
+                      <PurchaseDatesEditor
+                        userId={userId}
+                        purchase={sub}
+                        onUpdated={onUpdated}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
             </section>
           );
