@@ -164,4 +164,13 @@ export const userService = {
     const { data } = await api.delete(`/admin/users/${userId}`);
     return data.data ?? data;
   },
+
+  async impersonate(userId: string): Promise<{
+    user: { id: string; name: string | null; email: string; role: string; plan: string | null };
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    const { data } = await api.post(`/admin/users/${userId}/impersonate`);
+    return data.data ?? data;
+  },
 };

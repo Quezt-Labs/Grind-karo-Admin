@@ -21,6 +21,7 @@ import {
   Activity,
   MapPin,
   Pencil,
+  LogIn,
 } from "lucide-react";
 import { formatAthleteLocation } from "@/lib/indianStates";
 import toast from "react-hot-toast";
@@ -358,6 +359,9 @@ export function UserDetailPage() {
               <MessageCircle className="h-4 w-4" />
               Chat
             </Link>
+          )}
+          {isAdmin && user.role === "USER" && (
+            <ImpersonateButton userId={user.id} userName={user.name} />
           )}
           <DeleteUserButton
             userId={user.id}
@@ -923,7 +927,7 @@ function CoachingEntitlementsSection({
             <FormCheckQuotaSummary quota={formCheckQuota} />
           )}
         </div>
-        <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/40">
+        <        label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/40">
           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
             Set videos
           </span>
@@ -940,5 +944,50 @@ function CoachingEntitlementsSection({
         </label>
       </div>
     </div>
+  );
+}
+
+function ImpersonateButton({
+  userId,
+  userName,
+}: {
+  userId: string;
+  userName: string | null;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleImpersonate() {
+    setLoading(true);
+    try {
+      const result = await userService.impersonate(userId);
+      const appUrl = import.meta.env.VITE_ATHLETE_APP_URL || "https://app.grindkaro.in";
+      const params = new URLSearchParams({
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        user: JSON.stringify(result.user),
+      });
+      window.open(`${appUrl}/impersonate?${params.toString()}`, "_blank");
+    } catch {
+      toast.error("Failed to impersonate user");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      onClick={handleImpersonate}
+      disabled={loading}
+      title={`Login as ${userName || "this user"} in the app`}
+    >
+      {loading ? (
+        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <LogIn className="mr-1 h-3.5 w-3.5" />
+      )}
+      Login as user
+    </Button>
   );
 }
