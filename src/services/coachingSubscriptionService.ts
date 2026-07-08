@@ -200,4 +200,11 @@ export const coachingSubscriptionService = {
     );
     return data.data ?? data;
   },
+
+  async deleteSubscription(subscriptionId: string) {
+    const { data } = await api.delete(
+      `/admin/coaching/subscriptions/${subscriptionId}`,
+    );
+    return data.data ?? data;
+  },
 };

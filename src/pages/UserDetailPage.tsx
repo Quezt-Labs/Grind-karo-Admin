@@ -22,6 +22,7 @@ import {
   MapPin,
   Pencil,
   LogIn,
+  Trash2,
 } from "lucide-react";
 import { formatAthleteLocation } from "@/lib/indianStates";
 import toast from "react-hot-toast";
@@ -56,6 +57,8 @@ import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjus
 import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
 import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
+import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
 import { useIsAdmin, useIsStaff } from "@/hooks/useRole";
 import { useUserDetail, type UserDetailTab } from "@/hooks/useUserDetail";
 import { useUserActivityScope } from "@/hooks/useUserActivityScope";
@@ -642,6 +645,7 @@ export function UserDetailPage() {
                     purchase={purchase}
                     userId={user.id}
                     showDateEditor={isStaff}
+                    showDelete={isStaff}
                     onUpdated={invalidatePurchases}
                   />
                 ))}
@@ -701,13 +705,17 @@ function PurchaseCard({
   purchase,
   userId,
   showDateEditor = false,
+  showDelete = false,
   onUpdated,
 }: {
   purchase: Purchase;
   userId?: string;
   showDateEditor?: boolean;
+  showDelete?: boolean;
   onUpdated?: () => void;
 }) {
+  const queryClient = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const isCoaching = purchase.kind === "coaching_subscription";
   const isBook = purchase.kind === "book_purchase";
   const label = isCoaching
@@ -720,6 +728,22 @@ function PurchaseCard({
     : isBook
       ? purchase.bookName
       : purchase.programName;
+
+  const deleteMutation = useMutation({
+    mutationFn: () =>
+      coachingSubscriptionService.deleteSubscription(purchase.id),
+    onSuccess: () => {
+      toast.success("Purchase record deleted");
+      setConfirmDelete(false);
+      if (userId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["admin-user-purchases", userId],
+        });
+      }
+      onUpdated?.();
+    },
+    onError: () => toast.error("Failed to delete purchase record"),
+  });
 
   return (
     <div className="rounded-xl border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -768,6 +792,16 @@ function PurchaseCard({
                 onUpdated={onUpdated}
               />
             )}
+            {showDelete && isCoaching && (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -777,6 +811,19 @@ function PurchaseCard({
           </span>
         </div>
       </div>
+
+      {confirmDelete && isCoaching && (
+        <ConfirmModal
+          open
+          title="Delete purchase record?"
+          message={`Permanently remove "${name}" from this athlete's purchase history? This cannot be undone and does not issue a refund.`}
+          confirmLabel="Delete record"
+          variant="danger"
+          onConfirm={() => deleteMutation.mutate()}
+          onCancel={() => setConfirmDelete(false)}
+          isLoading={deleteMutation.isPending}
+        />
+      )}
     </div>
   );
 }
@@ -927,7 +974,7 @@ function CoachingEntitlementsSection({
             <FormCheckQuotaSummary quota={formCheckQuota} />
           )}
         </div>
-        <        label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/40">
+        <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/40">
           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
             Set videos
           </span>
@@ -960,7 +1007,8 @@ function ImpersonateButton({
     setLoading(true);
     try {
       const result = await userService.impersonate(userId);
-      const appUrl = import.meta.env.VITE_ATHLETE_APP_URL || "https://app.grindkaro.in";
+      const appUrl =
+        import.meta.env.VITE_ATHLETE_APP_URL || "https://app.grindkaro.in";
       const params = new URLSearchParams({
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
