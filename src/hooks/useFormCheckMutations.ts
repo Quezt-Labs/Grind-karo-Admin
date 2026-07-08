@@ -1,6 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { invalidateFormCheckQueries } from "@/hooks/formCheckQueryKeys";
+import {
+  invalidateFormCheckCounts,
+  invalidateFormCheckQueries,
+  patchFormCheckVideoComments,
+  type FormCheckCommentPatch,
+} from "@/hooks/formCheckQueryKeys";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import {
   bulkUpsertFormCheckComments,
@@ -12,6 +17,13 @@ export function useFormCheckMutations(userId?: string) {
   const queryClient = useQueryClient();
 
   const invalidate = () => invalidateFormCheckQueries(queryClient, { userId });
+
+  // Keep the commented video on screen (patch in place) and only refresh
+  // counts — refetching the list would drop it from the `uncommentedOnly` view.
+  const applyPatch = (patches: FormCheckCommentPatch[]) => {
+    patchFormCheckVideoComments(queryClient, patches);
+    invalidateFormCheckCounts(queryClient, { userId });
+  };
 
   const saveCommentMutation = useMutation({
     mutationFn: (payload: {
@@ -25,16 +37,34 @@ export function useFormCheckMutations(userId?: string) {
         setNumber: payload.setNumber,
         comment: payload.comment.trim(),
       }),
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       toast.success(
         variables.setLabel
           ? `${variables.setLabel} saved`
           : `Set ${variables.setNumber} saved`,
       );
-      invalidate();
+      applyPatch([
+        {
+          exerciseLogId: variables.exerciseLogId,
+          setNumber: variables.setNumber,
+          comment: variables.comment.trim(),
+          coachCommentId: data?.id ?? null,
+          coachCommentUpdatedAt: data?.updatedAt ?? null,
+        },
+      ]);
     },
     onError: () => toast.error("Failed to save comment"),
   });
+
+  const patchesForTargets = (
+    targets: FormCheckCommentTarget[],
+    comment: string,
+  ): FormCheckCommentPatch[] =>
+    targets.map((t) => ({
+      exerciseLogId: t.exerciseLogId,
+      setNumber: t.setNumber,
+      comment: comment.trim(),
+    }));
 
   const bulkApplyMutation = useMutation({
     mutationFn: ({
@@ -44,16 +74,18 @@ export function useFormCheckMutations(userId?: string) {
       targets: FormCheckCommentTarget[];
       comment: string;
     }) => bulkUpsertFormCheckComments(targets, comment),
-    onSuccess: (result: BulkCommentResult) => {
+    onSuccess: (result: BulkCommentResult, variables) => {
       if (result.failed === 0 && result.succeeded > 0) {
         toast.success(
           `${result.succeeded} set comment${result.succeeded === 1 ? "" : "s"} saved`,
         );
-        invalidate();
+        applyPatch(patchesForTargets(variables.targets, variables.comment));
         return;
       }
       if (result.succeeded > 0) {
         toast.error(`${result.succeeded} saved · ${result.failed} failed`);
+        // Partial failure: we can't tell which targets stuck, so fall back to
+        // a full refetch to resync with the server.
         invalidate();
         return;
       }
@@ -66,7 +98,11 @@ export function useFormCheckMutations(userId?: string) {
     comment: string,
   ): Promise<BulkCommentResult> => {
     const result = await bulkUpsertFormCheckComments(targets, comment);
-    if (result.succeeded > 0) invalidate();
+    if (result.succeeded > 0 && result.failed === 0) {
+      applyPatch(patchesForTargets(targets, comment));
+    } else if (result.succeeded > 0) {
+      invalidate();
+    }
     return result;
   };
 
