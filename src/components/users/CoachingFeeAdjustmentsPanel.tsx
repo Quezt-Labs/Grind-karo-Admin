@@ -13,10 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/ShadSelect";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
-import type {
-  CoachingBillingAdjustment,
-  CoachingFeeOverride,
-} from "@/services/coachingSubscriptionService";
+import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
 import { planService } from "@/services/planService";
 import { formatINR } from "@/pages/users/usersConstants";
 import { CoachingBillingFields } from "@/components/users/CoachingBillingFields";
