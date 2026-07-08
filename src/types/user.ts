@@ -120,6 +120,8 @@ export interface CoachingPurchase {
   currency: string;
   startDate: string;
   expiresAt: string;
+  /** Null = pending/incomplete checkout (not a live paid plan). */
+  razorpayPaymentId?: string | null;
   createdAt: string;
 }
 

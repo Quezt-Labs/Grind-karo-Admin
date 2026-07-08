@@ -10,7 +10,12 @@ export function requiresPersonalCoachingProgram(planSlug: string): boolean {
 export function activeCoachingSubscriptions(purchases: Purchase[]) {
   return purchases.filter(
     (p): p is Extract<Purchase, { kind: "coaching_subscription" }> =>
-      p.kind === "coaching_subscription" && p.status === "ACTIVE",
+      p.kind === "coaching_subscription" &&
+      p.status === "ACTIVE" &&
+      // Exclude pending/incomplete checkouts: an ACTIVE row with no payment id
+      // is an abandoned Razorpay attempt, not a live plan. `undefined` (older
+      // payloads / pre-deploy) is treated as paid so nothing disappears.
+      p.razorpayPaymentId !== null,
   );
 }
 
