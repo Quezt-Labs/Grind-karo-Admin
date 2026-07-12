@@ -260,7 +260,10 @@ export function ProgramEditorPage() {
             purchases={purchases}
           />
         ) : (
-          <UserRetailProgramPanel purchases={purchases} />
+          <UserRetailProgramPanel
+            purchases={purchases}
+            userId={coachingUserId}
+          />
         )}
       </div>
     );

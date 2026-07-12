@@ -491,6 +491,9 @@ export function UserDetailPage() {
 
       {activeTab === "activity" && (
         <div className="space-y-4">
+          {hasPaidPrograms && (
+            <UserRetailProgramPanel userId={user.id} purchases={purchases} />
+          )}
           {scope.mode === "subscription" && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 dark:border-indigo-800/60 dark:bg-indigo-900/20">
               <p className="text-sm text-indigo-900 dark:text-indigo-100">
@@ -625,7 +628,9 @@ export function UserDetailPage() {
             </div>
           )}
 
-          {hasPaidPrograms && <UserRetailProgramPanel purchases={purchases} />}
+          {hasPaidPrograms && (
+            <UserRetailProgramPanel userId={user.id} purchases={purchases} />
+          )}
 
           <div>
             <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">

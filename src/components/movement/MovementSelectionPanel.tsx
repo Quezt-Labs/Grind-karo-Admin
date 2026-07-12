@@ -191,9 +191,24 @@ export function MovementSelectionPanel({
       )}
 
       {mode === "select" && isLocked && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-          <Lock className="h-4 w-4 shrink-0" />
-          Selections are locked. Reset before editing.
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>
+              Selections are locked after the athlete logged their first
+              workout. Reset to let them choose again.
+            </span>
+          </div>
+          {userId ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setResetConfirm(true)}
+              className="shrink-0"
+            >
+              Reset selections
+            </Button>
+          ) : null}
         </div>
       )}
 
