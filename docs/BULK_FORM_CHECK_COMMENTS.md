@@ -12,7 +12,7 @@ Apply the same coach comment to all **pending** videos in one action (textarea +
 
 | Piece               | Path                                                |
 | ------------------- | --------------------------------------------------- |
-| Pass preset         | `src/constants/formCheckComments.ts`                |
+| Quick presets       | `GET /admin/form-check-preset-comments` (per coach) |
 | Bulk upsert utility | `src/utils/bulkFormCheckComments.ts`                |
 | Shared UI bar       | `src/components/shared/BulkFormCheckCommentBar.tsx` |
 

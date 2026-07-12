@@ -36,12 +36,18 @@ export function FormCheckInboxExerciseList({
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const prevPendingRef = useRef(pendingCount);
 
-  const [activeKey, setActiveKey] = useState<string | null>(
-    () =>
-      exerciseGroups.find((g) => g.pendingCount > 0)?.key ??
-      exerciseGroups[0]?.key ??
-      null,
-  );
+  const defaultActiveKey =
+    exerciseGroups.find((g) => g.pendingCount > 0)?.key ??
+    exerciseGroups[0]?.key ??
+    null;
+
+  const [activeKey, setActiveKey] = useState<string | null>(defaultActiveKey);
+  const [prevListKey, setPrevListKey] = useState(listKey);
+
+  if (listKey !== prevListKey) {
+    setPrevListKey(listKey);
+    setActiveKey(defaultActiveKey);
+  }
 
   const scrollToCard = useCallback((key: string) => {
     const el =
@@ -57,15 +63,6 @@ export function FormCheckInboxExerciseList({
     },
     [scrollToCard],
   );
-
-  useEffect(() => {
-    setActiveKey(
-      exerciseGroups.find((g) => g.pendingCount > 0)?.key ??
-        exerciseGroups[0]?.key ??
-        null,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when athlete/filter changes
-  }, [listKey]);
 
   useEffect(() => {
     if (

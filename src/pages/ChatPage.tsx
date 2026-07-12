@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useVirtualList } from "@/hooks/useVirtualList";
 import {
   MessageCircle,
   Send,
@@ -290,7 +290,7 @@ export function ChatPage() {
 
   // ── Inbox virtualizer ──────────────────────────────────────
   const inboxScrollRef = useRef<HTMLDivElement>(null);
-  const inboxVirtualizer = useVirtualizer({
+  const inboxVirtualizer = useVirtualList({
     count: inbox.length,
     getScrollElement: () => inboxScrollRef.current,
     estimateSize: () => 72,
@@ -299,7 +299,7 @@ export function ChatPage() {
 
   // ── Thread virtualizer ─────────────────────────────────────
   const threadScrollRef = useRef<HTMLDivElement>(null);
-  const threadVirtualizer = useVirtualizer({
+  const threadVirtualizer = useVirtualList({
     count: messages.length,
     getScrollElement: () => threadScrollRef.current,
     estimateSize: () => 64,

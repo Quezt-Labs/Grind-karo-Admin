@@ -894,17 +894,13 @@ function CoachingEntitlementsSection({
     hasActiveCoaching &&
     activePlans.every((p) => p.planSlug.toLowerCase() === "mini");
   const megaUltraActive = hasActiveCoaching && !miniOnly;
-  const [enabled, setEnabled] = useState(
-    megaUltraActive ? true : initialEnabled,
-  );
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [prevInitialEnabled, setPrevInitialEnabled] = useState(initialEnabled);
 
-  useEffect(() => {
-    if (megaUltraActive) {
-      setEnabled(true);
-      return;
-    }
+  if (initialEnabled !== prevInitialEnabled) {
+    setPrevInitialEnabled(initialEnabled);
     setEnabled(initialEnabled);
-  }, [megaUltraActive, initialEnabled]);
+  }
 
   const computedFormCheckSource = formCheckEnabled
     ? miniOnly && adminFlag === true
