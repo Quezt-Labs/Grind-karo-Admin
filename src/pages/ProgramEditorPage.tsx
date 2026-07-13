@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Undo2 } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -25,21 +25,14 @@ import { useProgramEditorRoute } from "@/hooks/useProgramEditorRoute";
 import { useCoachAthleteContext } from "@/hooks/useCoachAthleteContext";
 import { useIsAssistantCoach } from "@/hooks/useRole";
 import { ProgramComparePanel } from "./editor/ProgramComparePanel";
-import { ProgramHistoryPanel } from "./editor/ProgramHistoryPanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
 import { hasPersonalCoachingSubscription } from "@/utils/coachingCapabilities";
 import { coachingProgramService } from "@/services/coachingProgramService";
 import { defaultPreviewInputs } from "./editor/preview-context";
 import type { PreviewInputs } from "@/utils/programPreviewCompute";
-import { useProgramEditorUndo } from "./editor/useProgramEditorChrome";
 
-type DeleteTarget = {
-  type: string;
-  id: string;
-  name: string;
-  exerciseSnapshot?: ExerciseRow;
-};
+type DeleteTarget = { type: string; id: string; name: string };
 
 export function ProgramEditorPage() {
   const {
@@ -84,7 +77,6 @@ export function ProgramEditorPage() {
     null,
   );
   const isAssistantCoach = useIsAssistantCoach();
-  const { canUndo, isUndoing, push: pushUndo, undo } = useProgramEditorUndo();
 
   // ---- data -------------------------------------------------------------
   const {
@@ -181,64 +173,12 @@ export function ProgramEditorPage() {
     },
   });
   const deleteExerciseMut = useMutation({
-    mutationFn: async (target: { id: string; snapshot?: ExerciseRow }) => {
-      await programService.removeExerciseRow(programId!, target.id);
-      return target.snapshot;
-    },
-    onSuccess: (snapshot) => {
+    mutationFn: (id: string) =>
+      programService.removeExerciseRow(programId!, id),
+    onSuccess: () => {
       toast.success("Exercise deleted");
       setDeleteTarget(null);
       refresh();
-      if (snapshot) {
-        pushUndo({
-          label: `Restore ${snapshot.resolvedName ?? snapshot.exerciseNameOverride ?? "exercise"}`,
-          undo: async () => {
-            const restored = await programService.createExerciseRow(
-              programId!,
-              snapshot.dayId,
-              {
-                sortOrder: snapshot.sortOrder,
-                category: snapshot.category,
-                exerciseId: snapshot.exerciseId,
-                exerciseNameOverride: snapshot.exerciseNameOverride,
-                sets: snapshot.sets,
-                repScheme: snapshot.repScheme,
-                targetRpe: snapshot.targetRpe,
-                percentOneRm: snapshot.percentOneRm,
-                loadKg: snapshot.loadKg,
-                computedLoadKg: snapshot.computedLoadKg,
-                loadSource: snapshot.loadSource,
-                loadNote: snapshot.loadNote,
-                notes: snapshot.notes,
-                movementSlotId: snapshot.movementSlotId,
-                loadComputation: snapshot.loadComputation,
-                loadRefFactor: snapshot.loadRefFactor,
-                loadRefExerciseId: snapshot.loadRefExerciseId,
-                hasPlateCheck: snapshot.hasPlateCheck,
-              },
-            );
-            if (snapshot.exerciseSets?.length) {
-              for (const set of snapshot.exerciseSets) {
-                await programService.createExerciseSet(
-                  programId!,
-                  restored.id,
-                  {
-                    setNumber: set.setNumber,
-                    reps: set.reps,
-                    repScheme: set.repScheme,
-                    targetRpe: set.targetRpe,
-                    percentOneRm: set.percentOneRm,
-                    absoluteWeightKg: set.absoluteWeightKg,
-                    notes: set.notes,
-                  },
-                );
-              }
-            }
-            toast.success("Exercise restored");
-            refresh();
-          },
-        });
-      }
     },
   });
 
@@ -255,10 +195,7 @@ export function ProgramEditorPage() {
         deleteDayMut.mutate(deleteTarget.id);
         break;
       case "exercise":
-        deleteExerciseMut.mutate({
-          id: deleteTarget.id,
-          snapshot: deleteTarget.exerciseSnapshot,
-        });
+        deleteExerciseMut.mutate(deleteTarget.id);
         break;
     }
   }
@@ -399,7 +336,6 @@ export function ProgramEditorPage() {
           type: "exercise",
           id: row.id,
           name: row.resolvedName ?? row.exerciseNameOverride ?? "Exercise",
-          exerciseSnapshot: row,
         })
       }
       onRefresh={refresh}
@@ -453,25 +389,13 @@ export function ProgramEditorPage() {
             </p>
           </div>
           {activeTab === "structure" && (
-            <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!canUndo || isUndoing}
-                onClick={() => void undo()}
-                title="Undo last exercise delete (Ctrl/Cmd+Z)"
-              >
-                <Undo2 className="h-3.5 w-3.5" />
-                Undo
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setBlockModal({ open: true })}
-                className="w-full sm:w-auto"
-              >
-                <Plus className="h-3.5 w-3.5" /> Add Block
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              onClick={() => setBlockModal({ open: true })}
+              className="w-full shrink-0 sm:w-auto"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Block
+            </Button>
           )}
         </div>
 
@@ -526,10 +450,6 @@ export function ProgramEditorPage() {
             <PreviewInputsBar slots={movementSlots} />
             {structureEditor}
           </div>
-        )}
-
-        {activeTab === "history" && programId && (
-          <ProgramHistoryPanel programId={programId} />
         )}
 
         {/* Modals */}

@@ -400,29 +400,6 @@ export interface ProgramTree extends Program {
   movementSlots: MovementSlot[];
 }
 
-// ---- Program content revisions ------------------------------------------
-export type ProgramRevisionTrigger = "auto" | "manual" | "pre_restore";
-
-export interface ProgramRevisionSummary {
-  id: string;
-  revisionNumber: number;
-  label: string | null;
-  trigger: ProgramRevisionTrigger | string;
-  createdAt: string;
-  createdBy: string | null;
-  blockCount: number;
-  weekCount: number;
-  exerciseCount: number;
-}
-
-export interface ProgramRevisionDetail extends ProgramRevisionSummary {
-  treeJson: {
-    blocks: ProgramTree["blocks"];
-    resources: ProgramResource[];
-    movementSlots: MovementSlot[];
-  };
-}
-
 // ---- Program Reviews ----------------------------------------------------
 export interface ProgramReview {
   id: string;
