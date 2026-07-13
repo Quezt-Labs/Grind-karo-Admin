@@ -50,13 +50,16 @@ function athleteName(name: string | null | undefined, email: string) {
 }
 
 function pendingProgramDateLabel(row: CoachingSetupMember): string {
+  const parts: string[] = [];
   if (row.intakeCompletedAt) {
-    return `Intake ${formatShortDate(row.intakeCompletedAt)}`;
+    parts.push(`Intake ${formatShortDate(row.intakeCompletedAt)}`);
+  } else if (row.subscribedAt) {
+    parts.push(`Subscribed ${formatShortDate(row.subscribedAt)}`);
   }
-  if (row.subscribedAt) {
-    return `Subscribed ${formatShortDate(row.subscribedAt)}`;
+  if (row.expiresAt) {
+    parts.push(`Ends ${formatShortDate(row.expiresAt)}`);
   }
-  return "Date unknown";
+  return parts.length > 0 ? parts.join(" · ") : "Date unknown";
 }
 
 function isOpsIncomplete(item: CoachOpsBoardItem): boolean {
