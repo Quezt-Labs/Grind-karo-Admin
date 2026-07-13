@@ -59,6 +59,19 @@ export const programTemplateService = {
     return data.data ?? data;
   },
 
+  async demoteToRetail(programId: string): Promise<{
+    id: string;
+    slug: string;
+    name: string;
+    kind: "RETAIL";
+    isActive: boolean;
+  }> {
+    const { data } = await api.post(
+      `/admin/program-templates/demote/${programId}`,
+    );
+    return data.data ?? data;
+  },
+
   async remove(id: string): Promise<void> {
     await api.delete(`/admin/program-templates/${id}`);
   },

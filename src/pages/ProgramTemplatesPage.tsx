@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { LayoutList, Pencil, Plus, Trash2 } from "lucide-react";
+import { LayoutList, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -19,6 +19,9 @@ export function ProgramTemplatesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProgramTemplate | null>(
+    null,
+  );
+  const [restoreTarget, setRestoreTarget] = useState<ProgramTemplate | null>(
     null,
   );
 
@@ -39,6 +42,17 @@ export function ProgramTemplatesPage() {
       setDeleteTarget(null);
     },
     onError: () => toast.error("Failed to delete template"),
+  });
+
+  const restoreMut = useMutation({
+    mutationFn: (id: string) => programTemplateService.demoteToRetail(id),
+    onSuccess: (program) => {
+      toast.success(`"${program.name}" restored as retail program`);
+      queryClient.invalidateQueries({ queryKey: ["program-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["programs"] });
+      setRestoreTarget(null);
+    },
+    onError: () => toast.error("Failed to restore as retail program"),
   });
 
   const filtered = templates.filter((t) => {
@@ -122,6 +136,15 @@ export function ProgramTemplatesPage() {
                       <Button
                         variant="secondary"
                         size="sm"
+                        title="Restore as retail program"
+                        onClick={() => setRestoreTarget(template)}
+                      >
+                        <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                        Retail
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => setDeleteTarget(template)}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -156,6 +179,18 @@ export function ProgramTemplatesPage() {
           isLoading={deleteMut.isPending}
           onConfirm={() => deleteMut.mutate(deleteTarget.id)}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {restoreTarget && (
+        <ConfirmModal
+          open
+          title="Restore as retail program?"
+          message={`Convert "${restoreTarget.name}" back to a retail program (same id). Purchases stay valid and the program will show on the store again.`}
+          confirmLabel="Restore retail"
+          isLoading={restoreMut.isPending}
+          onConfirm={() => restoreMut.mutate(restoreTarget.id)}
+          onCancel={() => setRestoreTarget(null)}
         />
       )}
     </div>
