@@ -1,4 +1,5 @@
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
+import { isFormCheckPending } from "@/utils/formCheckReview";
 
 export type ProgramWeekOption = {
   weekNumber: number;
@@ -53,7 +54,7 @@ export function collectProgramDayOptions(
       row.dayLabel = item.dayLabel;
     }
     row.videoCount += 1;
-    if (!item.reviewed) row.pendingCount += 1;
+    if (isFormCheckPending(item)) row.pendingCount += 1;
     byDay.set(item.dayNumber, row);
   }
 
@@ -96,7 +97,7 @@ export function collectProgramWeekOptions(
       pendingCount: 0,
     };
     row.videoCount += 1;
-    if (!item.reviewed) row.pendingCount += 1;
+    if (isFormCheckPending(item)) row.pendingCount += 1;
     byWeek.set(item.weekNumber, row);
   }
 

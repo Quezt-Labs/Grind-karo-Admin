@@ -9,11 +9,16 @@ import {
   formCheckInboxService,
   type FormCheckInboxAthlete,
 } from "@/services/formCheckInboxService";
-import { groupFormCheckInboxItems } from "@/utils/groupFormCheckInboxItems";
+import {
+  dedupeFormCheckInboxItems,
+  groupFormCheckInboxItems,
+} from "@/utils/groupFormCheckInboxItems";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
 import {
   filterVideosByReview,
   formCheckInboxListParams,
+  isFormCheckPending,
+  isFormCheckReviewed,
 } from "@/utils/formCheckReview";
 import {
   collectProgramDayOptions,
@@ -131,7 +136,10 @@ export function useFormCheckVideos(opts: {
   });
 
   const videos = useMemo(
-    () => filterVideosByReview(query.data?.items ?? [], reviewFilter),
+    () =>
+      dedupeFormCheckInboxItems(
+        filterVideosByReview(query.data?.items ?? [], reviewFilter),
+      ),
     [query.data?.items, reviewFilter],
   );
 
@@ -146,9 +154,12 @@ export function useFormCheckVideos(opts: {
   );
 
   const reviewedSetCount = useMemo(
-    () =>
-      videos.filter((v) => v.reviewed || Boolean(v.coachComment?.trim()))
-        .length,
+    () => videos.filter((v) => isFormCheckReviewed(v)).length,
+    [videos],
+  );
+
+  const pendingSetCount = useMemo(
+    () => videos.filter((v) => isFormCheckPending(v)).length,
     [videos],
   );
 
@@ -157,12 +168,17 @@ export function useFormCheckVideos(opts: {
     [exerciseGroups],
   );
 
-  // Raw server rows fetched (pre client-side review filter). More exist on the
-  // server when the total for this filter exceeds what we've pulled so far.
+  // Server total is program-scoped (source=program). Prefer it for "all"
+  // when it covers more than the loaded page; otherwise use loaded length.
   const fetchedCount = query.data?.items.length ?? 0;
   const serverTotal = query.data?.total ?? 0;
   const hasMore =
     serverTotal > 0 ? serverTotal > fetchedCount : fetchedCount >= limit;
+
+  const totalSetCount =
+    reviewFilter === "all" && serverTotal > videos.length
+      ? serverTotal
+      : videos.length;
 
   return {
     ...query,
@@ -170,8 +186,9 @@ export function useFormCheckVideos(opts: {
     exerciseGroups,
     pendingTargets,
     reviewedSetCount,
+    pendingSetCount,
     pendingExerciseCount,
-    totalSetCount: videos.length,
+    totalSetCount,
     serverTotal,
     fetchedCount,
     hasMore,

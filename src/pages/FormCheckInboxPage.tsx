@@ -115,6 +115,7 @@ export function FormCheckInboxPage() {
     exerciseGroups,
     pendingTargets,
     reviewedSetCount,
+    pendingSetCount,
     pendingExerciseCount,
     totalSetCount,
     hasMore,
@@ -160,8 +161,7 @@ export function FormCheckInboxPage() {
 
   const missingMega = missingData?.mega ?? [];
   const missingUltra = missingData?.ultra ?? [];
-  const missingTierAthletes =
-    planTier === "mega" ? missingMega : missingUltra;
+  const missingTierAthletes = planTier === "mega" ? missingMega : missingUltra;
   const missingTotal = missingData?.total ?? 0;
 
   const handlerCounts = useMemo(
@@ -355,6 +355,7 @@ export function FormCheckInboxPage() {
             reviewFilter={reviewFilter}
             reviewedSetCount={reviewedSetCount}
             totalSetCount={totalSetCount}
+            pendingSetCount={pendingSetCount}
             pendingExerciseCount={pendingExerciseCount}
             totalExerciseCount={exerciseGroups.length}
             onBack={clearAthleteSelection}

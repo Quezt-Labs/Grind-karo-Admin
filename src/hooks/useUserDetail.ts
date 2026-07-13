@@ -124,7 +124,7 @@ export function useUserDetail(
     enabled: !!userId && showCoachingActivity,
   });
 
-  const pendingVideoCount = pendingFormCheckData?.items.length ?? 0;
+  const pendingVideoCount = pendingFormCheckData?.total ?? 0;
 
   const purchaseStats = useMemo(() => {
     if (!purchasesData) return null;

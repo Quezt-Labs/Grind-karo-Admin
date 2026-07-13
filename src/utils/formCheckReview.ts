@@ -7,6 +7,19 @@ export function hasFormCheckFeedback(
   return Boolean(video.coachComment?.trim());
 }
 
+/** Single source of truth: reviewed iff coach left non-empty feedback. */
+export function isFormCheckReviewed(
+  video: Pick<FormCheckInboxItem, "coachComment" | "reviewed">,
+): boolean {
+  return hasFormCheckFeedback(video);
+}
+
+export function isFormCheckPending(
+  video: Pick<FormCheckInboxItem, "coachComment" | "reviewed">,
+): boolean {
+  return !isFormCheckReviewed(video);
+}
+
 export function formCheckInboxListParams(reviewFilter: ReviewFilter): {
   uncommentedOnly?: boolean;
   commentedOnly?: boolean;
@@ -20,18 +33,23 @@ export function filterVideosByReview(
   items: FormCheckInboxItem[],
   reviewFilter: ReviewFilter,
 ): FormCheckInboxItem[] {
-  if (reviewFilter !== "reviewed") return items;
-  return items.filter((item) => hasFormCheckFeedback(item));
+  if (reviewFilter === "pending") {
+    return items.filter((item) => isFormCheckPending(item));
+  }
+  if (reviewFilter === "reviewed") {
+    return items.filter((item) => isFormCheckReviewed(item));
+  }
+  return items;
 }
 
 export function sortFeedbackVideos(
   items: FormCheckInboxItem[],
 ): FormCheckInboxItem[] {
   return [...items]
-    .filter((item) => hasFormCheckFeedback(item))
+    .filter((item) => isFormCheckReviewed(item))
     .sort((a, b) => {
-      const aReviewed = a.reviewed ? 1 : 0;
-      const bReviewed = b.reviewed ? 1 : 0;
+      const aReviewed = isFormCheckReviewed(a) ? 1 : 0;
+      const bReviewed = isFormCheckReviewed(b) ? 1 : 0;
       if (aReviewed !== bReviewed) return bReviewed - aReviewed;
 
       const aTime = a.coachCommentUpdatedAt

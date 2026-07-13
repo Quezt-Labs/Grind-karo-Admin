@@ -1,5 +1,8 @@
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
-import { hasFormCheckFeedback } from "@/utils/formCheckReview";
+import {
+  isFormCheckPending,
+  isFormCheckReviewed,
+} from "@/utils/formCheckReview";
 
 export interface FormCheckInboxGroup {
   key: string;
@@ -107,8 +110,8 @@ export function groupFormCheckInboxItems(
 
   for (const [key, videos] of byKey) {
     const sorted = dedupeVideosInGroup(videos);
-    const pendingCount = sorted.filter((v) => !v.reviewed).length;
-    const reviewedCount = sorted.filter((v) => hasFormCheckFeedback(v)).length;
+    const pendingCount = sorted.filter((v) => isFormCheckPending(v)).length;
+    const reviewedCount = sorted.filter((v) => isFormCheckReviewed(v)).length;
     groups.push({
       key,
       videos: sorted,

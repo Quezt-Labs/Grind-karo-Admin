@@ -1,11 +1,12 @@
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
 import type { FormCheckCommentTarget } from "@/utils/bulkFormCheckComments";
+import { isFormCheckPending } from "@/utils/formCheckReview";
 
 export function formCheckVideoToTarget(
   video: FormCheckInboxItem,
 ): FormCheckCommentTarget | null {
   if (video.source !== "program") return null;
-  if (video.reviewed || video.coachComment?.trim()) return null;
+  if (!isFormCheckPending(video)) return null;
   if (!video.exerciseLogId) return null;
 
   return {

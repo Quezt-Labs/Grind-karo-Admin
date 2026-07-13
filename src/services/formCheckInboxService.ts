@@ -1,5 +1,7 @@
 import api from "./api";
 
+const PROGRAM_SOURCE = "program" as const;
+
 export interface FormCheckInboxItem {
   id: string;
   source: "program";
@@ -89,6 +91,37 @@ export interface FormCheckMissingResponse {
   ultra: FormCheckMissingAthlete[];
 }
 
+function normalizeInboxItem(
+  item: FormCheckInboxItem & Record<string, unknown>,
+): FormCheckInboxItem {
+  const coachComment =
+    (item.coachComment as string | null | undefined) ??
+    (item.coach_comment as string | null | undefined) ??
+    null;
+  return {
+    ...item,
+    source: "program",
+    coachComment,
+    coachCommentId:
+      (item.coachCommentId as string | null | undefined) ??
+      (item.coach_comment_id as string | null | undefined) ??
+      null,
+    coachCommentUpdatedAt:
+      (item.coachCommentUpdatedAt as string | null | undefined) ??
+      (item.coach_comment_updated_at as string | null | undefined) ??
+      null,
+    athleteReply:
+      (item.athleteReply as string | null | undefined) ??
+      (item.athlete_reply as string | null | undefined) ??
+      null,
+    athleteRepliedAt:
+      (item.athleteRepliedAt as string | null | undefined) ??
+      (item.athlete_replied_at as string | null | undefined) ??
+      null,
+    reviewed: Boolean(coachComment?.trim()),
+  };
+}
+
 export const formCheckInboxService = {
   async list(params?: {
     uncommentedOnly?: boolean;
@@ -100,50 +133,31 @@ export const formCheckInboxService = {
     offset?: number;
   }): Promise<FormCheckInboxResponse> {
     const { data } = await api.get("/admin/form-check-videos", {
-      params,
+      params: { ...params, source: PROGRAM_SOURCE },
       timeout: 60_000,
     });
     const response = data.data ?? data;
+    // Server totals are program-scoped when source=program; keep filter as safety.
+    const items = (response.items ?? [])
+      .filter(
+        (item: FormCheckInboxItem) =>
+          item.source === "program" || item.source == null,
+      )
+      .map((item: FormCheckInboxItem & Record<string, unknown>) =>
+        normalizeInboxItem(item),
+      );
     return {
       ...response,
-      items: (response.items ?? [])
-        .filter((item: FormCheckInboxItem) => item.source === "program")
-        .map((item: FormCheckInboxItem & Record<string, unknown>) => ({
-          ...item,
-          coachComment:
-            (item.coachComment as string | null | undefined) ??
-            (item.coach_comment as string | null | undefined) ??
-            null,
-          coachCommentId:
-            (item.coachCommentId as string | null | undefined) ??
-            (item.coach_comment_id as string | null | undefined) ??
-            null,
-          coachCommentUpdatedAt:
-            (item.coachCommentUpdatedAt as string | null | undefined) ??
-            (item.coach_comment_updated_at as string | null | undefined) ??
-            null,
-          athleteReply:
-            (item.athleteReply as string | null | undefined) ??
-            (item.athlete_reply as string | null | undefined) ??
-            null,
-          athleteRepliedAt:
-            (item.athleteRepliedAt as string | null | undefined) ??
-            (item.athlete_replied_at as string | null | undefined) ??
-            null,
-          reviewed:
-            item.reviewed ??
-            Boolean(
-              (
-                (item.coachComment as string | null | undefined) ??
-                (item.coach_comment as string | null | undefined)
-              )?.trim(),
-            ),
-        })),
+      total: response.total ?? items.length,
+      pendingCount: response.pendingCount ?? 0,
+      items,
     };
   },
 
   async pendingCount(): Promise<{ pendingCount: number }> {
-    const { data } = await api.get("/admin/form-check-videos/pending-count");
+    const { data } = await api.get("/admin/form-check-videos/pending-count", {
+      params: { source: PROGRAM_SOURCE },
+    });
     return data.data ?? data;
   },
 
@@ -151,7 +165,7 @@ export const formCheckInboxService = {
     uncommentedOnly?: boolean;
   }): Promise<FormCheckInboxAthletesByPlan> {
     const { data } = await api.get("/admin/form-check-videos/athletes", {
-      params,
+      params: { ...params, source: PROGRAM_SOURCE },
     });
     const payload = data.data ?? data;
     const normalize = (

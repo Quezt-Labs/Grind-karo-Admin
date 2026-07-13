@@ -132,6 +132,9 @@ export function UserProgramFormCheckPanel({
     videos,
     exerciseGroups,
     pendingTargets,
+    reviewedSetCount,
+    pendingSetCount,
+    totalSetCount,
     hasMore,
   } = useFormCheckVideos({
     userId,
@@ -181,10 +184,13 @@ export function UserProgramFormCheckPanel({
         </h2>
         {!isLoading ? (
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-            {videos.length}
-            {reviewFilter === "all" && pendingTargets.length > 0
-              ? ` · ${pendingTargets.length} pending`
-              : ""}
+            {reviewFilter === "pending"
+              ? `${pendingSetCount} pending`
+              : reviewFilter === "reviewed"
+                ? `${reviewedSetCount} reviewed`
+                : `${totalSetCount} total · ${reviewedSetCount} reviewed${
+                    pendingSetCount > 0 ? ` · ${pendingSetCount} pending` : ""
+                  }`}
           </span>
         ) : null}
         <FormCheckHandlerBadge {...handlerInfo} size="md" />

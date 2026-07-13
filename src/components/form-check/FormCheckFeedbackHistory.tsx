@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { MessageSquare, Play, Video } from "lucide-react";
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
-import { sortFeedbackVideos } from "@/utils/formCheckReview";
+import {
+  sortFeedbackVideos,
+  isFormCheckPending,
+} from "@/utils/formCheckReview";
 import {
   formatProgramDayLabel,
   formatProgramWeekLabel,
@@ -68,11 +71,11 @@ function FeedbackRow({
         <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
           <MessageSquare className="h-3 w-3" />
           Coach feedback
-          {!video.reviewed ? (
+          {!isFormCheckPending(video) ? null : (
             <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
               Earlier upload
             </span>
-          ) : null}
+          )}
         </div>
         <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
           {comment}

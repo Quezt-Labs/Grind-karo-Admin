@@ -29,6 +29,7 @@ export function FormCheckInboxAthleteHeader({
   reviewFilter,
   reviewedSetCount,
   totalSetCount,
+  pendingSetCount,
   pendingExerciseCount,
   totalExerciseCount,
   onBack,
@@ -45,6 +46,7 @@ export function FormCheckInboxAthleteHeader({
   reviewFilter: ReviewFilter;
   reviewedSetCount: number;
   totalSetCount: number;
+  pendingSetCount?: number;
   pendingExerciseCount: number;
   totalExerciseCount: number;
   onBack: () => void;
@@ -60,6 +62,8 @@ export function FormCheckInboxAthleteHeader({
       ? Math.round((reviewedSetCount / totalSetCount) * 100)
       : 0;
   const exercisesLeft = pendingExerciseCount;
+  const needsReviewBadge =
+    pendingSetCount ?? selectedAthlete?.pendingCount ?? 0;
 
   return (
     <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -92,7 +96,7 @@ export function FormCheckInboxAthleteHeader({
           <ReviewFilterBar
             filter={reviewFilter}
             onChange={onReviewFilterChange}
-            pendingCount={selectedAthlete?.pendingCount}
+            pendingCount={needsReviewBadge}
           />
           {reviewFilter !== "pending" && onLayoutChange ? (
             <FormCheckInboxLayoutToggle

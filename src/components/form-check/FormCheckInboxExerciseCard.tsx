@@ -23,6 +23,10 @@ import { FormCheckPresetCommentChips } from "@/components/shared/FormCheckPreset
 import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
+import {
+  isFormCheckPending,
+  isFormCheckReviewed,
+} from "@/utils/formCheckReview";
 import { cn } from "@/utils/cn";
 
 function formatUploadedAt(iso: string): string {
@@ -253,11 +257,13 @@ function SetCommentPanelWithBulk({
 
   const savedComment = video.coachComment?.trim() ?? "";
   const showSavedFeedback = savedComment.length > 0;
-  const feedbackFromPriorUpload = showSavedFeedback && !video.reviewed;
-  const feedbackLocked = showSavedFeedback && video.reviewed;
+  const feedbackFromPriorUpload =
+    showSavedFeedback && isFormCheckPending(video);
+  const feedbackLocked = showSavedFeedback && isFormCheckReviewed(video);
   const [isEditing, setIsEditing] = useState(() => {
     const draft = draftByVideoId.current.get(video.id);
-    const locked = Boolean(video.coachComment?.trim()) && video.reviewed;
+    const locked =
+      Boolean(video.coachComment?.trim()) && isFormCheckReviewed(video);
     if (locked) return draft != null;
     return true;
   });
@@ -299,7 +305,7 @@ function SetCommentPanelWithBulk({
       setIsEditing(false);
     }
     const exercisePendingLeft = allVideos.filter(
-      (v) => !v.reviewed && v.id !== video.id,
+      (v) => isFormCheckPending(v) && v.id !== video.id,
     ).length;
     if (
       exercisePendingLeft === 0 &&
@@ -484,11 +490,11 @@ export const FormCheckInboxExerciseCard = forwardRef<
   const draftByVideoId = useRef(new Map<string, string>());
   const head = videos[0];
   const multiSet = videos.length > 1;
-  const reviewedCount = videos.filter((v) => v.reviewed).length;
-  const pendingCount = videos.length - reviewedCount;
+  const reviewedCount = videos.filter((v) => isFormCheckReviewed(v)).length;
+  const pendingCount = videos.filter((v) => isFormCheckPending(v)).length;
 
   const defaultIndex = useMemo(() => {
-    const pending = videos.findIndex((v) => !v.reviewed);
+    const pending = videos.findIndex((v) => isFormCheckPending(v));
     return pending >= 0 ? pending : 0;
   }, [videos]);
 
@@ -598,7 +604,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
                 <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
                   {reviewedCount}/{videos.length} reviewed
                 </span>
-              ) : active.reviewed ? (
+              ) : isFormCheckReviewed(active) ? (
                 <span className="inline-flex items-center gap-1 rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
                   <CheckCircle2 className="h-3 w-3" />
                   Reviewed
@@ -650,7 +656,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
                   )}
                 >
                   Set {video.setNumber}
-                  {video.reviewed ? (
+                  {isFormCheckReviewed(video) ? (
                     <CheckCircle2
                       className={cn(
                         "h-3.5 w-3.5",
@@ -693,7 +699,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
         </div>
         <div className="border-t border-gray-200 lg:col-span-2 lg:border-l lg:border-t-0 dark:border-gray-700">
           <SetCommentPanelWithBulk
-            key={`${active.id}:${active.reviewed ? "r" : "p"}:${active.coachComment ?? ""}`}
+            key={`${active.id}:${isFormCheckReviewed(active) ? "r" : "p"}:${active.coachComment ?? ""}`}
             video={active}
             allVideos={videos}
             exerciseName={head.exerciseName}
