@@ -49,7 +49,7 @@ type StatusFilter = "" | "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
 export function ProgramPurchasesPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("PAID");
   const [refundTarget, setRefundTarget] = useState<ProgramPurchase | null>(
     null,
   );

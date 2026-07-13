@@ -46,7 +46,7 @@ const subscriptionColumns: Column<SubscriptionRow>[] = [
 
 export function SubscriptionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ACTIVE");
   const [cancelTarget, setCancelTarget] = useState<CoachingSubscription | null>(
     null,
   );
