@@ -22,7 +22,8 @@ export function FormCheckPresetCommentChips({
 }) {
   const { comments, isLoading } = useFormCheckPresetComments();
   const [manageOpen, setManageOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string>("");
+  // Remount after pick so the same preset can be chosen again (always uncontrolled).
+  const [selectKey, setSelectKey] = useState(0);
 
   return (
     <>
@@ -31,15 +32,13 @@ export function FormCheckPresetCommentChips({
           <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
         ) : (
           <Select
-            value={selectedId || undefined}
+            key={selectKey}
             disabled={disabled || comments.length === 0}
             onValueChange={(id) => {
               const preset = comments.find((c) => c.id === id);
               if (!preset) return;
-              setSelectedId(id);
               onSelect(preset.body);
-              // Allow re-selecting the same preset later
-              requestAnimationFrame(() => setSelectedId(""));
+              setSelectKey((k) => k + 1);
             }}
           >
             <SelectTrigger
