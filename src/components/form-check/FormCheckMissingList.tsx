@@ -44,8 +44,8 @@ export function FormCheckMissingList({
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Athletes due a form-check this subscription week (MEGA weeks 2/4, ULTRA
-        any week) with zero uploads in the current week window.
+        Athletes due a form-check this coaching week (MEGA: weeks 2 &amp; 4 of
+        each 4-week quota window; ULTRA: every week) with zero uploads so far.
       </p>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
         {athletes.map((athlete) => (
@@ -75,10 +75,10 @@ export function FormCheckMissingList({
                   formCheckCoachName={athlete.formCheckCoachName}
                 />
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                  Sub week {athlete.subscriptionWeek}
+                  Coaching week {athlete.subscriptionWeek}
                 </span>
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                  Block {athlete.blockStartWeek}–{athlete.blockEndWeek}
+                  Quota weeks {athlete.blockStartWeek}–{athlete.blockEndWeek}
                 </span>
               </div>
             </div>

@@ -863,9 +863,9 @@ function FormCheckQuotaSummary({ quota }: { quota: FormCheckQuota }) {
   const remaining = quota.remainingThisWeek ?? 0;
   const weekGate =
     quota.formCheckWeekAllowed === false
-      ? ` · Not a form-check week (sub week ${quota.subscriptionWeek ?? "?"})`
+      ? ` · Not a form-check week (coaching week ${quota.subscriptionWeek ?? "?"})`
       : quota.formCheckWeekAllowed === true
-        ? ` · Form-check week (sub week ${quota.subscriptionWeek})`
+        ? ` · Form-check week (coaching week ${quota.subscriptionWeek})`
         : "";
 
   return (

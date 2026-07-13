@@ -16,9 +16,9 @@ export function FormCheckQuotaBanner({ quota }: { quota: FormCheckQuota }) {
           ? " · limit reached"
           : ""}
       {quota.formCheckWeekAllowed === false
-        ? ` · Not a form-check week (sub week ${quota.subscriptionWeek ?? "?"})`
+        ? ` · Not a form-check week (coaching week ${quota.subscriptionWeek ?? "?"})`
         : quota.formCheckWeekAllowed === true && quota.subscriptionWeek != null
-          ? ` · Form-check week (sub week ${quota.subscriptionWeek})`
+          ? ` · Form-check week (coaching week ${quota.subscriptionWeek})`
           : ""}
     </div>
   );
