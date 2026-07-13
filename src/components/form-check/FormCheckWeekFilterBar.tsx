@@ -1,7 +1,46 @@
 import { CalendarDays } from "lucide-react";
 import type { ProgramWeekOption } from "@/utils/formCheckWeekUtils";
-import { formatProgramWeekLabel } from "@/utils/formCheckWeekUtils";
+import {
+  formatProgramDayLabel,
+  formatProgramWeekLabel,
+} from "@/utils/formCheckWeekUtils";
 import { cn } from "@/utils/cn";
+
+/** Avoid duplicate total+pending when every video in the chip is still pending. */
+function FilterChipCounts({
+  videoCount,
+  pendingCount,
+  selected,
+}: {
+  videoCount: number;
+  pendingCount: number;
+  selected: boolean;
+}) {
+  const allPending = pendingCount > 0 && pendingCount === videoCount;
+  const showTotal = videoCount > 0 && !allPending;
+  const showPending = pendingCount > 0;
+
+  return (
+    <>
+      {showTotal ? (
+        <span className="ml-1.5 opacity-80">{videoCount}</span>
+      ) : null}
+      {showPending ? (
+        <span
+          className={cn(
+            "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+            showTotal ? "ml-1" : "ml-1.5",
+            selected
+              ? "bg-white/20 text-white"
+              : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
+          )}
+        >
+          {pendingCount}
+        </span>
+      ) : null}
+    </>
+  );
+}
 
 export function FormCheckWeekFilterBar({
   weeks,
@@ -55,19 +94,11 @@ export function FormCheckWeekFilterBar({
             )}
           >
             {formatProgramWeekLabel(week.weekNumber)}
-            <span className="ml-1.5 opacity-80">{week.videoCount}</span>
-            {week.pendingCount > 0 ? (
-              <span
-                className={cn(
-                  "ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  selectedWeek === week.weekNumber
-                    ? "bg-white/20 text-white"
-                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
-                )}
-              >
-                {week.pendingCount}
-              </span>
-            ) : null}
+            <FilterChipCounts
+              videoCount={week.videoCount}
+              pendingCount={week.pendingCount}
+              selected={selectedWeek === week.weekNumber}
+            />
           </button>
         ))}
       </div>
@@ -88,13 +119,6 @@ export function FormCheckWeekBadge({
 }) {
   if (weekNumber == null) return null;
 
-  const day =
-    dayNumber != null
-      ? dayLabel != null && dayLabel !== ""
-        ? `D${dayNumber} ${dayLabel}`
-        : `Day ${dayNumber}`
-      : null;
-
   return (
     <span
       className={cn(
@@ -104,8 +128,10 @@ export function FormCheckWeekBadge({
     >
       <CalendarDays className="h-3 w-3" />
       {formatProgramWeekLabel(weekNumber)}
-      {day ? (
-        <span className="font-medium normal-case opacity-90">· {day}</span>
+      {dayNumber != null ? (
+        <span className="font-medium normal-case opacity-90">
+          · {formatProgramDayLabel(dayNumber, dayLabel)}
+        </span>
       ) : null}
     </span>
   );

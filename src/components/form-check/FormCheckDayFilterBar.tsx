@@ -3,6 +3,42 @@ import type { ProgramDayOption } from "@/utils/formCheckWeekUtils";
 import { formatProgramDayLabel } from "@/utils/formCheckWeekUtils";
 import { cn } from "@/utils/cn";
 
+/** Avoid duplicate total+pending when every video in the chip is still pending. */
+function FilterChipCounts({
+  videoCount,
+  pendingCount,
+  selected,
+}: {
+  videoCount: number;
+  pendingCount: number;
+  selected: boolean;
+}) {
+  const allPending = pendingCount > 0 && pendingCount === videoCount;
+  const showTotal = videoCount > 0 && !allPending;
+  const showPending = pendingCount > 0;
+
+  return (
+    <>
+      {showTotal ? (
+        <span className="ml-1.5 opacity-80">{videoCount}</span>
+      ) : null}
+      {showPending ? (
+        <span
+          className={cn(
+            "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+            showTotal ? "ml-1" : "ml-1.5",
+            selected
+              ? "bg-white/20 text-white"
+              : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
+          )}
+        >
+          {pendingCount}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 export function FormCheckDayFilterBar({
   days,
   selectedDay,
@@ -55,19 +91,11 @@ export function FormCheckDayFilterBar({
             )}
           >
             {formatProgramDayLabel(day.dayNumber, day.dayLabel)}
-            <span className="ml-1.5 opacity-80">{day.videoCount}</span>
-            {day.pendingCount > 0 ? (
-              <span
-                className={cn(
-                  "ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  selectedDay === day.dayNumber
-                    ? "bg-white/20 text-white"
-                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
-                )}
-              >
-                {day.pendingCount}
-              </span>
-            ) : null}
+            <FilterChipCounts
+              videoCount={day.videoCount}
+              pendingCount={day.pendingCount}
+              selected={selectedDay === day.dayNumber}
+            />
           </button>
         ))}
       </div>

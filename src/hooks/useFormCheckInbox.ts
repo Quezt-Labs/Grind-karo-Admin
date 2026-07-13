@@ -65,7 +65,9 @@ export function useFormCheckVideoWeeks(opts: {
         limit: FORM_CHECK_VIDEO_LIMIT,
       });
       return collectProgramWeekOptions(
-        filterVideosByReview(data.items, reviewFilter),
+        dedupeFormCheckInboxItems(
+          filterVideosByReview(data.items, reviewFilter),
+        ),
       );
     },
     enabled: enabled && !!userId,
@@ -91,7 +93,9 @@ export function useFormCheckVideoDays(opts: {
         limit: FORM_CHECK_VIDEO_LIMIT,
       });
       return collectProgramDayOptions(
-        filterVideosByReview(data.items, reviewFilter),
+        dedupeFormCheckInboxItems(
+          filterVideosByReview(data.items, reviewFilter),
+        ),
         weekNumber,
       );
     },

@@ -18,14 +18,35 @@ export function formatProgramWeekLabel(weekNumber: number): string {
   return `Week ${weekNumber}`;
 }
 
+/**
+ * Avoid "Day 1 · Day 1" when program day title is already "Day 1".
+ */
 export function formatProgramDayLabel(
   dayNumber: number,
   dayLabel?: string | null,
 ): string {
-  if (dayLabel != null && dayLabel.trim() !== "") {
-    return `Day ${dayNumber} · ${dayLabel.trim()}`;
+  const trimmed = dayLabel?.trim() ?? "";
+  if (!trimmed) return `Day ${dayNumber}`;
+
+  const dayPrefix = `day ${dayNumber}`;
+  const lower = trimmed.toLowerCase();
+
+  if (lower === dayPrefix || lower === `day${dayNumber}`) {
+    return `Day ${dayNumber}`;
   }
-  return `Day ${dayNumber}`;
+
+  if (lower.startsWith(dayPrefix)) {
+    const rest = trimmed
+      .slice(dayPrefix.length)
+      .replace(/^[·\-–:,\s]+/, "")
+      .trim();
+    if (!rest || rest.toLowerCase() === dayPrefix) {
+      return `Day ${dayNumber}`;
+    }
+    return `Day ${dayNumber} · ${rest}`;
+  }
+
+  return `Day ${dayNumber} · ${trimmed}`;
 }
 
 /** Unique program days from inbox items, optionally scoped to one week. */
@@ -74,11 +95,7 @@ export function formatProgramWeekDayLabel(
   if (video.weekNumber == null) return null;
   const week = formatProgramWeekLabel(video.weekNumber);
   if (video.dayNumber == null) return week;
-  const day =
-    video.dayLabel != null && video.dayLabel !== ""
-      ? `Day ${video.dayNumber} · ${video.dayLabel}`
-      : `Day ${video.dayNumber}`;
-  return `${week} · ${day}`;
+  return `${week} · ${formatProgramDayLabel(video.dayNumber, video.dayLabel)}`;
 }
 
 /** Unique program weeks from inbox items, sorted ascending. */
