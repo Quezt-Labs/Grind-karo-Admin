@@ -295,7 +295,10 @@ export interface CoachingSetupMember {
   state?: string | null;
   expiresAt: string;
   subscribedAt: string;
+  /** When coaching intake was submitted (user_info.created_at). */
+  intakeCompletedAt?: string | null;
   spreadsheetId?: string | null;
+  coachingProgramId?: string | null;
 }
 
 export interface CoachingSetupCounts {
