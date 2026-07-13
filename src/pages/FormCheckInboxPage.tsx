@@ -135,8 +135,14 @@ export function FormCheckInboxPage() {
     return all.find((a) => a.userId === selectedUserId) ?? null;
   }, [athletesData, selectedUserId]);
 
-  const megaAthletes = athletesData?.mega ?? [];
-  const ultraAthletes = athletesData?.ultra ?? [];
+  const megaAthletes = useMemo(
+    () => athletesData?.mega ?? [],
+    [athletesData?.mega],
+  );
+  const ultraAthletes = useMemo(
+    () => athletesData?.ultra ?? [],
+    [athletesData?.ultra],
+  );
   const tierAthletes = planTier === "mega" ? megaAthletes : ultraAthletes;
 
   const handlerCounts = useMemo(
@@ -216,14 +222,42 @@ export function FormCheckInboxPage() {
     toast.success(`All caught up for ${name}`);
   }, [selectedAthlete]);
 
+  const handleSelectAthlete = useCallback(
+    (userId: string | null) => {
+      if (!userId) {
+        setSelectedUserId(null);
+        return;
+      }
+      const all = [...megaAthletes, ...ultraAthletes];
+      const athlete = all.find((a) => a.userId === userId);
+      setSelectedUserId(userId);
+      // Fully-reviewed athletes have nothing under "Needs review" — show history.
+      if (
+        athlete &&
+        athlete.pendingCount === 0 &&
+        athlete.totalCount > 0 &&
+        reviewFilter === "pending"
+      ) {
+        setReviewFilter("all");
+      }
+    },
+    [
+      megaAthletes,
+      ultraAthletes,
+      setSelectedUserId,
+      setReviewFilter,
+      reviewFilter,
+    ],
+  );
+
   const goToNextAthlete = useCallback(() => {
     if (nextAthleteInQueue) {
-      setSelectedUserId(nextAthleteInQueue.userId);
+      handleSelectAthlete(nextAthleteInQueue.userId);
       return;
     }
     clearAthleteSelection();
     toast("No more athletes in this queue", { icon: "✓" });
-  }, [nextAthleteInQueue, setSelectedUserId, clearAthleteSelection]);
+  }, [nextAthleteInQueue, handleSelectAthlete, clearAthleteSelection]);
 
   return (
     <div>
@@ -408,7 +442,7 @@ export function FormCheckInboxPage() {
           handlerCounts={handlerCounts}
           tierPending={tierPending}
           isLoading={athletesLoading}
-          onSelectAthlete={setSelectedUserId}
+          onSelectAthlete={handleSelectAthlete}
           onReviewFilterChange={setReviewFilter}
           onHandlerFilterChange={setHandlerFilter}
         />

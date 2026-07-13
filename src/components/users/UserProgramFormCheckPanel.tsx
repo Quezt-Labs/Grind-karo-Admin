@@ -81,7 +81,9 @@ export function UserProgramFormCheckPanel({
   onBillingUpdated,
   pendingSignal,
 }: UserProgramFormCheckPanelProps) {
-  const [reviewFilter, setReviewFilter] = useState<UserReviewFilter>("pending");
+  // Default to "all" so reviewed/legacy uploads are visible (pending-only
+  // looks empty when the athlete's queue is fully reviewed).
+  const [reviewFilter, setReviewFilter] = useState<UserReviewFilter>("all");
   const [layout, setLayout] = useState<InboxLayout>("videos");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(null);
