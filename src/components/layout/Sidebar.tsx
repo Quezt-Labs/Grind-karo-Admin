@@ -28,6 +28,7 @@ import {
   ClipboardCheck,
   PlayCircle,
   LayoutList,
+  Briefcase,
   CalendarClock,
   type LucideIcon,
 } from "lucide-react";
@@ -56,7 +57,10 @@ const NAV_SECTIONS: NavSection[] = [
   {
     key: "overview",
     title: "Overview",
-    items: [{ path: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+    items: [
+      { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/workspace", label: "Workspace", icon: Briefcase },
+    ],
   },
   {
     key: "people",
@@ -126,6 +130,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     key: "coach",
     title: "Coaching",
     items: [
+      { path: "/workspace", label: "Workspace", icon: Briefcase },
       { path: "/coach/athletes", label: "My Athletes", icon: Users },
       { path: "/coach/ops-board", label: "Daily ops", icon: ClipboardCheck },
       { path: "/coach/locations", label: "Locations", icon: MapPin },

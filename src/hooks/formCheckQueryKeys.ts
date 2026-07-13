@@ -10,6 +10,7 @@ export const FORM_CHECK_VIDEO_LIMIT = 100;
 export const formCheckKeys = {
   all: ["form-check"] as const,
   pendingCount: () => ["form-check-pending-count"] as const,
+  missing: () => ["form-check-missing"] as const,
   athletes: (review: ReviewFilter) =>
     ["form-check-inbox-athletes", review] as const,
   videos: (
@@ -52,6 +53,9 @@ export function invalidateFormCheckQueries(
   });
   void queryClient.invalidateQueries({
     queryKey: ["form-check-pending-count"],
+  });
+  void queryClient.invalidateQueries({
+    queryKey: ["form-check-missing"],
   });
   if (opts?.userId) {
     void queryClient.invalidateQueries({

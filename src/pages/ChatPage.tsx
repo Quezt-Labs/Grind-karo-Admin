@@ -15,6 +15,7 @@ import {
   Square,
   Search,
   X,
+  Reply,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { chatService } from "@/services/chatService";
@@ -65,12 +66,32 @@ export function ChatPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedUserId = searchParams.get("userId") ?? "";
   const [text, setText] = useState("");
+  const [replyTo, setReplyTo] = useState<{
+    userId: string;
+    message: ChatMessage;
+  } | null>(null);
+  const activeReply =
+    replyTo?.userId === selectedUserId ? replyTo.message : null;
   const [userSearch, setUserSearch] = useState("");
   const debouncedUserSearch = useDebounce(userSearch.trim(), 300);
   const [uploading, setUploading] = useState(false);
+  const [windowFocused, setWindowFocused] = useState(
+    () => typeof document !== "undefined" && document.hasFocus(),
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const voice = useVoiceRecorder();
+
+  useEffect(() => {
+    const onFocus = () => setWindowFocused(true);
+    const onBlur = () => setWindowFocused(false);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
 
   function selectUser(userId: string) {
     setSearchParams(userId ? { userId } : {});
@@ -178,7 +199,8 @@ export function ChatPage() {
     queryKey: ["chat-thread", selectedUserId],
     queryFn: () => chatService.getHistory(selectedUserId, { limit: 100 }),
     enabled: !!selectedUserId,
-    refetchInterval: 8_000,
+    refetchInterval: windowFocused ? 8_000 : 45_000,
+    refetchIntervalInBackground: false,
     select: (msgs) => [...msgs].reverse(), // API returns newest-first; reverse for bottom-up
   });
 
@@ -195,6 +217,7 @@ export function ChatPage() {
     mutationFn: chatService.sendMessage,
     onSuccess: () => {
       setText("");
+      setReplyTo(null);
       queryClient.invalidateQueries({
         queryKey: ["chat-thread", selectedUserId],
       });
@@ -210,6 +233,7 @@ export function ChatPage() {
       userId: selectedUserId,
       type: "TEXT",
       content: trimmed,
+      ...(activeReply ? { parentMessageId: activeReply.id } : {}),
     });
   }
 
@@ -238,6 +262,7 @@ export function ChatPage() {
           userId: selectedUserId,
           type: isAudio ? "AUDIO" : "IMAGE",
           mediaUrl,
+          ...(activeReply ? { parentMessageId: activeReply.id } : {}),
         });
       } catch {
         toast.error("Upload failed. Please try again.");
@@ -245,7 +270,7 @@ export function ChatPage() {
         setUploading(false);
       }
     },
-    [selectedUserId, sendMutation],
+    [selectedUserId, sendMutation, activeReply],
   );
 
   const handleFileChange = useCallback(
@@ -525,6 +550,12 @@ export function ChatPage() {
                         <MessageBubble
                           msg={item.msg}
                           isFromUser={item.isFromUser}
+                          onReply={() =>
+                            setReplyTo({
+                              userId: selectedUserId,
+                              message: item.msg,
+                            })
+                          }
                         />
                       </div>
                     );
@@ -535,6 +566,27 @@ export function ChatPage() {
 
             {/* Compose */}
             <div className="shrink-0 border-t border-gray-200 px-3 py-2.5 dark:border-gray-700 sm:px-4 sm:py-3">
+              {activeReply ? (
+                <div className="mb-2 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 dark:border-emerald-800/40 dark:bg-emerald-900/20">
+                  <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                      Replying to…
+                    </p>
+                    <p className="truncate text-xs text-gray-700 dark:text-gray-200">
+                      {replyPreviewLabel(activeReply)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReplyTo(null)}
+                    className="rounded p-0.5 text-gray-400 hover:bg-emerald-100 hover:text-gray-600 dark:hover:bg-emerald-900/40"
+                    aria-label="Cancel reply"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : null}
               {voice.recording && (
                 <div
                   className="mb-2 flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900/40 dark:bg-red-900/20"
@@ -707,14 +759,33 @@ function formatRecordTime(totalSec: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function replyPreviewLabel(msg: ChatMessage): string {
+  if (msg.content?.trim()) return msg.content.trim();
+  if (msg.type === "IMAGE") {
+    return isChatVideoMessage(msg) ? "Video" : "Image";
+  }
+  if (msg.type === "AUDIO") return "Voice note";
+  return "Message";
+}
+
+function parentQuotePreview(msg: ChatMessage): string | null {
+  if (!msg.parent) return null;
+  const preview = msg.parent.contentPreview?.trim();
+  if (preview) return preview;
+  return "Original message";
+}
+
 function MessageBubble({
   msg,
   isFromUser,
+  onReply,
 }: {
   msg: ChatMessage;
   isFromUser: boolean;
+  onReply: () => void;
 }) {
   const [lightbox, setLightbox] = useState(false);
+  const parentPreview = parentQuotePreview(msg);
 
   const timeStamp = (
     <p
@@ -732,8 +803,22 @@ function MessageBubble({
 
   return (
     <div
-      className={cn("flex mb-1", isFromUser ? "justify-start" : "justify-end")}
+      className={cn(
+        "group mb-1 flex items-end gap-1",
+        isFromUser ? "justify-start" : "justify-end",
+      )}
     >
+      {!isFromUser ? (
+        <button
+          type="button"
+          onClick={onReply}
+          className="mb-1 rounded-lg p-1.5 text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+          title="Reply"
+          aria-label="Reply"
+        >
+          <Reply className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
       <div
         className={cn(
           "max-w-[70%] overflow-hidden rounded-2xl text-sm",
@@ -743,6 +828,19 @@ function MessageBubble({
             : "rounded-tr-sm bg-emerald-500 text-white",
         )}
       >
+        {parentPreview ? (
+          <div
+            className={cn(
+              "mb-1.5 rounded-lg border-l-2 px-2 py-1 text-[11px] leading-snug",
+              isFromUser
+                ? "border-emerald-500/60 bg-white/60 text-gray-600 dark:bg-gray-800/60 dark:text-gray-300"
+                : "border-white/50 bg-black/10 text-emerald-50",
+            )}
+          >
+            <p className="line-clamp-2">{parentPreview}</p>
+          </div>
+        ) : null}
+
         {msg.type === "TEXT" && (
           <>
             <p className="whitespace-pre-wrap break-all">{msg.content}</p>
@@ -804,6 +902,17 @@ function MessageBubble({
           </>
         )}
       </div>
+      {isFromUser ? (
+        <button
+          type="button"
+          onClick={onReply}
+          className="mb-1 rounded-lg p-1.5 text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+          title="Reply"
+          aria-label="Reply"
+        >
+          <Reply className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
     </div>
   );
 }

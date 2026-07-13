@@ -24,6 +24,8 @@ import type {
   ProgramResource,
   CreateResourcePayload,
   UpdateResourcePayload,
+  ProgramRevisionSummary,
+  ProgramRevisionDetail,
 } from "@/types/programs";
 
 export const programService = {
@@ -309,5 +311,42 @@ export const programService = {
 
   async removeResource(programId: string, resourceId: string): Promise<void> {
     await api.delete(`/admin/programs/${programId}/resources/${resourceId}`);
+  },
+
+  // ---- Content revisions ---------------------------------------------------
+  async listRevisions(programId: string): Promise<ProgramRevisionSummary[]> {
+    const { data } = await api.get(`/admin/programs/${programId}/revisions`);
+    return data.data ?? data;
+  },
+
+  async getRevision(
+    programId: string,
+    revisionId: string,
+  ): Promise<ProgramRevisionDetail> {
+    const { data } = await api.get(
+      `/admin/programs/${programId}/revisions/${revisionId}`,
+    );
+    return data.data ?? data;
+  },
+
+  async createRevision(
+    programId: string,
+    payload?: { label?: string },
+  ): Promise<ProgramRevisionSummary> {
+    const { data } = await api.post(
+      `/admin/programs/${programId}/revisions`,
+      payload ?? {},
+    );
+    return data.data ?? data;
+  },
+
+  async restoreRevision(
+    programId: string,
+    revisionId: string,
+  ): Promise<ProgramTree> {
+    const { data } = await api.post(
+      `/admin/programs/${programId}/revisions/${revisionId}/restore`,
+    );
+    return data.data ?? data;
   },
 };

@@ -1,4 +1,5 @@
-import { useForm, Controller, type Resolver } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, Controller, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -10,6 +11,8 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { programAddonService } from "@/services/programAddonService";
 import type { ProgramAddon } from "@/types/program";
+import { apiErrorMessage } from "@/utils/apiErrorMessage";
+import { toSlug } from "@/utils/toSlug";
 
 const schema = z.object({
   slug: z
@@ -18,10 +21,10 @@ const schema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Must be kebab-case"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  price: z.coerce.number().min(1, "Min ₹1"),
+  price: z.coerce.number().int("Must be a whole number").min(1, "Min ₹1"),
   grantsFormCheck: z.boolean(),
   isActive: z.boolean(),
-  sortOrder: z.coerce.number().min(0),
+  sortOrder: z.coerce.number().int().min(0),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -38,11 +41,13 @@ export function ProgramAddonFormModal({
   onSuccess,
 }: ProgramAddonFormModalProps) {
   const isEdit = !!addon;
+  const [slugTouched, setSlugTouched] = useState(isEdit);
 
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
@@ -57,7 +62,7 @@ export function ProgramAddonFormModal({
           sortOrder: addon.sortOrder,
         }
       : {
-          slug: "form-check",
+          slug: "",
           name: "",
           description: "",
           price: 999,
@@ -67,38 +72,55 @@ export function ProgramAddonFormModal({
         },
   });
 
+  const watchedName = useWatch({ control, name: "name" });
+
+  useEffect(() => {
+    if (isEdit || slugTouched) return;
+    const next = toSlug(watchedName || "");
+    setValue("slug", next, { shouldValidate: next.length > 0 });
+  }, [watchedName, isEdit, slugTouched, setValue]);
+
   const createMutation = useMutation({
     mutationFn: programAddonService.create,
     onSuccess: () => {
       toast.success("Program add-on created!");
       onSuccess();
     },
+    onError: (error) =>
+      toast.error(apiErrorMessage(error, "Failed to create program add-on")),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: Parameters<typeof programAddonService.update>) =>
-      programAddonService.update(...data),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Parameters<typeof programAddonService.update>[1];
+    }) => programAddonService.update(id, payload),
     onSuccess: () => {
       toast.success("Program add-on updated!");
       onSuccess();
     },
+    onError: (error) =>
+      toast.error(apiErrorMessage(error, "Failed to update program add-on")),
   });
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   function onSubmit(data: FormData) {
     const payload = {
-      slug: data.slug,
-      name: data.name,
-      description: data.description || null,
-      price: data.price,
+      slug: data.slug.trim(),
+      name: data.name.trim(),
+      description: data.description?.trim() || null,
+      price: Math.round(data.price),
       grantsFormCheck: data.grantsFormCheck,
       isActive: data.isActive,
-      sortOrder: data.sortOrder,
+      sortOrder: Math.round(data.sortOrder),
     };
 
     if (isEdit && addon) {
-      updateMutation.mutate([addon.id, payload]);
+      updateMutation.mutate({ id: addon.id, payload });
     } else {
       createMutation.mutate(payload);
     }
@@ -126,7 +148,9 @@ export function ProgramAddonFormModal({
               label="Slug"
               placeholder="form-check"
               error={errors.slug?.message}
-              {...register("slug")}
+              {...register("slug", {
+                onChange: () => setSlugTouched(true),
+              })}
             />
             <Input
               id="pa-name"
@@ -149,7 +173,9 @@ export function ProgramAddonFormModal({
               id="pa-price"
               label="Price (₹)"
               type="number"
-              min={0}
+              min={1}
+              step={1}
+              error={errors.price?.message}
               {...register("price")}
             />
             <Input
@@ -157,6 +183,8 @@ export function ProgramAddonFormModal({
               label="Sort Order"
               type="number"
               min={0}
+              step={1}
+              error={errors.sortOrder?.message}
               {...register("sortOrder")}
             />
           </div>

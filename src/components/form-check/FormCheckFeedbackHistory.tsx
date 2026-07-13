@@ -83,6 +83,22 @@ function FeedbackRow({
           </p>
         ) : null}
       </div>
+      {video.athleteReply?.trim() ? (
+        <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-600 dark:bg-gray-900/40">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+            Athlete reply
+            {formatReviewedAt(video.athleteRepliedAt) ? (
+              <span className="font-normal normal-case text-gray-500 dark:text-gray-400">
+                {" "}
+                · {formatReviewedAt(video.athleteRepliedAt)}
+              </span>
+            ) : null}
+          </p>
+          <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
+            {video.athleteReply}
+          </p>
+        </div>
+      ) : null}
     </article>
   );
 }

@@ -17,6 +17,8 @@ export interface FormCheckInboxItem {
   coachComment: string | null;
   coachCommentId: string | null;
   coachCommentUpdatedAt?: string | null;
+  athleteReply?: string | null;
+  athleteRepliedAt?: string | null;
   reviewed: boolean;
   exerciseNotes?: string | null;
   setNotes?: string | null;
@@ -65,6 +67,28 @@ export interface FormCheckInboxAthletesByPlan {
   ultra: FormCheckInboxAthlete[];
 }
 
+export interface FormCheckMissingAthlete {
+  userId: string;
+  userName: string | null;
+  userEmail: string;
+  planSlug: "mega" | "ultra";
+  planName: string;
+  subscriptionWeek: number;
+  blockStartWeek: number;
+  blockEndWeek: number;
+  uploadsThisWeek: number;
+  coachingSubscriptionId: string;
+  formCheckHandler: "assistant_coach" | "admin";
+  formCheckCoachId: string | null;
+  formCheckCoachName: string | null;
+}
+
+export interface FormCheckMissingResponse {
+  total: number;
+  mega: FormCheckMissingAthlete[];
+  ultra: FormCheckMissingAthlete[];
+}
+
 export const formCheckInboxService = {
   async list(params?: {
     uncommentedOnly?: boolean;
@@ -97,6 +121,14 @@ export const formCheckInboxService = {
           coachCommentUpdatedAt:
             (item.coachCommentUpdatedAt as string | null | undefined) ??
             (item.coach_comment_updated_at as string | null | undefined) ??
+            null,
+          athleteReply:
+            (item.athleteReply as string | null | undefined) ??
+            (item.athlete_reply as string | null | undefined) ??
+            null,
+          athleteRepliedAt:
+            (item.athleteRepliedAt as string | null | undefined) ??
+            (item.athlete_replied_at as string | null | undefined) ??
             null,
           reviewed:
             item.reviewed ??
@@ -136,6 +168,33 @@ export const formCheckInboxService = {
       formCheckCoachName: row.formCheckCoachName ?? null,
     });
     return {
+      mega: (payload.mega ?? []).map(normalize),
+      ultra: (payload.ultra ?? []).map(normalize),
+    };
+  },
+
+  async listMissing(): Promise<FormCheckMissingResponse> {
+    const { data } = await api.get("/admin/form-check-videos/missing");
+    const payload = data.data ?? data;
+    const normalize = (
+      row: Partial<FormCheckMissingAthlete>,
+    ): FormCheckMissingAthlete => ({
+      userId: row.userId!,
+      userName: row.userName ?? null,
+      userEmail: row.userEmail!,
+      planSlug: row.planSlug === "ultra" ? "ultra" : "mega",
+      planName: row.planName ?? "",
+      subscriptionWeek: row.subscriptionWeek ?? 0,
+      blockStartWeek: row.blockStartWeek ?? 0,
+      blockEndWeek: row.blockEndWeek ?? 0,
+      uploadsThisWeek: row.uploadsThisWeek ?? 0,
+      coachingSubscriptionId: row.coachingSubscriptionId ?? "",
+      formCheckHandler: row.formCheckHandler ?? "admin",
+      formCheckCoachId: row.formCheckCoachId ?? null,
+      formCheckCoachName: row.formCheckCoachName ?? null,
+    });
+    return {
+      total: payload.total ?? 0,
       mega: (payload.mega ?? []).map(normalize),
       ultra: (payload.ultra ?? []).map(normalize),
     };

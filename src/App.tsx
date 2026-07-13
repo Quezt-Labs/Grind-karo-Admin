@@ -22,6 +22,7 @@ import {
   CoachAthletesPage,
   CoachAthletesLocationPage,
   FormCheckInboxPage,
+  WorkspacePage,
   CoachingRenewalsPage,
   CoachOpsBoardPage,
   ChatPage,
@@ -94,6 +95,7 @@ export default function App() {
                   element={<CoachAthleteDetailPage />}
                 />
                 <Route path="/form-checks" element={<FormCheckInboxPage />} />
+                <Route path="/workspace" element={<WorkspacePage />} />
                 <Route
                   path="/coaching-renewals"
                   element={<CoachingRenewalsPage />}

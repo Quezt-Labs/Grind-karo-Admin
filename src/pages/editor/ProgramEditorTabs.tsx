@@ -5,7 +5,8 @@ export type ProgramEditorTab =
   | "compare"
   | "movement-selection"
   | "loads"
-  | "preview";
+  | "preview"
+  | "history";
 
 const TABS: { id: ProgramEditorTab; label: string; shortLabel: string }[] = [
   { id: "structure", label: "Structure", shortLabel: "Structure" },
@@ -17,6 +18,7 @@ const TABS: { id: ProgramEditorTab; label: string; shortLabel: string }[] = [
   },
   { id: "loads", label: "Load settings", shortLabel: "Loads" },
   { id: "preview", label: "Preview", shortLabel: "Preview" },
+  { id: "history", label: "History", shortLabel: "History" },
 ];
 
 interface ProgramEditorTabsProps {
@@ -47,6 +49,15 @@ export function ProgramEditorTabs({
             <span className="hidden sm:inline">{tab.label}</span>
           </button>
         ))}
+        <button
+          type="button"
+          disabled
+          title="Use Program Resources (slug: warmup) until structured warmup data is available"
+          className="shrink-0 cursor-not-allowed rounded-md px-3 py-2 text-sm font-medium text-gray-400 sm:px-4 dark:text-gray-500"
+        >
+          <span className="sm:hidden">Warmup</span>
+          <span className="hidden sm:inline">Warmup · soon</span>
+        </button>
       </div>
     </div>
   );

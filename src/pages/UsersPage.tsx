@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { Users, ShoppingCart, ClipboardList, Plus, Upload } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -21,8 +22,16 @@ import { CoachingSetupSection } from "./users/CoachingSetupSection";
 import { formatINR } from "./users/usersConstants";
 import type { Tab } from "./users/usersConstants";
 import type { CoachingSetupStatusFilter } from "@/types/user";
+
+const TAB_VALUES: Tab[] = ["all", "purchasers", "coaching-setup"];
+
+function parseTab(value: string | null): Tab {
+  return TAB_VALUES.includes(value as Tab) ? (value as Tab) : "all";
+}
+
 export function UsersPage() {
-  const [tab, setTab] = useState<Tab>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseTab(searchParams.get("tab"));
   const [search, setSearch] = useState("");
   const [showAddUser, setShowAddUser] = useState(false);
   const [showBulkAdd, setShowBulkAdd] = useState(false);
@@ -33,6 +42,21 @@ export function UsersPage() {
     useState<CoachingSetupStatusFilter>("awaiting_program");
   const [coachingSetupStateFilter, setCoachingSetupStateFilter] =
     useState<string>("");
+
+  const setTab = useCallback(
+    (next: Tab) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (next === "all") params.delete("tab");
+          else params.set("tab", next);
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const handleSearch = useCallback((value: string) => {
     setSearch(value);

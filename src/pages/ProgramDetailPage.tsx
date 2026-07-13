@@ -179,6 +179,15 @@ export function ProgramDetailPage() {
           </Button>
         </div>
 
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          Warmup: until structured warmup data lands, manage warmup here as a
+          markdown resource with slug{" "}
+          <code className="rounded bg-amber-100 px-1 font-mono dark:bg-amber-900/60">
+            warmup
+          </code>
+          .
+        </p>
+
         {guideResources.length === 0 ? (
           <EmptySection
             icon={<FileText className="h-8 w-8" />}

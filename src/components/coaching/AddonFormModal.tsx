@@ -1,4 +1,5 @@
-import { useForm, Controller, type Resolver } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, Controller, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -10,6 +11,8 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { addonService } from "@/services/addonService";
 import type { CoachingAddon } from "@/types/program";
+import { apiErrorMessage } from "@/utils/apiErrorMessage";
+import { toSlug } from "@/utils/toSlug";
 
 const addonSchema = z.object({
   slug: z
@@ -18,9 +21,9 @@ const addonSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Must be kebab-case"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  price: z.coerce.number().min(1, "Min ₹1"),
+  price: z.coerce.number().int("Must be a whole number").min(1, "Min ₹1"),
   isActive: z.boolean(),
-  sortOrder: z.coerce.number().min(0),
+  sortOrder: z.coerce.number().int().min(0),
 });
 
 type AddonFormData = z.infer<typeof addonSchema>;
@@ -37,11 +40,13 @@ export function AddonFormModal({
   onSuccess,
 }: AddonFormModalProps) {
   const isEdit = !!addon;
+  const [slugTouched, setSlugTouched] = useState(isEdit);
 
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<AddonFormData>({
     resolver: zodResolver(addonSchema) as Resolver<AddonFormData>,
@@ -58,11 +63,19 @@ export function AddonFormModal({
           slug: "",
           name: "",
           description: "",
-          price: 0,
+          price: 999,
           isActive: true,
           sortOrder: 0,
         },
   });
+
+  const watchedName = useWatch({ control, name: "name" });
+
+  useEffect(() => {
+    if (isEdit || slugTouched) return;
+    const next = toSlug(watchedName || "");
+    setValue("slug", next, { shouldValidate: next.length > 0 });
+  }, [watchedName, isEdit, slugTouched, setValue]);
 
   const createMutation = useMutation({
     mutationFn: addonService.create,
@@ -70,31 +83,40 @@ export function AddonFormModal({
       toast.success("Add-on created successfully!");
       onSuccess();
     },
+    onError: (error) =>
+      toast.error(apiErrorMessage(error, "Failed to create add-on")),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: Parameters<typeof addonService.update>) =>
-      addonService.update(...data),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Parameters<typeof addonService.update>[1];
+    }) => addonService.update(id, payload),
     onSuccess: () => {
       toast.success("Add-on updated successfully!");
       onSuccess();
     },
+    onError: (error) =>
+      toast.error(apiErrorMessage(error, "Failed to update add-on")),
   });
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   function onSubmit(data: AddonFormData) {
     const payload = {
-      slug: data.slug,
-      name: data.name,
-      description: data.description || null,
-      price: data.price,
+      slug: data.slug.trim(),
+      name: data.name.trim(),
+      description: data.description?.trim() || null,
+      price: Math.round(data.price),
       isActive: data.isActive,
-      sortOrder: data.sortOrder,
+      sortOrder: Math.round(data.sortOrder),
     };
 
     if (isEdit && addon) {
-      updateMutation.mutate([addon.id, payload]);
+      updateMutation.mutate({ id: addon.id, payload });
     } else {
       createMutation.mutate(payload);
     }
@@ -122,7 +144,9 @@ export function AddonFormModal({
               label="Slug"
               placeholder="nutrition-guidance"
               error={errors.slug?.message}
-              {...register("slug")}
+              {...register("slug", {
+                onChange: () => setSlugTouched(true),
+              })}
             />
             <Input
               id="addon-name"
@@ -147,8 +171,9 @@ export function AddonFormModal({
               id="addon-price"
               label="Price (₹)"
               type="number"
-              min={0}
-              placeholder="99900"
+              min={1}
+              step={1}
+              placeholder="999"
               error={errors.price?.message}
               {...register("price")}
             />
@@ -157,7 +182,9 @@ export function AddonFormModal({
               label="Sort Order"
               type="number"
               min={0}
+              step={1}
               placeholder="0"
+              error={errors.sortOrder?.message}
               {...register("sortOrder")}
             />
           </div>

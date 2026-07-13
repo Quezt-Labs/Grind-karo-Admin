@@ -10,6 +10,7 @@ import {
 } from "@/components/form-check/FormCheckInboxAthleteList";
 import { FormCheckInboxAthleteHeader } from "@/components/form-check/FormCheckInboxAthleteHeader";
 import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
+import { FormCheckMissingList } from "@/components/form-check/FormCheckMissingList";
 import { FormCheckQuotaBanner } from "@/components/form-check/FormCheckQuotaBanner";
 import { FormCheckWeekFilterBar } from "@/components/form-check/FormCheckWeekFilterBar";
 import { FormCheckDayFilterBar } from "@/components/form-check/FormCheckDayFilterBar";
@@ -28,12 +29,14 @@ import {
 import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
 import { useFormCheckInboxRoute } from "@/hooks/useFormCheckInboxRoute";
 import type { FormCheckInboxAthlete } from "@/services/formCheckInboxService";
+import { formCheckInboxService } from "@/services/formCheckInboxService";
 import { userService } from "@/services/userService";
 import {
   formatProgramDayLabel,
   formatProgramWeekLabel,
 } from "@/utils/formCheckWeekUtils";
 import { sortFeedbackVideos } from "@/utils/formCheckReview";
+import { cn } from "@/utils/cn";
 
 function athleteLabel(
   athlete: Pick<FormCheckInboxAthlete, "userName" | "userEmail">,
@@ -52,6 +55,7 @@ function filterAthletesByHandler(
 export function FormCheckInboxPage() {
   const route = useFormCheckInboxRoute();
   const {
+    view,
     tier: planTier,
     selectedUserId,
     reviewFilter,
@@ -59,6 +63,7 @@ export function FormCheckInboxPage() {
     handlerFilter,
     weekNumber,
     dayNumber,
+    setView,
     setPlanTier,
     setSelectedUserId,
     setReviewFilter,
@@ -68,6 +73,8 @@ export function FormCheckInboxPage() {
     setDayNumber,
     clearAthleteSelection,
   } = route;
+
+  const isMissingView = view === "missing";
 
   // Reset pagination whenever the filter/scope changes. Handled during render
   // (not an effect) to avoid a cascading re-render.
@@ -82,17 +89,23 @@ export function FormCheckInboxPage() {
   const { data: athletesData, isLoading: athletesLoading } =
     useFormCheckAthletes(reviewFilter);
 
+  const { data: missingData, isLoading: missingLoading } = useQuery({
+    queryKey: formCheckKeys.missing(),
+    queryFn: () => formCheckInboxService.listMissing(),
+    enabled: isMissingView,
+  });
+
   const { data: weekOptions = [] } = useFormCheckVideoWeeks({
     userId: selectedUserId,
     reviewFilter,
-    enabled: !!selectedUserId,
+    enabled: !!selectedUserId && !isMissingView,
   });
 
   const { data: dayOptions = [] } = useFormCheckVideoDays({
     userId: selectedUserId,
     reviewFilter,
     weekNumber,
-    enabled: !!selectedUserId,
+    enabled: !!selectedUserId && !isMissingView,
   });
 
   const {
@@ -111,7 +124,7 @@ export function FormCheckInboxPage() {
     weekNumber,
     dayNumber,
     limit: pageSize,
-    enabled: !!selectedUserId,
+    enabled: !!selectedUserId && !isMissingView,
   });
 
   const { bulkApply } = useFormCheckMutations(selectedUserId ?? undefined);
@@ -126,7 +139,7 @@ export function FormCheckInboxPage() {
   const { data: purchasesData } = useQuery({
     queryKey: formCheckKeys.purchases(selectedUserId ?? ""),
     queryFn: () => userService.getPurchases(selectedUserId!),
-    enabled: !!selectedUserId,
+    enabled: !!selectedUserId && !isMissingView,
   });
 
   const selectedAthlete = useMemo(() => {
@@ -144,6 +157,12 @@ export function FormCheckInboxPage() {
     [athletesData?.ultra],
   );
   const tierAthletes = planTier === "mega" ? megaAthletes : ultraAthletes;
+
+  const missingMega = missingData?.mega ?? [];
+  const missingUltra = missingData?.ultra ?? [];
+  const missingTierAthletes =
+    planTier === "mega" ? missingMega : missingUltra;
+  const missingTotal = missingData?.total ?? 0;
 
   const handlerCounts = useMemo(
     () => ({
@@ -177,6 +196,11 @@ export function FormCheckInboxPage() {
   }, [filteredQueue, selectedUserId]);
 
   const subtitle = useMemo(() => {
+    if (isMissingView) {
+      return missingTotal === 0
+        ? "All due athletes have uploaded this week"
+        : `${missingTotal} athlete${missingTotal === 1 ? "" : "s"} missing a form-check upload this week`;
+    }
     if (selectedUserId && selectedAthlete) {
       const weekLabel =
         weekNumber != null ? ` · ${formatProgramWeekLabel(weekNumber)}` : "";
@@ -201,6 +225,8 @@ export function FormCheckInboxPage() {
     }
     return `${globalPending} video${globalPending === 1 ? "" : "s"} waiting for review`;
   }, [
+    isMissingView,
+    missingTotal,
     selectedUserId,
     selectedAthlete,
     reviewFilter,
@@ -263,18 +289,64 @@ export function FormCheckInboxPage() {
     <div>
       <PageHeader title="Form Check Inbox" description={subtitle} />
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {(
+          [
+            { value: "inbox" as const, label: "Inbox" },
+            {
+              value: "missing" as const,
+              label: "Missing",
+              count: isMissingView ? missingTotal : undefined,
+            },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setView(tab.value)}
+            className={cn(
+              "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
+              view === tab.value
+                ? "bg-indigo-600 text-white"
+                : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800",
+            )}
+          >
+            {tab.label}
+            {"count" in tab && tab.count != null && tab.count > 0 ? (
+              <span
+                className={cn(
+                  "ml-2 rounded-full px-2 py-0.5 text-xs font-bold",
+                  view === tab.value
+                    ? "bg-white/20 text-white"
+                    : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200",
+                )}
+              >
+                {tab.count}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-4 border-b border-gray-200 pb-4 dark:border-gray-700">
         <FormCheckInboxTierTabs
           planTier={planTier}
-          megaAthletes={megaAthletes}
-          ultraAthletes={ultraAthletes}
-          megaPending={megaPending}
-          ultraPending={ultraPending}
+          megaAthletes={isMissingView ? missingMega : megaAthletes}
+          ultraAthletes={isMissingView ? missingUltra : ultraAthletes}
+          megaPending={isMissingView ? missingMega.length : megaPending}
+          ultraPending={isMissingView ? missingUltra.length : ultraPending}
+          pendingLabel={isMissingView ? "missing" : "pending"}
           onPlanChange={setPlanTier}
         />
       </div>
 
-      {selectedUserId ? (
+      {isMissingView ? (
+        <FormCheckMissingList
+          planTier={planTier}
+          athletes={missingTierAthletes}
+          isLoading={missingLoading}
+        />
+      ) : selectedUserId ? (
         <div className="space-y-4">
           <FormCheckInboxAthleteHeader
             planTier={planTier}

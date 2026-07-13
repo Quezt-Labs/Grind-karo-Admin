@@ -24,6 +24,9 @@ export interface CoachingPlan {
   badge: string | null;
   displayOrder: number;
   isActive: boolean;
+  maxSlots: number | null;
+  slotsTaken?: number;
+  slotsRemaining?: number | null;
   createdAt: string;
   updatedAt: string;
   availableAddons: PublicAddon[];
@@ -43,6 +46,7 @@ export interface CreateCoachingPlanPayload {
   badge?: string | null;
   displayOrder?: number;
   isActive?: boolean;
+  maxSlots?: number | null;
 }
 
 export type UpdateCoachingPlanPayload = Partial<CreateCoachingPlanPayload>;

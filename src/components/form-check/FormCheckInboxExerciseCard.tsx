@@ -166,12 +166,18 @@ function SavedCoachFeedback({
   comment,
   updatedAt,
   fromPriorUpload = false,
+  athleteReply,
+  athleteRepliedAt,
 }: {
   comment: string;
   updatedAt?: string | null;
   fromPriorUpload?: boolean;
+  athleteReply?: string | null;
+  athleteRepliedAt?: string | null;
 }) {
   const reviewDate = formatReviewDate(updatedAt);
+  const reply = athleteReply?.trim() ?? "";
+  const replyDate = formatReviewDate(athleteRepliedAt);
   return (
     <div
       className={cn(
@@ -204,6 +210,22 @@ function SavedCoachFeedback({
         <p className="mt-1.5 text-[10px] text-amber-700 dark:text-amber-400">
           From a previous upload of this set — latest video still needs review.
         </p>
+      ) : null}
+      {reply ? (
+        <div className="mt-2.5 rounded-md border border-gray-200 bg-white/80 px-2.5 py-2 dark:border-gray-600 dark:bg-gray-900/50">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+            Athlete reply
+            {replyDate ? (
+              <span className="font-normal normal-case text-gray-500 dark:text-gray-400">
+                {" "}
+                · {replyDate}
+              </span>
+            ) : null}
+          </p>
+          <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
+            {reply}
+          </p>
+        </div>
       ) : null}
     </div>
   );
@@ -307,6 +329,8 @@ function SetCommentPanelWithBulk({
           comment={savedComment}
           updatedAt={video.coachCommentUpdatedAt}
           fromPriorUpload={feedbackFromPriorUpload}
+          athleteReply={video.athleteReply}
+          athleteRepliedAt={video.athleteRepliedAt}
         />
       ) : null}
 

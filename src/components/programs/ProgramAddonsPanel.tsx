@@ -65,6 +65,7 @@ export function ProgramAddonsPanel({ programId }: ProgramAddonsPanelProps) {
       });
       setShowLink(false);
     },
+    onError: () => toast.error("Failed to link add-on"),
   });
 
   const unlinkMutation = useMutation({
@@ -77,6 +78,7 @@ export function ProgramAddonsPanel({ programId }: ProgramAddonsPanelProps) {
       });
       setUnlinkId(null);
     },
+    onError: () => toast.error("Failed to unlink add-on"),
   });
 
   const linkedIds = useMemo(() => new Set(linked.map((a) => a.id)), [linked]);

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { ChevronRight, Layers, Plus } from "lucide-react";
+import { ChevronRight, Layers, PanelLeftClose, Plus } from "lucide-react";
 import { cn } from "@/utils/cn";
 import type { Block } from "@/types/programs";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +20,7 @@ export interface ProgramBlockSidebarProps {
   onEditBlock: (block: Block) => void;
   onDeleteBlock: (block: Block) => void;
   onCloneBlock: (blockId: string) => void;
+  onCollapse?: () => void;
 }
 
 export const ProgramBlockSidebar = memo(function ProgramBlockSidebar({
@@ -30,6 +31,7 @@ export const ProgramBlockSidebar = memo(function ProgramBlockSidebar({
   onEditBlock,
   onDeleteBlock,
   onCloneBlock,
+  onCollapse,
 }: ProgramBlockSidebarProps) {
   return (
     <aside className="flex h-full w-full flex-col border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 lg:w-56 lg:shrink-0 lg:border-r">
@@ -37,16 +39,30 @@ export const ProgramBlockSidebar = memo(function ProgramBlockSidebar({
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Blocks
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onAddBlock}
-          className="h-8 w-8 p-0 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
-          title="Add block"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          {onCollapse && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCollapse}
+              className="hidden h-8 w-8 p-0 text-gray-500 lg:inline-flex"
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onAddBlock}
+            className="h-8 w-8 p-0 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+            title="Add block"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-2">

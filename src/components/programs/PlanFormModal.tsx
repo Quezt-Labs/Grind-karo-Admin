@@ -37,6 +37,10 @@ const planSchema = z.object({
   badge: z.string().optional(),
   displayOrder: z.coerce.number().min(0),
   isActive: z.boolean(),
+  maxSlots: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : v),
+    z.coerce.number().int().min(1).nullable(),
+  ),
 });
 
 type PlanFormData = z.infer<typeof planSchema>;
@@ -79,19 +83,21 @@ export function PlanFormModal({
           badge: plan.badge || "",
           displayOrder: plan.displayOrder,
           isActive: plan.isActive,
+          maxSlots: plan.maxSlots ?? null,
         }
       : {
           slug: "",
           name: "",
           tagline: "",
           description: "",
-          price: 0,
+          price: 4999,
           validityMonths: 3,
           includedFeatures: [{ value: "" }],
           excludedFeatures: [{ value: "" }],
           badge: "",
           displayOrder: 0,
           isActive: true,
+          maxSlots: null,
         },
   });
 
@@ -141,6 +147,7 @@ export function PlanFormModal({
       badge: data.badge || null,
       displayOrder: data.displayOrder,
       isActive: data.isActive,
+      maxSlots: data.maxSlots ?? null,
     };
 
     if (isEdit && plan) {
@@ -229,6 +236,16 @@ export function PlanFormModal({
             />
           </div>
 
+          <Input
+            id="plan-max-slots"
+            label="Max slots (blank = unlimited)"
+            type="number"
+            min={1}
+            placeholder="e.g. 10"
+            error={errors.maxSlots?.message}
+            {...register("maxSlots")}
+          />
+
           <Controller
             control={control}
             name="badge"
@@ -256,7 +273,7 @@ export function PlanFormModal({
 
           {/* Excluded Features */}
           <FeatureList
-            label="Excluded Features"
+            label="What's excluded"
             fields={excludedArray.fields}
             onAppend={() => excludedArray.append({ value: "" })}
             onRemove={(i) => excludedArray.remove(i)}

@@ -191,13 +191,15 @@ export function FormCheckInboxTierTabs({
   ultraAthletes,
   megaPending,
   ultraPending,
+  pendingLabel = "pending",
   onPlanChange,
 }: {
   planTier: PlanTier;
-  megaAthletes: FormCheckInboxAthlete[];
-  ultraAthletes: FormCheckInboxAthlete[];
+  megaAthletes: { length: number };
+  ultraAthletes: { length: number };
   megaPending: number;
   ultraPending: number;
+  pendingLabel?: string;
   onPlanChange: (tier: PlanTier) => void;
 }) {
   return (
@@ -231,7 +233,7 @@ export function FormCheckInboxTierTabs({
                     : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
                 )}
               >
-                {pending} pending
+                {pending} {pendingLabel}
               </span>
             ) : null}
           </button>

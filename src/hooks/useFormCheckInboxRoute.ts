@@ -6,11 +6,13 @@ export type PlanTier = "mega" | "ultra";
 export type ReviewFilter = "pending" | "reviewed" | "all";
 export type InboxLayout = "videos" | "feedback";
 export type HandlerFilter = "all" | "assistant_coach" | "admin";
+export type InboxView = "inbox" | "missing";
 
 const TIER_VALUES: PlanTier[] = ["mega", "ultra"];
 const REVIEW_VALUES: ReviewFilter[] = ["pending", "reviewed", "all"];
 const LAYOUT_VALUES: InboxLayout[] = ["videos", "feedback"];
 const HANDLER_VALUES: HandlerFilter[] = ["all", "assistant_coach", "admin"];
+const VIEW_VALUES: InboxView[] = ["inbox", "missing"];
 
 function parseTier(value: string | null): PlanTier {
   return TIER_VALUES.includes(value as PlanTier) ? (value as PlanTier) : "mega";
@@ -20,6 +22,12 @@ function parseReview(value: string | null): ReviewFilter {
   return REVIEW_VALUES.includes(value as ReviewFilter)
     ? (value as ReviewFilter)
     : "pending";
+}
+
+function parseView(value: string | null): InboxView {
+  return VIEW_VALUES.includes(value as InboxView)
+    ? (value as InboxView)
+    : "inbox";
 }
 
 function parseLayout(
@@ -55,6 +63,7 @@ export function useFormCheckInboxRoute() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isAssistantCoach = useIsAssistantCoach();
 
+  const view = parseView(searchParams.get("view"));
   const tier = parseTier(searchParams.get("tier"));
   const selectedUserId = searchParams.get("userId");
   const reviewFilter = parseReview(searchParams.get("review"));
@@ -94,6 +103,18 @@ export function useFormCheckInboxRoute() {
       );
     },
     [setSearchParams],
+  );
+
+  const setView = useCallback(
+    (next: InboxView) => {
+      patchParams({
+        view: next === "inbox" ? null : next,
+        userId: null,
+        week: null,
+        day: null,
+      });
+    },
+    [patchParams],
   );
 
   const setPlanTier = useCallback(
@@ -159,6 +180,7 @@ export function useFormCheckInboxRoute() {
 
   return useMemo(
     () => ({
+      view,
       tier,
       selectedUserId,
       reviewFilter,
@@ -166,6 +188,7 @@ export function useFormCheckInboxRoute() {
       handlerFilter,
       weekNumber,
       dayNumber,
+      setView,
       setPlanTier,
       setSelectedUserId,
       setReviewFilter,
@@ -176,6 +199,7 @@ export function useFormCheckInboxRoute() {
       clearAthleteSelection,
     }),
     [
+      view,
       tier,
       selectedUserId,
       reviewFilter,
@@ -183,6 +207,7 @@ export function useFormCheckInboxRoute() {
       handlerFilter,
       weekNumber,
       dayNumber,
+      setView,
       setPlanTier,
       setSelectedUserId,
       setReviewFilter,
