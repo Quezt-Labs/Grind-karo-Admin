@@ -15,20 +15,12 @@ import { Shimmer } from "@/components/ui/Shimmer";
 import { formCheckInboxService } from "@/services/formCheckInboxService";
 import { formCheckKeys } from "@/hooks/formCheckQueryKeys";
 import { useFormCheckPendingCount } from "@/hooks/useFormCheckPendingCount";
-import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
 import { coachOpsService } from "@/services/coachOpsService";
 import { userService } from "@/services/userService";
 import { cn } from "@/utils/cn";
+import { formatWeekDateRange } from "@/utils/weekDates";
 import type { CoachingSetupMember } from "@/types/user";
 import type { CoachOpsBoardItem } from "@/types/coachOps";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -110,13 +102,12 @@ export function WorkspacePage() {
   });
 
   const {
-    data: renewalsData,
-    isLoading: renewalsLoading,
-    isError: renewalsError,
+    data: endingData,
+    isLoading: endingLoading,
+    isError: endingError,
   } = useQuery({
-    queryKey: ["workspace-renewals", 7],
-    queryFn: () =>
-      coachingSubscriptionService.listRenewals({ expiringWithinDays: 7 }),
+    queryKey: ["workspace-programs-ending", 7],
+    queryFn: () => coachOpsService.listProgramsEnding({ withinDays: 7 }),
   });
 
   const {
@@ -134,15 +125,10 @@ export function WorkspacePage() {
     ...(missingData?.ultra ?? []),
   ];
   const missingTotal = missingData?.total ?? missingAthletes.length;
-  const renewalsDue =
-    (renewalsData?.counts.expiringSoon ?? 0) +
-    (renewalsData?.counts.overdueGrace ?? 0);
+  const programsEndingSoon = endingData?.total ?? 0;
 
   const pendingPrograms = setupData?.items ?? [];
-  const renewalPreview = [
-    ...(renewalsData?.overdueGrace ?? []),
-    ...(renewalsData?.expiringSoon ?? []),
-  ].slice(0, 8);
+  const endingPreview = (endingData?.items ?? []).slice(0, 8);
   const pendingVideoItems = pendingVideos?.items ?? [];
   const missingPreview = missingAthletes.slice(0, 4);
 
@@ -152,8 +138,8 @@ export function WorkspacePage() {
   const opsPayDone = opsItems.filter((i) => i.paymentDone).length;
   const opsTotal = opsItems.length;
 
-  const openActions = awaitingProgram + pendingReviewCount + renewalsDue;
-  const statsLoading = setupLoading || missingLoading || renewalsLoading;
+  const openActions = awaitingProgram + pendingReviewCount + programsEndingSoon;
+  const statsLoading = setupLoading || missingLoading || endingLoading;
 
   return (
     <div className="space-y-6">
@@ -196,13 +182,13 @@ export function WorkspacePage() {
             error={missingError || pendingVideosError}
           />
           <SummaryCard
-            title="Upcoming payments"
-            value={renewalsDue}
-            subtitle="Expiring soon or in grace"
+            title="Weeks ending"
+            value={programsEndingSoon}
+            subtitle="Last scheduled week ending soon — build next"
             icon={CalendarClock}
-            to="/coaching-renewals"
+            to="/coach/ops-board"
             tone="rose"
-            error={renewalsError}
+            error={endingError}
           />
         </div>
       )}
@@ -217,10 +203,10 @@ export function WorkspacePage() {
           error={setupError ? "Could not load pending programs." : null}
           rows={pendingPrograms.map((row) => ({
             id: row.id,
-            href: `/users/${row.id}`,
+            href: `/coaching/${row.id}/editor`,
             primary: athleteName(row.name, row.email),
             secondary: `${row.planName} · ${pendingProgramDateLabel(row)}`,
-            actionLabel: "Assign" as const,
+            actionLabel: "Build" as const,
           }))}
         />
 
@@ -268,23 +254,28 @@ export function WorkspacePage() {
         />
 
         <SectionCard
-          title="Upcoming payments / renewals"
-          href="/coaching-renewals"
-          emptyLabel="No renewals due in the next 7 days."
-          loading={renewalsLoading}
-          error={renewalsError ? "Could not load renewals." : null}
-          rows={renewalPreview.map((row) => {
-            const overdue = row.daysOverdue > 0;
+          title="Weeks ending soon"
+          href="/coach/ops-board"
+          emptyLabel="No scheduled weeks ending in the next 7 days."
+          loading={endingLoading}
+          error={endingError ? "Could not load ending weeks." : null}
+          rows={endingPreview.map((row) => {
+            const overdue = row.daysUntilEnd < 0;
+            const dateRange =
+              formatWeekDateRange(row.weekStart, row.weekEnd) ??
+              `until ${row.weekEnd}`;
+            const weekLabel = row.weekTitle?.trim() || `Week ${row.weekNumber}`;
             return {
-              id: row.subscriptionId,
-              href: `/users/${row.userId}?tab=coaching`,
-              primary: athleteName(row.userName, row.userEmail),
-              secondary: `${row.planName} · ${
-                overdue
-                  ? `${row.daysOverdue}d overdue`
-                  : `expires ${formatDate(row.expiresAt)}`
-              }`,
-              badge: overdue ? ("Overdue" as const) : ("Soon" as const),
+              id: `${row.programId}-${row.weekEnd}`,
+              href: `/coaching/${row.athleteId}/editor`,
+              primary: athleteName(row.athleteName, row.athleteEmail),
+              secondary: `${weekLabel} · ${dateRange}`,
+              actionLabel: "Build" as const,
+              badge: overdue
+                ? ("Ended" as const)
+                : row.daysUntilEnd === 0
+                  ? ("Today" as const)
+                  : ("Soon" as const),
               badgeTone: overdue ? ("rose" as const) : ("amber" as const),
             };
           })}

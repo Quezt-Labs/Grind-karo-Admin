@@ -27,6 +27,24 @@ export interface CoachOpsBoardResponse {
   total: number;
 }
 
+export interface ProgramEndingSoonItem {
+  athleteId: string;
+  athleteName: string | null;
+  athleteEmail: string;
+  programId: string;
+  weekNumber: number;
+  weekTitle: string | null;
+  weekStart: string | null;
+  weekEnd: string;
+  daysUntilEnd: number;
+}
+
+export interface ProgramsEndingSoonResponse {
+  withinDays: number;
+  items: ProgramEndingSoonItem[];
+  total: number;
+}
+
 export interface PatchCoachOpsEntryPayload {
   date: string;
   formChecksDone?: boolean;

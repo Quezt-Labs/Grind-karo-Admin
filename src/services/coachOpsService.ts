@@ -3,6 +3,7 @@ import type {
   CoachOpsBoardItem,
   CoachOpsBoardResponse,
   PatchCoachOpsEntryPayload,
+  ProgramsEndingSoonResponse,
 } from "@/types/coachOps";
 
 export const coachOpsService = {
@@ -11,6 +12,15 @@ export const coachOpsService = {
     coachFilter?: string;
   }): Promise<CoachOpsBoardResponse> {
     const { data } = await api.get("/coach/ops-board", { params });
+    return data.data ?? data;
+  },
+
+  async listProgramsEnding(params?: {
+    withinDays?: number;
+  }): Promise<ProgramsEndingSoonResponse> {
+    const { data } = await api.get("/coach/ops-board/programs-ending", {
+      params,
+    });
     return data.data ?? data;
   },
 
