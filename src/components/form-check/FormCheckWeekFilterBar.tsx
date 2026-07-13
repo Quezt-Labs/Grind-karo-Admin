@@ -1,6 +1,7 @@
 import { CalendarDays } from "lucide-react";
-import type { ProgramWeekOption } from "@/utils/formCheckWeekUtils";
+import type { ProgramWeekFilterModel } from "@/utils/formCheckWeekUtils";
 import {
+  FORM_CHECK_UNSCOPED,
   formatProgramDayLabel,
   formatProgramWeekLabel,
 } from "@/utils/formCheckWeekUtils";
@@ -43,19 +44,18 @@ function FilterChipCounts({
 }
 
 export function FormCheckWeekFilterBar({
-  weeks,
+  model,
   selectedWeek,
   onChange,
   className,
 }: {
-  weeks: ProgramWeekOption[];
+  model: ProgramWeekFilterModel;
   selectedWeek: number | null;
   onChange: (week: number | null) => void;
   className?: string;
 }) {
-  if (weeks.length === 0) return null;
-
-  const totalPending = weeks.reduce((sum, w) => sum + w.pendingCount, 0);
+  const { weeks, unscoped, totalPending } = model;
+  if (weeks.length === 0 && !unscoped) return null;
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -101,6 +101,25 @@ export function FormCheckWeekFilterBar({
             />
           </button>
         ))}
+        {unscoped ? (
+          <button
+            type="button"
+            onClick={() => onChange(FORM_CHECK_UNSCOPED)}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              selectedWeek === FORM_CHECK_UNSCOPED
+                ? "bg-indigo-600 text-white"
+                : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200",
+            )}
+          >
+            No week
+            <FilterChipCounts
+              videoCount={unscoped.videoCount}
+              pendingCount={unscoped.pendingCount}
+              selected={selectedWeek === FORM_CHECK_UNSCOPED}
+            />
+          </button>
+        ) : null}
       </div>
     </div>
   );

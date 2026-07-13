@@ -49,12 +49,14 @@ function parseHandler(value: string | null): HandlerFilter | null {
 
 function parseWeek(value: string | null): number | null {
   if (!value || value === "all") return null;
+  if (value === "none" || value === "-1") return -1;
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function parseDay(value: string | null): number | null {
   if (!value || value === "all") return null;
+  if (value === "none" || value === "-1") return -1;
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
@@ -155,14 +157,17 @@ export function useFormCheckInboxRoute() {
 
   const setWeekNumber = useCallback(
     (week: number | null) => {
-      patchParams({ week: week == null ? null : String(week) });
+      const weekParam =
+        week == null ? null : week === -1 ? "none" : String(week);
+      patchParams({ week: weekParam, day: null });
     },
     [patchParams],
   );
 
   const setDayNumber = useCallback(
     (day: number | null) => {
-      patchParams({ day: day == null ? null : String(day) });
+      const dayParam = day == null ? null : day === -1 ? "none" : String(day);
+      patchParams({ day: dayParam });
     },
     [patchParams],
   );

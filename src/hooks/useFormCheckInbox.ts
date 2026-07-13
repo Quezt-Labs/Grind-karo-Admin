@@ -8,6 +8,7 @@ import type { ReviewFilter } from "@/hooks/useFormCheckInboxRoute";
 import {
   formCheckInboxService,
   type FormCheckInboxAthlete,
+  type FormCheckInboxItem,
 } from "@/services/formCheckInboxService";
 import {
   dedupeFormCheckInboxItems,
@@ -23,6 +24,8 @@ import {
 import {
   collectProgramDayOptions,
   collectProgramWeekOptions,
+  FORM_CHECK_UNSCOPED,
+  isFormCheckUnscopedFilter,
 } from "@/utils/formCheckWeekUtils";
 
 function filterAthletesByReview(
@@ -31,6 +34,29 @@ function filterAthletesByReview(
 ): FormCheckInboxAthlete[] {
   if (reviewFilter !== "reviewed") return athletes;
   return athletes.filter((a) => a.totalCount > a.pendingCount);
+}
+
+function applyWeekDayClientFilter(
+  items: FormCheckInboxItem[],
+  weekNumber: number | null,
+  dayNumber: number | null,
+): FormCheckInboxItem[] {
+  let next = items;
+  if (isFormCheckUnscopedFilter(weekNumber)) {
+    next = next.filter((v) => v.weekNumber == null);
+  }
+  if (isFormCheckUnscopedFilter(dayNumber)) {
+    next = next.filter((v) => v.dayNumber == null);
+  }
+  return next;
+}
+
+function apiWeekParam(weekNumber: number | null): number | undefined {
+  return weekNumber != null && weekNumber > 0 ? weekNumber : undefined;
+}
+
+function apiDayParam(dayNumber: number | null): number | undefined {
+  return dayNumber != null && dayNumber > 0 ? dayNumber : undefined;
 }
 
 export function useFormCheckAthletes(reviewFilter: ReviewFilter) {
@@ -86,20 +112,22 @@ export function useFormCheckVideoDays(opts: {
   return useQuery({
     queryKey: formCheckKeys.videoDays(reviewFilter, userId ?? "", weekNumber),
     queryFn: async () => {
+      // Unscoped week has no day chips from API week filter — fetch all then scope.
       const data = await formCheckInboxService.list({
         userId: userId!,
         ...formCheckInboxListParams(reviewFilter),
-        weekNumber: weekNumber ?? undefined,
+        weekNumber: apiWeekParam(weekNumber),
         limit: FORM_CHECK_VIDEO_LIMIT,
       });
-      return collectProgramDayOptions(
-        dedupeFormCheckInboxItems(
-          filterVideosByReview(data.items, reviewFilter),
-        ),
-        weekNumber,
+      let items = dedupeFormCheckInboxItems(
+        filterVideosByReview(data.items, reviewFilter),
       );
+      if (isFormCheckUnscopedFilter(weekNumber)) {
+        items = items.filter((v) => v.weekNumber == null);
+      }
+      return collectProgramDayOptions(items, weekNumber);
     },
-    enabled: enabled && !!userId,
+    enabled: enabled && !!userId && !isFormCheckUnscopedFilter(weekNumber),
   });
 }
 
@@ -132,8 +160,8 @@ export function useFormCheckVideos(opts: {
       formCheckInboxService.list({
         userId: userId!,
         ...formCheckInboxListParams(reviewFilter),
-        weekNumber: weekNumber ?? undefined,
-        dayNumber: dayNumber ?? undefined,
+        weekNumber: apiWeekParam(weekNumber),
+        dayNumber: apiDayParam(dayNumber),
         limit,
       }),
     enabled: enabled && !!userId,
@@ -141,10 +169,14 @@ export function useFormCheckVideos(opts: {
 
   const videos = useMemo(
     () =>
-      dedupeFormCheckInboxItems(
-        filterVideosByReview(query.data?.items ?? [], reviewFilter),
+      applyWeekDayClientFilter(
+        dedupeFormCheckInboxItems(
+          filterVideosByReview(query.data?.items ?? [], reviewFilter),
+        ),
+        weekNumber,
+        dayNumber,
       ),
-    [query.data?.items, reviewFilter],
+    [query.data?.items, reviewFilter, weekNumber, dayNumber],
   );
 
   const exerciseGroups = useMemo(
@@ -172,17 +204,22 @@ export function useFormCheckVideos(opts: {
     [exerciseGroups],
   );
 
-  // Server total is program-scoped (source=program). Prefer it for "all"
-  // when it covers more than the loaded page; otherwise use loaded length.
   const fetchedCount = query.data?.items.length ?? 0;
   const serverTotal = query.data?.total ?? 0;
-  const hasMore =
-    serverTotal > 0 ? serverTotal > fetchedCount : fetchedCount >= limit;
+  const usingUnscopedFilter =
+    isFormCheckUnscopedFilter(weekNumber) ||
+    isFormCheckUnscopedFilter(dayNumber);
+  // Server total is undeduped / may ignore client unscoped filters — only trust
+  // it for pagination when we are not applying client-only filters.
+  const hasMore = usingUnscopedFilter
+    ? false
+    : serverTotal > 0
+      ? serverTotal > fetchedCount
+      : fetchedCount >= limit;
 
-  const totalSetCount =
-    reviewFilter === "all" && serverTotal > videos.length
-      ? serverTotal
-      : videos.length;
+  // Keep total/reviewed/pending on the same video set (never mix serverTotal
+  // with client-derived reviewed/pending — that caused chip vs header mismatches).
+  const totalSetCount = videos.length;
 
   return {
     ...query,
@@ -198,3 +235,5 @@ export function useFormCheckVideos(opts: {
     hasMore,
   };
 }
+
+export { FORM_CHECK_UNSCOPED };

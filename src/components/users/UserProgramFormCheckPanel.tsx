@@ -85,9 +85,14 @@ export function UserProgramFormCheckPanel({
   // looks empty when the athlete's queue is fully reviewed).
   const [reviewFilter, setReviewFilter] = useState<UserReviewFilter>("all");
   const [layout, setLayout] = useState<InboxLayout>("videos");
-  const [weekNumber, setWeekNumber] = useState<number | null>(null);
+  const [weekNumber, setWeekNumberState] = useState<number | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(null);
   const [pageSize, setPageSize] = useState(FORM_CHECK_VIDEO_LIMIT);
+
+  const setWeekNumber = (week: number | null) => {
+    setWeekNumberState(week);
+    setDayNumber(null);
+  };
 
   // "Review now" nudge: snap back to the pending queue when the parent bumps
   // the signal. Handled during render (not an effect) to avoid a cascading
@@ -115,12 +120,12 @@ export function UserProgramFormCheckPanel({
     else if (next === "reviewed") setLayout("feedback");
   };
 
-  const { data: weekOptions = [] } = useFormCheckVideoWeeks({
+  const { data: weekModel } = useFormCheckVideoWeeks({
     userId,
     reviewFilter,
   });
 
-  const { data: dayOptions = [] } = useFormCheckVideoDays({
+  const { data: dayModel } = useFormCheckVideoDays({
     userId,
     reviewFilter,
     weekNumber,
@@ -223,20 +228,20 @@ export function UserProgramFormCheckPanel({
         </div>
       ) : null}
 
-      {weekOptions.length > 0 ? (
+      {weekModel && (weekModel.weeks.length > 0 || weekModel.unscoped) ? (
         <div className="mb-4">
           <FormCheckWeekFilterBar
-            weeks={weekOptions}
+            model={weekModel}
             selectedWeek={weekNumber}
             onChange={setWeekNumber}
           />
         </div>
       ) : null}
 
-      {dayOptions.length > 0 ? (
+      {dayModel && (dayModel.days.length > 0 || dayModel.unscoped) ? (
         <div className="mb-4">
           <FormCheckDayFilterBar
-            days={dayOptions}
+            model={dayModel}
             selectedDay={dayNumber}
             onChange={setDayNumber}
           />

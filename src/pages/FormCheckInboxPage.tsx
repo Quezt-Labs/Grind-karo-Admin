@@ -95,13 +95,13 @@ export function FormCheckInboxPage() {
     enabled: isMissingView,
   });
 
-  const { data: weekOptions = [] } = useFormCheckVideoWeeks({
+  const { data: weekModel } = useFormCheckVideoWeeks({
     userId: selectedUserId,
     reviewFilter,
     enabled: !!selectedUserId && !isMissingView,
   });
 
-  const { data: dayOptions = [] } = useFormCheckVideoDays({
+  const { data: dayModel } = useFormCheckVideoDays({
     userId: selectedUserId,
     reviewFilter,
     weekNumber,
@@ -367,17 +367,17 @@ export function FormCheckInboxPage() {
             onLayoutChange={setLayout}
           />
 
-          {weekOptions.length > 0 ? (
+          {weekModel && (weekModel.weeks.length > 0 || weekModel.unscoped) ? (
             <FormCheckWeekFilterBar
-              weeks={weekOptions}
+              model={weekModel}
               selectedWeek={weekNumber}
               onChange={setWeekNumber}
             />
           ) : null}
 
-          {dayOptions.length > 0 ? (
+          {dayModel && (dayModel.days.length > 0 || dayModel.unscoped) ? (
             <FormCheckDayFilterBar
-              days={dayOptions}
+              model={dayModel}
               selectedDay={dayNumber}
               onChange={setDayNumber}
             />

@@ -1,6 +1,9 @@
 import { Sun } from "lucide-react";
-import type { ProgramDayOption } from "@/utils/formCheckWeekUtils";
-import { formatProgramDayLabel } from "@/utils/formCheckWeekUtils";
+import type { ProgramDayFilterModel } from "@/utils/formCheckWeekUtils";
+import {
+  FORM_CHECK_UNSCOPED,
+  formatProgramDayLabel,
+} from "@/utils/formCheckWeekUtils";
 import { cn } from "@/utils/cn";
 
 /** Avoid duplicate total+pending when every video in the chip is still pending. */
@@ -40,19 +43,18 @@ function FilterChipCounts({
 }
 
 export function FormCheckDayFilterBar({
-  days,
+  model,
   selectedDay,
   onChange,
   className,
 }: {
-  days: ProgramDayOption[];
+  model: ProgramDayFilterModel;
   selectedDay: number | null;
   onChange: (day: number | null) => void;
   className?: string;
 }) {
-  if (days.length === 0) return null;
-
-  const totalPending = days.reduce((sum, d) => sum + d.pendingCount, 0);
+  const { days, unscoped, totalPending } = model;
+  if (days.length === 0 && !unscoped) return null;
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -98,6 +100,25 @@ export function FormCheckDayFilterBar({
             />
           </button>
         ))}
+        {unscoped ? (
+          <button
+            type="button"
+            onClick={() => onChange(FORM_CHECK_UNSCOPED)}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              selectedDay === FORM_CHECK_UNSCOPED
+                ? "bg-indigo-600 text-white"
+                : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200",
+            )}
+          >
+            No day
+            <FilterChipCounts
+              videoCount={unscoped.videoCount}
+              pendingCount={unscoped.pendingCount}
+              selected={selectedDay === FORM_CHECK_UNSCOPED}
+            />
+          </button>
+        ) : null}
       </div>
     </div>
   );

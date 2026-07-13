@@ -1,6 +1,9 @@
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
 import { isFormCheckPending } from "@/utils/formCheckReview";
 
+/** Sentinel for videos with null weekNumber / dayNumber in filter UI + URL. */
+export const FORM_CHECK_UNSCOPED = -1;
+
 export type ProgramWeekOption = {
   weekNumber: number;
   videoCount: number;
@@ -14,7 +17,23 @@ export type ProgramDayOption = {
   pendingCount: number;
 };
 
+export type ProgramWeekFilterModel = {
+  weeks: ProgramWeekOption[];
+  unscoped: { videoCount: number; pendingCount: number } | null;
+  /** Pending across every video in the source list (including unscoped). */
+  totalPending: number;
+  totalVideos: number;
+};
+
+export type ProgramDayFilterModel = {
+  days: ProgramDayOption[];
+  unscoped: { videoCount: number; pendingCount: number } | null;
+  totalPending: number;
+  totalVideos: number;
+};
+
 export function formatProgramWeekLabel(weekNumber: number): string {
+  if (weekNumber === FORM_CHECK_UNSCOPED) return "No week";
   return `Week ${weekNumber}`;
 }
 
@@ -25,6 +44,8 @@ export function formatProgramDayLabel(
   dayNumber: number,
   dayLabel?: string | null,
 ): string {
+  if (dayNumber === FORM_CHECK_UNSCOPED) return "No day";
+
   const trimmed = dayLabel?.trim() ?? "";
   if (!trimmed) return `Day ${dayNumber}`;
 
@@ -49,19 +70,47 @@ export function formatProgramDayLabel(
   return `Day ${dayNumber} · ${trimmed}`;
 }
 
+export function isFormCheckUnscopedFilter(
+  value: number | null | undefined,
+): boolean {
+  return value === FORM_CHECK_UNSCOPED;
+}
+
 /** Unique program days from inbox items, optionally scoped to one week. */
 export function collectProgramDayOptions(
   items: FormCheckInboxItem[],
   weekNumber?: number | null,
-): ProgramDayOption[] {
+): ProgramDayFilterModel {
   const byDay = new Map<
     number,
     { dayLabel: string | null; videoCount: number; pendingCount: number }
   >();
+  let unscopedVideos = 0;
+  let unscopedPending = 0;
+  let totalPending = 0;
+  let totalVideos = 0;
 
   for (const item of items) {
-    if (item.dayNumber == null) continue;
-    if (weekNumber != null && item.weekNumber !== weekNumber) continue;
+    if (
+      weekNumber != null &&
+      weekNumber > 0 &&
+      item.weekNumber !== weekNumber
+    ) {
+      continue;
+    }
+    if (weekNumber === FORM_CHECK_UNSCOPED && item.weekNumber != null) {
+      continue;
+    }
+
+    totalVideos += 1;
+    if (isFormCheckPending(item)) totalPending += 1;
+
+    if (item.dayNumber == null) {
+      unscopedVideos += 1;
+      if (isFormCheckPending(item)) unscopedPending += 1;
+      continue;
+    }
+
     const row = byDay.get(item.dayNumber) ?? {
       dayLabel: item.dayLabel ?? null,
       videoCount: 0,
@@ -79,14 +128,22 @@ export function collectProgramDayOptions(
     byDay.set(item.dayNumber, row);
   }
 
-  return [...byDay.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([dayNumber, stats]) => ({
-      dayNumber,
-      dayLabel: stats.dayLabel,
-      videoCount: stats.videoCount,
-      pendingCount: stats.pendingCount,
-    }));
+  return {
+    days: [...byDay.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([dayNumber, stats]) => ({
+        dayNumber,
+        dayLabel: stats.dayLabel,
+        videoCount: stats.videoCount,
+        pendingCount: stats.pendingCount,
+      })),
+    unscoped:
+      unscopedVideos > 0
+        ? { videoCount: unscopedVideos, pendingCount: unscopedPending }
+        : null,
+    totalPending,
+    totalVideos,
+  };
 }
 
 export function formatProgramWeekDayLabel(
@@ -101,14 +158,26 @@ export function formatProgramWeekDayLabel(
 /** Unique program weeks from inbox items, sorted ascending. */
 export function collectProgramWeekOptions(
   items: FormCheckInboxItem[],
-): ProgramWeekOption[] {
+): ProgramWeekFilterModel {
   const byWeek = new Map<
     number,
     { videoCount: number; pendingCount: number }
   >();
+  let unscopedVideos = 0;
+  let unscopedPending = 0;
+  let totalPending = 0;
+  let totalVideos = 0;
 
   for (const item of items) {
-    if (item.weekNumber == null) continue;
+    totalVideos += 1;
+    if (isFormCheckPending(item)) totalPending += 1;
+
+    if (item.weekNumber == null) {
+      unscopedVideos += 1;
+      if (isFormCheckPending(item)) unscopedPending += 1;
+      continue;
+    }
+
     const row = byWeek.get(item.weekNumber) ?? {
       videoCount: 0,
       pendingCount: 0,
@@ -118,10 +187,18 @@ export function collectProgramWeekOptions(
     byWeek.set(item.weekNumber, row);
   }
 
-  return [...byWeek.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([weekNumber, stats]) => ({
-      weekNumber,
-      ...stats,
-    }));
+  return {
+    weeks: [...byWeek.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([weekNumber, stats]) => ({
+        weekNumber,
+        ...stats,
+      })),
+    unscoped:
+      unscopedVideos > 0
+        ? { videoCount: unscopedVideos, pendingCount: unscopedPending }
+        : null,
+    totalPending,
+    totalVideos,
+  };
 }
