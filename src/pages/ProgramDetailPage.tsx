@@ -179,13 +179,15 @@ export function ProgramDetailPage() {
           </Button>
         </div>
 
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          Warmup: until structured warmup data lands, manage warmup here as a
-          markdown resource with slug{" "}
-          <code className="rounded bg-amber-100 px-1 font-mono dark:bg-amber-900/60">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+          Warmups auto-resolve on athlete workouts from working load (squat /
+          bench / deadlift). Open the program editor{" "}
+          <span className="font-semibold">Warmup</span> tab to browse the chart.
+          Optional markdown resources (slug{" "}
+          <code className="rounded bg-emerald-100 px-1 font-mono dark:bg-emerald-900/60">
             warmup
           </code>
-          .
+          ) can still hold technique notes.
         </p>
 
         {guideResources.length === 0 ? (

@@ -25,6 +25,7 @@ import { useProgramEditorRoute } from "@/hooks/useProgramEditorRoute";
 import { useCoachAthleteContext } from "@/hooks/useCoachAthleteContext";
 import { useIsAssistantCoach } from "@/hooks/useRole";
 import { ProgramComparePanel } from "./editor/ProgramComparePanel";
+import { ProgramWarmupPanel } from "./editor/ProgramWarmupPanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
 import { hasPersonalCoachingSubscription } from "@/utils/coachingCapabilities";
@@ -451,6 +452,8 @@ export function ProgramEditorPage() {
             {structureEditor}
           </div>
         )}
+
+        {activeTab === "warmup" && <ProgramWarmupPanel />}
 
         {/* Modals */}
         {blockModal.open && (
