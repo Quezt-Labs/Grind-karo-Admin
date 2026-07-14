@@ -1,16 +1,30 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Crown, UserMinus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowDownUp, Crown, UserMinus } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/ShadDialog";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
+import { planService } from "@/services/planService";
 import {
   activeCoachingSubscriptions,
   orderedActiveCoachingSubscriptions,
 } from "@/utils/coachingCapabilities";
+import { apiErrorMessage } from "@/utils/apiErrorMessage";
+import { formatINR } from "@/pages/users/usersConstants";
 import type { Purchase } from "@/types/user";
+import type { CoachingPlan } from "@/types/program";
 import { cn } from "@/utils/cn";
 
 type Props = {
@@ -19,6 +33,14 @@ type Props = {
   primarySubscriptionId?: string | null;
   onUpdated?: () => void;
   onSelectSubscription?: (subscriptionId: string) => void;
+};
+
+type ActiveCoachingSub = Extract<Purchase, { kind: "coaching_subscription" }>;
+
+type SwitchTarget = {
+  subscription: ActiveCoachingSub;
+  targetPlan: CoachingPlan;
+  direction: "upgrade" | "downgrade";
 };
 
 function formatDate(iso: string) {
@@ -50,6 +72,43 @@ function overdueGraceInfo(sub: { status: string; expiresAt: string }) {
     : { daysLeft: 0, pastGrace: true as const };
 }
 
+function normalizeSlug(slug: string) {
+  return slug.trim().toLowerCase();
+}
+
+function switchPartnerSlug(slug: string): "mega" | "ultra" | null {
+  const key = normalizeSlug(slug);
+  if (key === "mini") return "mega";
+  if (key === "mega") return "ultra";
+  if (key === "ultra") return "mega";
+  return null;
+}
+
+function switchDirectionFor(
+  fromSlug: string,
+  toSlug: string,
+): "upgrade" | "downgrade" {
+  const from = normalizeSlug(fromSlug);
+  const to = normalizeSlug(toSlug);
+  if (from === "ultra" && to === "mega") return "downgrade";
+  return "upgrade";
+}
+
+function switchButtonLabel(fromSlug: string, toSlug: string): string {
+  const to = normalizeSlug(toSlug);
+  const direction = switchDirectionFor(fromSlug, toSlug);
+  const targetName = to === "ultra" ? "Ultra" : to === "mega" ? "Mega" : to;
+  return direction === "upgrade"
+    ? `Upgrade to ${targetName}`
+    : `Downgrade to ${targetName}`;
+}
+
+function switchDialogTitle(direction: "upgrade" | "downgrade", toName: string) {
+  return direction === "upgrade"
+    ? `Upgrade to ${toName}?`
+    : `Downgrade to ${toName}?`;
+}
+
 export function UserActiveCoachingPlansPanel({
   userId,
   purchases,
@@ -62,6 +121,22 @@ export function UserActiveCoachingPlansPanel({
     id: string;
     planName: string;
   } | null>(null);
+  const [switchTarget, setSwitchTarget] = useState<SwitchTarget | null>(null);
+  const [switchAmount, setSwitchAmount] = useState("");
+  const [switchReason, setSwitchReason] = useState("");
+
+  const { data: plans = [] } = useQuery({
+    queryKey: ["coaching-plans"],
+    queryFn: () => planService.getAll(),
+  });
+
+  const plansBySlug = useMemo(() => {
+    const map = new Map<string, CoachingPlan>();
+    for (const plan of plans) {
+      if (plan.isActive) map.set(normalizeSlug(plan.slug), plan);
+    }
+    return map;
+  }, [plans]);
 
   const activePlans = orderedActiveCoachingSubscriptions(
     purchases,
@@ -104,6 +179,62 @@ export function UserActiveCoachingPlansPanel({
     onError: () => toast.error("Failed to remove athlete from plan"),
   });
 
+  const switchMutation = useMutation({
+    mutationFn: () => {
+      if (!switchTarget) throw new Error("No switch target");
+      const amount = switchAmount.trim();
+      const parsed = amount === "" ? undefined : Number.parseInt(amount, 10);
+      if (parsed !== undefined && (!Number.isFinite(parsed) || parsed < 0)) {
+        throw new Error("Settlement amount must be a non-negative number");
+      }
+      const reason = switchReason.trim();
+      if (reason.length < 3) {
+        throw new Error("Reason must be at least 3 characters");
+      }
+      return coachingSubscriptionService.switchPlan(
+        switchTarget.subscription.id,
+        {
+          targetPlanId: switchTarget.targetPlan.id,
+          totalAmount: parsed,
+          reason,
+        },
+      );
+    },
+    onSuccess: () => {
+      const label =
+        switchTarget?.direction === "upgrade" ? "Upgraded" : "Downgraded";
+      toast.success(
+        `${label} to ${switchTarget?.targetPlan.name ?? "new plan"} — dates carried over`,
+      );
+      setSwitchTarget(null);
+      setSwitchAmount("");
+      setSwitchReason("");
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-user-purchases", userId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-user", userId],
+      });
+      onUpdated?.();
+    },
+    onError: (err: unknown) =>
+      toast.error(apiErrorMessage(err, "Failed to switch plan")),
+  });
+
+  function openSwitch(sub: ActiveCoachingSub) {
+    const partner = switchPartnerSlug(sub.planSlug);
+    if (!partner) return;
+    const targetPlan = plansBySlug.get(partner);
+    if (!targetPlan) {
+      toast.error(`${partner.toUpperCase()} plan not found or inactive`);
+      return;
+    }
+    const direction = switchDirectionFor(sub.planSlug, partner);
+    setSwitchTarget({ subscription: sub, targetPlan, direction });
+    setSwitchAmount(String(targetPlan.price));
+    setSwitchReason("");
+  }
+
   if (activeCoachingSubscriptions(purchases).length === 0) {
     return null;
   }
@@ -124,7 +255,7 @@ export function UserActiveCoachingPlansPanel({
           <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
             {multiple
               ? "Choose which plan drives the athlete app and program editor. Remove plans the athlete should no longer access."
-              : "Manage this athlete's coaching access."}
+              : "Manage this athlete's coaching access. Switch Mini → Mega, Mega → Ultra, or Ultra → Mega while keeping remaining days."}
           </p>
         </div>
       </div>
@@ -133,6 +264,10 @@ export function UserActiveCoachingPlansPanel({
         {activePlans.map((sub) => {
           const isPrimary = sub.id === pinnedId;
           const grace = overdueGraceInfo(sub);
+          const partner = switchPartnerSlug(sub.planSlug);
+          const switchLabel = partner
+            ? switchButtonLabel(sub.planSlug, partner)
+            : null;
 
           return (
             <div
@@ -189,6 +324,16 @@ export function UserActiveCoachingPlansPanel({
                       Show in app
                     </label>
                   )}
+                  {switchLabel && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => openSwitch(sub)}
+                    >
+                      <ArrowDownUp className="mr-1 h-3.5 w-3.5" />
+                      {switchLabel}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="secondary"
@@ -218,6 +363,98 @@ export function UserActiveCoachingPlansPanel({
           onCancel={() => setCancelTarget(null)}
           isLoading={cancelMutation.isPending}
         />
+      )}
+
+      {switchTarget && (
+        <Dialog
+          open
+          onOpenChange={(next) => {
+            if (!next && !switchMutation.isPending) {
+              setSwitchTarget(null);
+              setSwitchAmount("");
+              setSwitchReason("");
+            }
+          }}
+        >
+          <DialogContent className="max-w-md" showClose={false}>
+            <DialogHeader>
+              <DialogTitle>
+                {switchDialogTitle(
+                  switchTarget.direction,
+                  normalizeSlug(switchTarget.targetPlan.slug) === "ultra"
+                    ? "Ultra"
+                    : normalizeSlug(switchTarget.targetPlan.slug) === "mega"
+                      ? "Mega"
+                      : switchTarget.targetPlan.name,
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                Switch from {switchTarget.subscription.planName} to{" "}
+                {switchTarget.targetPlan.name}. Start and expiry stay the same (
+                {formatDate(switchTarget.subscription.startDate)} –{" "}
+                {formatDate(switchTarget.subscription.expiresAt)}). The old plan
+                is cancelled and this becomes the primary plan in the app.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-1">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Settlement amount (₹)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={switchAmount}
+                  onChange={(e) => setSwitchAmount(e.target.value)}
+                  placeholder={String(switchTarget.targetPlan.price)}
+                  disabled={switchMutation.isPending}
+                />
+                <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  Default {formatINR(switchTarget.targetPlan.price)} (plan
+                  price). Use 0 for a free switch.
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Reason
+                </label>
+                <Textarea
+                  value={switchReason}
+                  onChange={(e) => setSwitchReason(e.target.value)}
+                  placeholder="e.g. Athlete requested upgrade — UPI settlement on WhatsApp"
+                  rows={3}
+                  disabled={switchMutation.isPending}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mt-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSwitchTarget(null);
+                  setSwitchAmount("");
+                  setSwitchReason("");
+                }}
+                disabled={switchMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => switchMutation.mutate()}
+                isLoading={switchMutation.isPending}
+                disabled={switchReason.trim().length < 3}
+              >
+                {switchTarget.direction === "upgrade"
+                  ? "Confirm upgrade"
+                  : "Confirm downgrade"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </section>
   );

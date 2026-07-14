@@ -42,6 +42,7 @@ const TYPE_LABEL: Record<CoachingBillingAdjustment["type"], string> = {
   MANUAL_PAYMENT: "Manual payment",
   DATE_CORRECTION: "Dates corrected",
   FEE_CORRECTION: "Lifter fee updated",
+  PLAN_CHANGE: "Plan changed",
 };
 
 type Props = {
