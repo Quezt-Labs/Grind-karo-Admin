@@ -1,9 +1,17 @@
-import { ExternalLink, User } from "lucide-react";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Bell, ExternalLink, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import { FormCheckHandlerBadge } from "@/components/form-check/FormCheckHandlerBadge";
+import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
-import type { FormCheckMissingAthlete } from "@/services/formCheckInboxService";
+import {
+  formCheckInboxService,
+  type FormCheckMissingAthlete,
+} from "@/services/formCheckInboxService";
 import type { PlanTier } from "@/hooks/useFormCheckInboxRoute";
+import { apiErrorMessage } from "@/utils/apiErrorMessage";
 import { cn } from "@/utils/cn";
 
 function athleteLabel(
@@ -21,6 +29,24 @@ export function FormCheckMissingList({
   athletes: FormCheckMissingAthlete[];
   isLoading: boolean;
 }) {
+  const [sendingUserId, setSendingUserId] = useState<string | null>(null);
+
+  const remindMutation = useMutation({
+    mutationFn: (userId: string) =>
+      formCheckInboxService.sendUploadReminder(userId),
+    onMutate: (userId) => setSendingUserId(userId),
+    onSuccess: (res) => {
+      toast.success(
+        res.pushSent > 0
+          ? "Reminder sent — app modal + push"
+          : "Reminder set — athlete will see the in-app modal",
+      );
+    },
+    onError: (err: unknown) =>
+      toast.error(apiErrorMessage(err, "Failed to send reminder")),
+    onSettled: () => setSendingUserId(null),
+  });
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-16">
@@ -46,6 +72,9 @@ export function FormCheckMissingList({
       <p className="text-sm text-gray-500 dark:text-gray-400">
         Athletes due a form-check this coaching week (MEGA: weeks 2 &amp; 4 of
         each 4-week quota window; ULTRA: every week) with zero uploads so far.
+        Auto reminders also go out every 2 days once the week is underway — use{" "}
+        <span className="font-medium">Send reminder</span> anytime for an
+        immediate in-app modal.
       </p>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
         {athletes.map((athlete) => (
@@ -81,8 +110,20 @@ export function FormCheckMissingList({
                   Quota weeks {athlete.blockStartWeek}–{athlete.blockEndWeek}
                 </span>
               </div>
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={remindMutation.isPending}
+                  isLoading={sendingUserId === athlete.userId}
+                  onClick={() => remindMutation.mutate(athlete.userId)}
+                >
+                  <Bell className="mr-1 h-3.5 w-3.5" />
+                  Send reminder
+                </Button>
+              </div>
             </div>
-            <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
+            <span className="shrink-0 self-start rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
               0 uploads
             </span>
           </div>

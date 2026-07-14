@@ -213,4 +213,13 @@ export const formCheckInboxService = {
       ultra: (payload.ultra ?? []).map(normalize),
     };
   },
+
+  async sendUploadReminder(
+    userId: string,
+  ): Promise<{ success: true; pushSent: number }> {
+    const { data } = await api.post(
+      `/admin/form-check-videos/users/${userId}/remind`,
+    );
+    return data.data ?? data;
+  },
 };
