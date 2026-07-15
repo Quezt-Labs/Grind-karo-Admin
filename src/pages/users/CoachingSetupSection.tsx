@@ -29,6 +29,7 @@ type Props = {
   onStateFilterChange: (value: string) => void;
   counts?: {
     needsIntake: number;
+    needsSbdVideos: number;
     awaitingProgram: number;
     ready: number;
   };
@@ -137,6 +138,9 @@ export const CoachingSetupSection = memo(function CoachingSetupSection({
     <div className="space-y-3">
       {counts && (
         <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-violet-100 px-2.5 py-1 font-medium text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+            Needs SBD videos: {counts.needsSbdVideos}
+          </span>
           <span className="rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
             Awaiting program: {counts.awaitingProgram}
           </span>
@@ -201,6 +205,7 @@ function StatusFilter({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="awaiting_program">Awaiting program</SelectItem>
+        <SelectItem value="needs_sbd_videos">Needs SBD videos</SelectItem>
         <SelectItem value="needs_intake">Needs intake</SelectItem>
         <SelectItem value="ready">Ready</SelectItem>
         <SelectItem value="all">All active coaching</SelectItem>

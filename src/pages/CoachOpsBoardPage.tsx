@@ -89,6 +89,7 @@ function attentionScore(item: CoachOpsBoardItem, date: string): number {
   let score = 0;
   if (isCheckInDue(item, date)) score += 40;
   if (item.setupStatus === "awaiting_program") score += 30;
+  if (item.setupStatus === "needs_sbd_videos") score += 25;
   if (item.setupStatus === "needs_intake") score += 20;
   if (!item.formChecksDone) score += 10;
   if (!item.paymentDone) score += 5;

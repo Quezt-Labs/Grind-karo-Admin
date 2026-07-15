@@ -2,6 +2,7 @@ import { cn } from "@/utils/cn";
 
 const coachingSetupStatusLabel: Record<string, string> = {
   needs_intake: "Needs intake",
+  needs_sbd_videos: "Needs SBD videos",
   awaiting_program: "Awaiting program",
   ready: "Ready",
 };
@@ -15,6 +16,8 @@ export function CoachingSetupStatusBadge({ status }: { status: string }) {
           "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
         status === "awaiting_program" &&
           "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+        status === "needs_sbd_videos" &&
+          "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300",
         status === "needs_intake" &&
           "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
       )}

@@ -280,7 +280,11 @@ export interface UserInfo {
 
 // ---- Coaching setup queue -----------------------------------------------
 
-export type CoachingSetupStatus = "needs_intake" | "awaiting_program" | "ready";
+export type CoachingSetupStatus =
+  | "needs_intake"
+  | "needs_sbd_videos"
+  | "awaiting_program"
+  | "ready";
 
 export type CoachingSetupStatusFilter = CoachingSetupStatus | "all";
 
@@ -303,6 +307,7 @@ export interface CoachingSetupMember {
 
 export interface CoachingSetupCounts {
   needsIntake: number;
+  needsSbdVideos: number;
   awaitingProgram: number;
   ready: number;
 }
@@ -313,6 +318,25 @@ export interface CoachingSetupListResponse {
   offset: number;
   counts: CoachingSetupCounts;
   items: CoachingSetupMember[];
+}
+
+export type SbdBaselineLift = "squat" | "bench" | "deadlift";
+
+export interface SbdBaselineVideoItemDto {
+  lift: SbdBaselineLift;
+  videoUrl: string | null;
+  notes: string | null;
+  uploadedAt: string | null;
+  coachComment: string | null;
+  coachCommentedAt: string | null;
+}
+
+export interface SbdBaselineStatusDto {
+  lifts: SbdBaselineVideoItemDto[];
+  uploadedCount: number;
+  complete: boolean;
+  skipped: boolean;
+  skippedAt: string | null;
 }
 
 // ---- Notifications ------------------------------------------------------

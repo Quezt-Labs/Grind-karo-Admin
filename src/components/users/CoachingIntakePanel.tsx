@@ -1,6 +1,7 @@
 import { ClipboardList } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { AthleteLocationEditor } from "@/components/users/AthleteLocationEditor";
+import { SbdBaselinePanel } from "@/components/users/SbdBaselinePanel";
 import type { UserInfo } from "@/types/user";
 
 function formatEnum(value: string): string {
@@ -96,6 +97,7 @@ export function CoachingIntakePanel({
         </div>
       ) : (
         <div className="space-y-4">
+          <SbdBaselinePanel userId={userId} />
           <AthleteLocationEditor userId={userId} intake={intake} />
 
           <Section title="Personal info">

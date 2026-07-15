@@ -1,4 +1,8 @@
-export type CoachingSetupStatus = "needs_intake" | "awaiting_program" | "ready";
+export type CoachingSetupStatus =
+  | "needs_intake"
+  | "needs_sbd_videos"
+  | "awaiting_program"
+  | "ready";
 
 export interface CoachOpsCoachFilter {
   id: string;

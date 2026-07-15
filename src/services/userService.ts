@@ -12,6 +12,7 @@ import type {
   CreateAdminUserResponse,
   BulkCreateUsersResponse,
   UserInfo,
+  SbdBaselineStatusDto,
 } from "@/types/user";
 import type { AdminWorkoutLogsResponse } from "@/types/workoutLogs";
 
@@ -72,6 +73,23 @@ export const userService = {
     const { data } = await api.patch(
       `/admin/users/${userId}/location`,
       payload,
+    );
+    return data.data ?? data;
+  },
+
+  async getSbdBaseline(userId: string): Promise<SbdBaselineStatusDto> {
+    const { data } = await api.get(`/admin/users/${userId}/sbd-baseline`);
+    return data.data ?? data;
+  },
+
+  async commentSbdBaseline(
+    userId: string,
+    lift: string,
+    comment: string,
+  ): Promise<SbdBaselineStatusDto> {
+    const { data } = await api.post(
+      `/admin/users/${userId}/sbd-baseline/${lift}/comment`,
+      { comment },
     );
     return data.data ?? data;
   },
@@ -166,7 +184,13 @@ export const userService = {
   },
 
   async impersonate(userId: string): Promise<{
-    user: { id: string; name: string | null; email: string; role: string; plan: string | null };
+    user: {
+      id: string;
+      name: string | null;
+      email: string;
+      role: string;
+      plan: string | null;
+    };
     accessToken: string;
     refreshToken: string;
   }> {
