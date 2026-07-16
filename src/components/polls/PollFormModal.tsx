@@ -13,9 +13,21 @@ import type { CouponScope } from "@/types/coupon";
 import type { CreatePollPayload, Poll, PollOptionInput } from "@/types/poll";
 
 const SCOPE_OPTIONS = [
-  { value: "ALL", label: "All products" },
-  { value: "PROGRAMS", label: "Programs only" },
-  { value: "COACHING_PLANS", label: "Coaching plans only" },
+  {
+    value: "PROGRAMS",
+    label: "Programs only",
+    info: "Valid only on program checkout",
+  },
+  {
+    value: "COACHING_PLANS",
+    label: "Coaching only",
+    info: "Valid only on coaching plan checkout",
+  },
+  {
+    value: "ALL",
+    label: "Programs + coaching",
+    info: "Valid on both programs and coaching",
+  },
 ];
 
 interface PollFormModalProps {
@@ -212,69 +224,95 @@ export function PollFormModal({
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              label="Participation % off"
-              type="number"
-              min={1}
-              max={100}
-              value={participationDiscountValue}
-              onChange={(e) => setParticipationDiscountValue(e.target.value)}
-            />
-            <Input
-              label="Winner % off"
-              type="number"
-              min={1}
-              max={100}
-              value={winnerDiscountValue}
-              onChange={(e) => setWinnerDiscountValue(e.target.value)}
-            />
-            <Select
-              label="Participation scope"
-              value={participationScope}
-              onValueChange={(value) =>
-                setParticipationScope(value as CouponScope)
-              }
-              options={SCOPE_OPTIONS}
-            />
-            <Select
-              label="Winner scope"
-              value={winnerScope}
-              onValueChange={(value) => setWinnerScope(value as CouponScope)}
-              options={SCOPE_OPTIONS}
-            />
-            <Input
-              label="Participation coupon expires"
-              type="datetime-local"
-              value={participationExpiresAt}
-              onChange={(e) => setParticipationExpiresAt(e.target.value)}
-            />
-            <Input
-              label="Winner coupon expires"
-              type="datetime-local"
-              value={winnerExpiresAt}
-              onChange={(e) => setWinnerExpiresAt(e.target.value)}
-            />
-          </div>
+          <div className="space-y-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Coupon rewards
+              </p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Set discount, where each code can be used, and expiry separately
+                for participation vs winner.
+              </p>
+            </div>
 
-          <div className="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Coupon controls
-            </p>
-            <CheckboxField
-              id="bind-rewards-to-voter"
-              label="Bind coupon to voter account"
-              description="Only the logged-in voter who earned it can redeem."
-              checked={bindRewardsToVoter}
-              onCheckedChange={setBindRewardsToVoter}
-            />
-            <CheckboxField
-              id="reveal-codes-after-close"
-              label="Reveal code after voting ends"
-              description="Hide participation codes until the poll closes. Also delays redeem start until then."
-              checked={revealCodesAfterClose}
-              onCheckedChange={setRevealCodesAfterClose}
-            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Participation coupon
+                </p>
+                <Input
+                  label="% off"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={participationDiscountValue}
+                  onChange={(e) =>
+                    setParticipationDiscountValue(e.target.value)
+                  }
+                />
+                <Select
+                  label="Applicable on"
+                  labelInfo="Where this coupon can be redeemed at checkout"
+                  value={participationScope}
+                  onValueChange={(value) =>
+                    setParticipationScope(value as CouponScope)
+                  }
+                  options={SCOPE_OPTIONS}
+                />
+                <Input
+                  label="Expires"
+                  type="datetime-local"
+                  value={participationExpiresAt}
+                  onChange={(e) => setParticipationExpiresAt(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Winner coupon
+                </p>
+                <Input
+                  label="% off"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={winnerDiscountValue}
+                  onChange={(e) => setWinnerDiscountValue(e.target.value)}
+                />
+                <Select
+                  label="Applicable on"
+                  labelInfo="Where the winner coupon can be redeemed at checkout"
+                  value={winnerScope}
+                  onValueChange={(value) =>
+                    setWinnerScope(value as CouponScope)
+                  }
+                  options={SCOPE_OPTIONS}
+                />
+                <Input
+                  label="Expires"
+                  type="datetime-local"
+                  value={winnerExpiresAt}
+                  onChange={(e) => setWinnerExpiresAt(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 border-t border-gray-200 pt-3 dark:border-gray-700">
+              <CheckboxField
+                id="bind-rewards-to-voter"
+                label="Bind coupon to voter account"
+                description="Only the logged-in voter who earned it can redeem."
+                checked={bindRewardsToVoter}
+                onCheckedChange={setBindRewardsToVoter}
+              />
+              <CheckboxField
+                id="reveal-codes-after-close"
+                label="Reveal code after voting ends"
+                description="Hide participation codes until the poll closes. Also delays redeem start until then."
+                checked={revealCodesAfterClose}
+                onCheckedChange={setRevealCodesAfterClose}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -117,11 +117,20 @@ export function PollDetailPage() {
         <div className="space-y-1 rounded-lg border border-gray-200 p-4 text-sm dark:border-gray-700">
           <p className="font-medium">Reward templates</p>
           <p>
-            Participation: {poll.participationDiscountValue}% (
-            {poll.participationScope})
+            Participation: {poll.participationDiscountValue}% · applicable on{" "}
+            {poll.participationScope === "PROGRAMS"
+              ? "programs"
+              : poll.participationScope === "COACHING_PLANS"
+                ? "coaching"
+                : "programs + coaching"}
           </p>
           <p>
-            Winner: {poll.winnerDiscountValue}% ({poll.winnerScope})
+            Winner: {poll.winnerDiscountValue}% · applicable on{" "}
+            {poll.winnerScope === "PROGRAMS"
+              ? "programs"
+              : poll.winnerScope === "COACHING_PLANS"
+                ? "coaching"
+                : "programs + coaching"}
           </p>
           <p className="text-xs text-gray-500">
             {poll.bindRewardsToVoter ? "Voter-bound" : "Anyone with code"} ·{" "}
