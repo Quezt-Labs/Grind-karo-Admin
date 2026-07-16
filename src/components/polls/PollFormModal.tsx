@@ -70,7 +70,7 @@ export function PollFormModal({
     poll?.bindRewardsToVoter ?? true,
   );
   const [revealCodesAfterClose, setRevealCodesAfterClose] = useState(
-    poll?.revealCodesAfterClose ?? false,
+    poll?.revealCodesAfterClose ?? true,
   );
   const [options, setOptions] = useState<PollOptionInput[]>(
     poll?.options.map((o) => ({
