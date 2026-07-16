@@ -3,11 +3,20 @@ import { useMutation } from "@tanstack/react-query";
 import { Plus, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ImageUploadField } from "@/components/shared/ImageUploadField";
 import { pollService } from "@/services/pollService";
+import type { CouponScope } from "@/types/coupon";
 import type { CreatePollPayload, Poll, PollOptionInput } from "@/types/poll";
+
+const SCOPE_OPTIONS = [
+  { value: "ALL", label: "All products" },
+  { value: "PROGRAMS", label: "Programs only" },
+  { value: "COACHING_PLANS", label: "Coaching plans only" },
+];
 
 interface PollFormModalProps {
   poll: Poll | null;
@@ -45,11 +54,23 @@ export function PollFormModal({
   const [winnerDiscountValue, setWinnerDiscountValue] = useState(
     String(poll?.winnerDiscountValue ?? 25),
   );
+  const [participationScope, setParticipationScope] = useState<CouponScope>(
+    poll?.participationScope ?? "PROGRAMS",
+  );
+  const [winnerScope, setWinnerScope] = useState<CouponScope>(
+    poll?.winnerScope ?? "PROGRAMS",
+  );
   const [participationExpiresAt, setParticipationExpiresAt] = useState(
     toLocalInput(poll?.participationExpiresAt),
   );
   const [winnerExpiresAt, setWinnerExpiresAt] = useState(
     toLocalInput(poll?.winnerExpiresAt),
+  );
+  const [bindRewardsToVoter, setBindRewardsToVoter] = useState(
+    poll?.bindRewardsToVoter ?? true,
+  );
+  const [revealCodesAfterClose, setRevealCodesAfterClose] = useState(
+    poll?.revealCodesAfterClose ?? false,
   );
   const [options, setOptions] = useState<PollOptionInput[]>(
     poll?.options.map((o) => ({
@@ -73,16 +94,18 @@ export function PollFormModal({
         closesAt: new Date(closesAt).toISOString(),
         participationDiscountType: "PERCENT",
         participationDiscountValue: Number(participationDiscountValue),
-        participationScope: "PROGRAMS",
+        participationScope,
         participationExpiresAt: participationExpiresAt
           ? new Date(participationExpiresAt).toISOString()
           : null,
         winnerDiscountType: "PERCENT",
         winnerDiscountValue: Number(winnerDiscountValue),
-        winnerScope: "PROGRAMS",
+        winnerScope,
         winnerExpiresAt: winnerExpiresAt
           ? new Date(winnerExpiresAt).toISOString()
           : null,
+        bindRewardsToVoter,
+        revealCodesAfterClose,
         heroEyebrow: heroEyebrow.trim() || null,
         heroHeadline: heroHeadline.trim() || null,
         ctaLabel: ctaLabel.trim() || null,
@@ -206,6 +229,20 @@ export function PollFormModal({
               value={winnerDiscountValue}
               onChange={(e) => setWinnerDiscountValue(e.target.value)}
             />
+            <Select
+              label="Participation scope"
+              value={participationScope}
+              onValueChange={(value) =>
+                setParticipationScope(value as CouponScope)
+              }
+              options={SCOPE_OPTIONS}
+            />
+            <Select
+              label="Winner scope"
+              value={winnerScope}
+              onValueChange={(value) => setWinnerScope(value as CouponScope)}
+              options={SCOPE_OPTIONS}
+            />
             <Input
               label="Participation coupon expires"
               type="datetime-local"
@@ -219,10 +256,26 @@ export function PollFormModal({
               onChange={(e) => setWinnerExpiresAt(e.target.value)}
             />
           </div>
-          <p className="-mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Coupons are always programs-only, bound to the voter, and the code
-            unlocks after voting ends.
-          </p>
+
+          <div className="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Coupon controls
+            </p>
+            <CheckboxField
+              id="bind-rewards-to-voter"
+              label="Bind coupon to voter account"
+              description="Only the logged-in voter who earned it can redeem."
+              checked={bindRewardsToVoter}
+              onCheckedChange={setBindRewardsToVoter}
+            />
+            <CheckboxField
+              id="reveal-codes-after-close"
+              label="Reveal code after voting ends"
+              description="Hide participation codes until the poll closes. Also delays redeem start until then."
+              checked={revealCodesAfterClose}
+              onCheckedChange={setRevealCodesAfterClose}
+            />
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

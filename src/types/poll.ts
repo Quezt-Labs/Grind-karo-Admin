@@ -30,6 +30,8 @@ export interface Poll {
   winnerMaxDiscount: number | null;
   winnerScope: CouponScope;
   winnerExpiresAt: string | null;
+  bindRewardsToVoter: boolean;
+  revealCodesAfterClose: boolean;
   heroEyebrow: string | null;
   heroHeadline: string | null;
   ctaLabel: string | null;
@@ -67,6 +69,8 @@ export interface CreatePollPayload {
   winnerMaxDiscount?: number | null;
   winnerScope?: CouponScope;
   winnerExpiresAt?: string | null;
+  bindRewardsToVoter?: boolean;
+  revealCodesAfterClose?: boolean;
   heroEyebrow?: string | null;
   heroHeadline?: string | null;
   ctaLabel?: string | null;
