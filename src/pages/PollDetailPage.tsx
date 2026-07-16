@@ -126,6 +126,17 @@ export function PollDetailPage() {
         </div>
       </div>
 
+      {poll.heroImageUrl && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Hero background</p>
+          <img
+            src={poll.heroImageUrl}
+            alt=""
+            className="h-40 w-full max-w-xl rounded-lg border object-cover dark:border-gray-700"
+          />
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left dark:bg-gray-800">
@@ -142,15 +153,32 @@ export function PollDetailPage() {
                 className="border-t border-gray-200 dark:border-gray-700"
               >
                 <td className="px-4 py-3">
-                  <div className="font-medium">{opt.label}</div>
-                  {opt.subtitle && (
-                    <div className="text-xs text-gray-500">{opt.subtitle}</div>
-                  )}
-                  {poll.winningOptionId === opt.id && (
-                    <div className="mt-1 text-xs font-medium text-primary-600">
-                      Winner
+                  <div className="flex items-center gap-3">
+                    {opt.imageUrl ? (
+                      <img
+                        src={opt.imageUrl}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-gray-100 text-[10px] text-gray-400 dark:bg-gray-800">
+                        No photo
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-medium">{opt.label}</div>
+                      {opt.subtitle && (
+                        <div className="text-xs text-gray-500">
+                          {opt.subtitle}
+                        </div>
+                      )}
+                      {poll.winningOptionId === opt.id && (
+                        <div className="mt-1 text-xs font-medium text-primary-600">
+                          Winner
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">{opt.voteCount}</td>
                 <td className="px-4 py-3">

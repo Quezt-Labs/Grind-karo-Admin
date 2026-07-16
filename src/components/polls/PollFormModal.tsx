@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { ImageUploadField } from "@/components/shared/ImageUploadField";
 import { pollService } from "@/services/pollService";
 import type { CouponScope } from "@/types/coupon";
 import type { CreatePollPayload, Poll, PollOptionInput } from "@/types/poll";
@@ -43,6 +44,9 @@ export function PollFormModal({
   const [heroEyebrow, setHeroEyebrow] = useState(poll?.heroEyebrow ?? "");
   const [heroHeadline, setHeroHeadline] = useState(poll?.heroHeadline ?? "");
   const [ctaLabel, setCtaLabel] = useState(poll?.ctaLabel ?? "");
+  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(
+    poll?.heroImageUrl ?? null,
+  );
   const [participationDiscountValue, setParticipationDiscountValue] = useState(
     String(poll?.participationDiscountValue ?? 10),
   );
@@ -97,10 +101,12 @@ export function PollFormModal({
         heroEyebrow: heroEyebrow.trim() || null,
         heroHeadline: heroHeadline.trim() || null,
         ctaLabel: ctaLabel.trim() || null,
+        heroImageUrl: heroImageUrl || null,
         options: options.map((o, i) => ({
           ...o,
           label: o.label.trim(),
           subtitle: o.subtitle?.trim() || null,
+          imageUrl: o.imageUrl || null,
           sortOrder: o.sortOrder ?? i,
         })),
       };
@@ -185,6 +191,19 @@ export function PollFormModal({
             />
           </div>
 
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Hero background
+            </p>
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+              Shows behind the poll hero on the site.
+            </p>
+            <ImageUploadField
+              imageUrl={heroImageUrl}
+              onImageChange={setHeroImageUrl}
+            />
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
               label="Participation % off"
@@ -253,33 +272,46 @@ export function PollFormModal({
             {options.map((opt, i) => (
               <div
                 key={opt.id ?? `new-${i}`}
-                className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[1fr_1fr_auto]"
+                className="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
               >
-                <Input
-                  label="Label"
-                  value={opt.label}
-                  onChange={(e) => updateOption(i, { label: e.target.value })}
-                />
-                <Input
-                  label="Subtitle"
-                  value={opt.subtitle ?? ""}
-                  onChange={(e) =>
-                    updateOption(i, { subtitle: e.target.value })
-                  }
-                />
-                {(!poll || poll.status === "DRAFT") && options.length > 2 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="self-end"
-                    onClick={() =>
-                      setOptions((prev) => prev.filter((_, idx) => idx !== i))
+                <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <Input
+                    label="Label"
+                    value={opt.label}
+                    onChange={(e) => updateOption(i, { label: e.target.value })}
+                  />
+                  <Input
+                    label="Subtitle"
+                    value={opt.subtitle ?? ""}
+                    onChange={(e) =>
+                      updateOption(i, { subtitle: e.target.value })
                     }
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+                  />
+                  {(!poll || poll.status === "DRAFT") && options.length > 2 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="self-end"
+                      onClick={() =>
+                        setOptions((prev) =>
+                          prev.filter((_, idx) => idx !== i),
+                        )
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Option background photo
+                  </p>
+                  <ImageUploadField
+                    imageUrl={opt.imageUrl ?? null}
+                    onImageChange={(url) => updateOption(i, { imageUrl: url })}
+                  />
+                </div>
               </div>
             ))}
           </div>
