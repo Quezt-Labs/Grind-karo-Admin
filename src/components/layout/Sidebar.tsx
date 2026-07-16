@@ -15,6 +15,7 @@ import {
   Star,
   MonitorSmartphone,
   Ticket,
+  Vote,
   MessageCircle,
   Video,
   FileText,
@@ -67,6 +68,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "People",
     items: [
       { path: "/coupons", label: "Coupons", icon: Ticket },
+      { path: "/polls", label: "Polls", icon: Vote },
       { path: "/users", label: "Users", icon: Users },
       { path: "/form-checks", label: "Form checks", icon: Video },
       { path: "/chat", label: "Chat", icon: MessageCircle },

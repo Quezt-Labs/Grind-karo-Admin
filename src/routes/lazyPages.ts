@@ -101,6 +101,14 @@ export const CouponDetailPage = lazyPage(
   () => import("@/pages/CouponDetailPage"),
   "CouponDetailPage",
 );
+export const PollsPage = lazyPage(
+  () => import("@/pages/PollsPage"),
+  "PollsPage",
+);
+export const PollDetailPage = lazyPage(
+  () => import("@/pages/PollDetailPage"),
+  "PollDetailPage",
+);
 export const FormCheckInboxPage = lazyPage(
   () => import("@/pages/FormCheckInboxPage"),
   "FormCheckInboxPage",

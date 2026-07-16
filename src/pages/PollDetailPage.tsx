@@ -1,0 +1,200 @@
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { PollFormModal } from "@/components/polls/PollFormModal";
+import { pollService } from "@/services/pollService";
+
+export function PollDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+  const [resolveOptionId, setResolveOptionId] = useState<string | null>(null);
+
+  const {
+    data: poll,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["poll", id],
+    queryFn: () => pollService.getById(id!),
+    enabled: !!id,
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["poll", id] });
+    queryClient.invalidateQueries({ queryKey: ["polls"] });
+  };
+
+  const openMut = useMutation({
+    mutationFn: () => pollService.open(id!),
+    onSuccess: () => {
+      toast.success("Poll opened");
+      invalidate();
+    },
+    onError: () => toast.error("Failed to open poll"),
+  });
+
+  const closeMut = useMutation({
+    mutationFn: () => pollService.close(id!),
+    onSuccess: () => {
+      toast.success("Poll closed");
+      invalidate();
+    },
+    onError: () => toast.error("Failed to close poll"),
+  });
+
+  const resolveMut = useMutation({
+    mutationFn: (winningOptionId: string) =>
+      pollService.resolve(id!, winningOptionId),
+    onSuccess: () => {
+      toast.success("Poll resolved");
+      setResolveOptionId(null);
+      invalidate();
+    },
+    onError: () => toast.error("Failed to resolve poll"),
+  });
+
+  if (isLoading) {
+    return <p className="text-sm text-gray-500">Loading…</p>;
+  }
+  if (isError || !poll) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-red-600">Failed to load poll.</p>
+        <Button variant="secondary" onClick={() => navigate("/polls")}>
+          Back
+        </Button>
+      </div>
+    );
+  }
+
+  const resolveLabel =
+    poll.options.find((o) => o.id === resolveOptionId)?.label ?? "option";
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={poll.title}
+        description={`/${poll.slug} · ${poll.totalVotes} votes · rewards P${poll.rewardCounts.participation} / W${poll.rewardCounts.winner}`}
+      >
+        <StatusBadge status={poll.status} />
+        <Button variant="secondary" onClick={() => setEditOpen(true)}>
+          Edit
+        </Button>
+        {(poll.status === "DRAFT" || poll.status === "CLOSED") && (
+          <Button
+            onClick={() => openMut.mutate()}
+            isLoading={openMut.isPending}
+          >
+            Open voting
+          </Button>
+        )}
+        {poll.status === "OPEN" && (
+          <Button
+            variant="secondary"
+            onClick={() => closeMut.mutate()}
+            isLoading={closeMut.isPending}
+          >
+            Close
+          </Button>
+        )}
+      </PageHeader>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1 rounded-lg border border-gray-200 p-4 text-sm dark:border-gray-700">
+          <p className="font-medium">Schedule</p>
+          <p>Ends: {new Date(poll.closesAt).toLocaleString()}</p>
+          {poll.resolvedAt && (
+            <p>Resolved: {new Date(poll.resolvedAt).toLocaleString()}</p>
+          )}
+        </div>
+        <div className="space-y-1 rounded-lg border border-gray-200 p-4 text-sm dark:border-gray-700">
+          <p className="font-medium">Reward templates</p>
+          <p>
+            Participation: {poll.participationDiscountValue}% (
+            {poll.participationScope})
+          </p>
+          <p>
+            Winner: {poll.winnerDiscountValue}% ({poll.winnerScope})
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-left dark:bg-gray-800">
+            <tr>
+              <th className="px-4 py-3 font-medium">Option</th>
+              <th className="px-4 py-3 font-medium">Votes</th>
+              <th className="px-4 py-3 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {poll.options.map((opt) => (
+              <tr
+                key={opt.id}
+                className="border-t border-gray-200 dark:border-gray-700"
+              >
+                <td className="px-4 py-3">
+                  <div className="font-medium">{opt.label}</div>
+                  {opt.subtitle && (
+                    <div className="text-xs text-gray-500">{opt.subtitle}</div>
+                  )}
+                  {poll.winningOptionId === opt.id && (
+                    <div className="mt-1 text-xs font-medium text-primary-600">
+                      Winner
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-3">{opt.voteCount}</td>
+                <td className="px-4 py-3">
+                  {(poll.status === "OPEN" || poll.status === "CLOSED") && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setResolveOptionId(opt.id)}
+                    >
+                      Set as winner
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Link to="/polls" className="text-sm text-primary-600 hover:underline">
+        ← Back to polls
+      </Link>
+
+      {editOpen && (
+        <PollFormModal
+          poll={poll}
+          onClose={() => setEditOpen(false)}
+          onSuccess={() => {
+            setEditOpen(false);
+            invalidate();
+          }}
+        />
+      )}
+
+      <ConfirmModal
+        open={!!resolveOptionId}
+        title="Resolve poll?"
+        message={`Mark "${resolveLabel}" as the winner? Correct voters can then claim the winner coupon.`}
+        confirmLabel="Resolve"
+        variant="primary"
+        onConfirm={() => resolveOptionId && resolveMut.mutate(resolveOptionId)}
+        onCancel={() => setResolveOptionId(null)}
+        isLoading={resolveMut.isPending}
+      />
+    </div>
+  );
+}

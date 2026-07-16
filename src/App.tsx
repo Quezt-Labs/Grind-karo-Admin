@@ -31,6 +31,8 @@ import {
   UploadFailuresPage,
   CouponDetailPage,
   CouponsPage,
+  PollDetailPage,
+  PollsPage,
   DashboardPage,
   ExercisesPage,
   LandingPageDetailPage,
@@ -171,6 +173,8 @@ export default function App() {
                   />
                   <Route path="/coupons" element={<CouponsPage />} />
                   <Route path="/coupons/:id" element={<CouponDetailPage />} />
+                  <Route path="/polls" element={<PollsPage />} />
+                  <Route path="/polls/:id" element={<PollDetailPage />} />
                   <Route path="/big-lift-pr" element={<BigLiftPrPage />} />
                   <Route
                     path="/announcements"
