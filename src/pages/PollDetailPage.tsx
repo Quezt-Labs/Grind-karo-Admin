@@ -116,12 +116,10 @@ export function PollDetailPage() {
         </div>
         <div className="space-y-1 rounded-lg border border-gray-200 p-4 text-sm dark:border-gray-700">
           <p className="font-medium">Reward templates</p>
-          <p>
-            Participation: {poll.participationDiscountValue}% (
-            {poll.participationScope})
-          </p>
-          <p>
-            Winner: {poll.winnerDiscountValue}% ({poll.winnerScope})
+          <p>Participation: {poll.participationDiscountValue}% off programs</p>
+          <p>Winner: {poll.winnerDiscountValue}% off programs</p>
+          <p className="text-xs text-gray-500">
+            Codes unlock after voting ends · voter-bound · not for coaching
           </p>
         </div>
       </div>

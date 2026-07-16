@@ -4,18 +4,10 @@ import { Plus, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ImageUploadField } from "@/components/shared/ImageUploadField";
 import { pollService } from "@/services/pollService";
-import type { CouponScope } from "@/types/coupon";
 import type { CreatePollPayload, Poll, PollOptionInput } from "@/types/poll";
-
-const SCOPE_OPTIONS = [
-  { value: "ALL", label: "All products" },
-  { value: "PROGRAMS", label: "Programs only" },
-  { value: "COACHING_PLANS", label: "Coaching plans only" },
-];
 
 interface PollFormModalProps {
   poll: Poll | null;
@@ -53,12 +45,6 @@ export function PollFormModal({
   const [winnerDiscountValue, setWinnerDiscountValue] = useState(
     String(poll?.winnerDiscountValue ?? 25),
   );
-  const [participationScope, setParticipationScope] = useState<CouponScope>(
-    poll?.participationScope ?? "ALL",
-  );
-  const [winnerScope, setWinnerScope] = useState<CouponScope>(
-    poll?.winnerScope ?? "ALL",
-  );
   const [participationExpiresAt, setParticipationExpiresAt] = useState(
     toLocalInput(poll?.participationExpiresAt),
   );
@@ -87,14 +73,13 @@ export function PollFormModal({
         closesAt: new Date(closesAt).toISOString(),
         participationDiscountType: "PERCENT",
         participationDiscountValue: Number(participationDiscountValue),
-        participationScope:
-          participationScope as CreatePollPayload["participationScope"],
+        participationScope: "PROGRAMS",
         participationExpiresAt: participationExpiresAt
           ? new Date(participationExpiresAt).toISOString()
           : null,
         winnerDiscountType: "PERCENT",
         winnerDiscountValue: Number(winnerDiscountValue),
-        winnerScope: winnerScope as CreatePollPayload["winnerScope"],
+        winnerScope: "PROGRAMS",
         winnerExpiresAt: winnerExpiresAt
           ? new Date(winnerExpiresAt).toISOString()
           : null,
@@ -221,20 +206,6 @@ export function PollFormModal({
               value={winnerDiscountValue}
               onChange={(e) => setWinnerDiscountValue(e.target.value)}
             />
-            <Select
-              label="Participation scope"
-              value={participationScope}
-              onValueChange={(value) =>
-                setParticipationScope(value as CouponScope)
-              }
-              options={SCOPE_OPTIONS}
-            />
-            <Select
-              label="Winner scope"
-              value={winnerScope}
-              onValueChange={(value) => setWinnerScope(value as CouponScope)}
-              options={SCOPE_OPTIONS}
-            />
             <Input
               label="Participation coupon expires"
               type="datetime-local"
@@ -248,6 +219,10 @@ export function PollFormModal({
               onChange={(e) => setWinnerExpiresAt(e.target.value)}
             />
           </div>
+          <p className="-mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Coupons are always programs-only, bound to the voter, and the code
+            unlocks after voting ends.
+          </p>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -294,9 +269,7 @@ export function PollFormModal({
                       size="sm"
                       className="self-end"
                       onClick={() =>
-                        setOptions((prev) =>
-                          prev.filter((_, idx) => idx !== i),
-                        )
+                        setOptions((prev) => prev.filter((_, idx) => idx !== i))
                       }
                     >
                       <Trash2 className="h-4 w-4" />
