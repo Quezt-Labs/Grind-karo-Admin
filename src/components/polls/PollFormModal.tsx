@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { pollService } from "@/services/pollService";
+import type { CouponScope } from "@/types/coupon";
 import type { CreatePollPayload, Poll, PollOptionInput } from "@/types/poll";
 
 const SCOPE_OPTIONS = [
@@ -48,10 +49,12 @@ export function PollFormModal({
   const [winnerDiscountValue, setWinnerDiscountValue] = useState(
     String(poll?.winnerDiscountValue ?? 25),
   );
-  const [participationScope, setParticipationScope] = useState(
+  const [participationScope, setParticipationScope] = useState<CouponScope>(
     poll?.participationScope ?? "ALL",
   );
-  const [winnerScope, setWinnerScope] = useState(poll?.winnerScope ?? "ALL");
+  const [winnerScope, setWinnerScope] = useState<CouponScope>(
+    poll?.winnerScope ?? "ALL",
+  );
   const [participationExpiresAt, setParticipationExpiresAt] = useState(
     toLocalInput(poll?.participationExpiresAt),
   );
@@ -202,13 +205,15 @@ export function PollFormModal({
             <Select
               label="Participation scope"
               value={participationScope}
-              onValueChange={setParticipationScope}
+              onValueChange={(value) =>
+                setParticipationScope(value as CouponScope)
+              }
               options={SCOPE_OPTIONS}
             />
             <Select
               label="Winner scope"
               value={winnerScope}
-              onValueChange={setWinnerScope}
+              onValueChange={(value) => setWinnerScope(value as CouponScope)}
               options={SCOPE_OPTIONS}
             />
             <Input
