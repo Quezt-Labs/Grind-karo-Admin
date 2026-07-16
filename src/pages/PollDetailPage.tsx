@@ -43,10 +43,19 @@ export function PollDetailPage() {
   const closeMut = useMutation({
     mutationFn: () => pollService.close(id!),
     onSuccess: () => {
-      toast.success("Poll closed");
+      toast.success("Voting ended");
       invalidate();
     },
-    onError: () => toast.error("Failed to close poll"),
+    onError: () => toast.error("Failed to end voting"),
+  });
+
+  const revealMut = useMutation({
+    mutationFn: () => pollService.revealResults(id!),
+    onSuccess: () => {
+      toast.success("Results are now public");
+      invalidate();
+    },
+    onError: () => toast.error("Failed to show results"),
   });
 
   const resolveMut = useMutation({
@@ -101,15 +110,31 @@ export function PollDetailPage() {
             onClick={() => closeMut.mutate()}
             isLoading={closeMut.isPending}
           >
-            Close
+            End voting
           </Button>
         )}
+        {!poll.votingOpen &&
+          poll.status !== "DRAFT" &&
+          !poll.resultsVisible && (
+            <Button
+              onClick={() => revealMut.mutate()}
+              isLoading={revealMut.isPending}
+            >
+              Show results
+            </Button>
+          )}
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1 rounded-lg border border-gray-200 p-4 text-sm dark:border-gray-700">
           <p className="font-medium">Schedule</p>
-          <p>Ends: {new Date(poll.closesAt).toLocaleString()}</p>
+          <p>Voting ends: {new Date(poll.closesAt).toLocaleString()}</p>
+          <p>
+            Public results:{" "}
+            {poll.resultsVisible
+              ? `shown ${poll.resultsRevealedAt ? new Date(poll.resultsRevealedAt).toLocaleString() : ""}`
+              : "hidden — use Show results"}
+          </p>
           {poll.resolvedAt && (
             <p>Resolved: {new Date(poll.resolvedAt).toLocaleString()}</p>
           )}
@@ -135,7 +160,7 @@ export function PollDetailPage() {
           <p className="text-xs text-gray-500">
             {poll.bindRewardsToVoter ? "Voter-bound" : "Anyone with code"} ·{" "}
             {poll.revealCodesAfterClose
-              ? "Code after voting ends"
+              ? "Code when results declared"
               : "Code on vote"}
           </p>
         </div>
@@ -197,15 +222,16 @@ export function PollDetailPage() {
                 </td>
                 <td className="px-4 py-3">{opt.voteCount}</td>
                 <td className="px-4 py-3">
-                  {(poll.status === "OPEN" || poll.status === "CLOSED") && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setResolveOptionId(opt.id)}
-                    >
-                      Set as winner
-                    </Button>
-                  )}
+                  {!poll.votingOpen &&
+                    (poll.status === "CLOSED" || poll.status === "OPEN") && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setResolveOptionId(opt.id)}
+                      >
+                        Set as winner
+                      </Button>
+                    )}
                 </td>
               </tr>
             ))}

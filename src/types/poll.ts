@@ -19,6 +19,9 @@ export interface Poll {
   status: PollStatus;
   closesAt: string;
   resolvedAt: string | null;
+  resultsRevealedAt: string | null;
+  resultsVisible: boolean;
+  votingOpen: boolean;
   winningOptionId: string | null;
   participationDiscountType: DiscountType;
   participationDiscountValue: number;

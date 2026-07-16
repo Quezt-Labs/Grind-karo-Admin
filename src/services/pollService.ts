@@ -32,6 +32,11 @@ export const pollService = {
     return data.data ?? data;
   },
 
+  async revealResults(id: string): Promise<Poll> {
+    const { data } = await api.post(`/admin/polls/${id}/reveal-results`);
+    return data.data ?? data;
+  },
+
   async resolve(id: string, winningOptionId: string): Promise<Poll> {
     const { data } = await api.post(`/admin/polls/${id}/resolve`, {
       winningOptionId,

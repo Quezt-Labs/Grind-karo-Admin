@@ -307,8 +307,8 @@ export function PollFormModal({
               />
               <CheckboxField
                 id="reveal-codes-after-close"
-                label="Reveal code after voting ends"
-                description="Hide participation codes until the poll closes. Also delays redeem start until then."
+                label="Reveal code when results are declared"
+                description="Hide participation codes until you click Show results (or Resolve). Redeem also unlocks then."
                 checked={revealCodesAfterClose}
                 onCheckedChange={setRevealCodesAfterClose}
               />
