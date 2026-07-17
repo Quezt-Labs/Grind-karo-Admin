@@ -2,9 +2,9 @@ import type { Purchase } from "@/types/user";
 
 export const MINI_PLAN_SLUG = "mini";
 
-/** MEGA / ULTRA — per-athlete coaching program built in admin. MINI is retail program-only. */
+/** Any active coaching plan (including MINI) gets a per-athlete program in admin. */
 export function requiresPersonalCoachingProgram(planSlug: string): boolean {
-  return planSlug.trim().toLowerCase() !== MINI_PLAN_SLUG;
+  return planSlug.trim().length > 0;
 }
 
 export function activeCoachingSubscriptions(purchases: Purchase[]) {
