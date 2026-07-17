@@ -31,6 +31,7 @@ import {
   LayoutList,
   Briefcase,
   CalendarClock,
+  Calculator,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -91,6 +92,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { path: "/program-reviews", label: "Program Reviews", icon: Star },
       { path: "/exercises", label: "Exercises", icon: Dumbbell },
+      { path: "/rpe-calculator", label: "RPE calculator", icon: Calculator },
     ],
   },
   {
@@ -153,6 +155,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
       { path: "/programs", label: "Programs", icon: BookOpen },
       { path: "/program-templates", label: "Templates", icon: LayoutList },
       { path: "/exercises", label: "Exercises", icon: Dumbbell },
+      { path: "/rpe-calculator", label: "RPE calculator", icon: Calculator },
     ],
   },
 ];

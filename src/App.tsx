@@ -56,6 +56,7 @@ import {
   BigLiftPrPage,
   AnnouncementsPage,
   VideoLibraryPage,
+  RpeCalculatorPage,
 } from "@/routes/lazyPages";
 
 function HomeRedirect() {
@@ -129,6 +130,10 @@ export default function App() {
                     element={<ProgramDetailPage />}
                   />
                   <Route path="/exercises" element={<ExercisesPage />} />
+                  <Route
+                    path="/rpe-calculator"
+                    element={<RpeCalculatorPage />}
+                  />
                   <Route path="/plans" element={<PlansPage />} />
                   <Route path="/plans/:id" element={<PlanDetailPage />} />
                 </Route>

@@ -134,7 +134,15 @@ export function useUserDetail(
     const programs = purchases.filter((p) => p.kind === "program_purchase");
     const books = purchases.filter((p) => p.kind === "book_purchase");
     const totalSpent = purchases.reduce((sum, p) => {
-      if (p.kind === "coaching_subscription") return sum + p.totalAmount;
+      // Paid coaching = payment id present (undefined = older payload → treat
+      // as paid) and not CANCELLED. Mirrors backend totalSpent / dashboard.
+      if (
+        p.kind === "coaching_subscription" &&
+        p.razorpayPaymentId !== null &&
+        p.status !== "CANCELLED"
+      ) {
+        return sum + p.totalAmount;
+      }
       if (p.kind === "program_purchase" && p.status === "PAID")
         return sum + p.amount;
       if (p.kind === "book_purchase" && p.status === "PAID")

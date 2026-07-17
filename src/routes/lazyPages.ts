@@ -166,6 +166,10 @@ export const VideoLibraryPage = lazyPage(
   () => import("@/pages/VideoLibraryPage"),
   "VideoLibraryPage",
 );
+export const RpeCalculatorPage = lazyPage(
+  () => import("@/pages/RpeCalculatorPage"),
+  "RpeCalculatorPage",
+);
 export const ProgramEditorPage = lazyPage(
   () => import("@/pages/ProgramEditorPage"),
   "ProgramEditorPage",

@@ -332,10 +332,13 @@ export function CoachingPaymentCalendar({
           const first = chain[0];
           const last = chain[chain.length - 1];
           const renewalCount = chain.length - 1;
-          const totalCollected = chain.reduce(
-            (sum, s) => sum + s.totalAmount,
-            0,
-          );
+          const totalCollected = chain.reduce((sum, s) => {
+            // null = unpaid checkout; undefined = older payload → treat as paid
+            if (s.razorpayPaymentId === null || s.status === "CANCELLED") {
+              return sum;
+            }
+            return sum + s.totalAmount;
+          }, 0);
           return (
             <section
               key={first.id}
