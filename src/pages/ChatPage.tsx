@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ChatAudioPlayer } from "@/components/chat/ChatAudioPlayer";
 import { ChatVideoPlayer } from "@/components/chat/ChatVideoPlayer";
+import { LinkifiedText } from "@/components/shared/LinkifiedText";
 import { cn } from "@/utils/cn";
 import { isChatVideoMessage } from "@/utils/mediaUrl";
 import { Spinner } from "@/components/ui/Spinner";
@@ -843,7 +844,15 @@ function MessageBubble({
 
         {msg.type === "TEXT" && (
           <>
-            <p className="whitespace-pre-wrap break-all">{msg.content}</p>
+            <LinkifiedText
+              text={msg.content ?? ""}
+              className="break-all"
+              linkClassName={
+                isFromUser
+                  ? undefined
+                  : "break-all font-medium text-white underline underline-offset-2 hover:opacity-90"
+              }
+            />
             {timeStamp}
           </>
         )}
@@ -866,9 +875,15 @@ function MessageBubble({
             )}
             <div className="px-3 pb-2 pt-1.5">
               {msg.content && (
-                <p className="mb-0.5 wrap-break-word text-xs opacity-80">
-                  {msg.content}
-                </p>
+                <LinkifiedText
+                  text={msg.content}
+                  className="mb-0.5 wrap-break-word text-xs opacity-80"
+                  linkClassName={
+                    isFromUser
+                      ? undefined
+                      : "break-all font-medium text-white underline underline-offset-2 hover:opacity-90"
+                  }
+                />
               )}
               {timeStamp}
             </div>

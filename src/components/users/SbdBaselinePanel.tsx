@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MessageSquare, Video } from "lucide-react";
 import { userService } from "@/services/userService";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
+import { LinkifiedText } from "@/components/shared/LinkifiedText";
 import type { SbdBaselineLift, SbdBaselineVideoItemDto } from "@/types/user";
 
 const LIFT_LABELS: Record<SbdBaselineLift, string> = {
@@ -101,9 +102,14 @@ function LiftCard({
       )}
 
       {item.notes ? (
-        <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">
-          <span className="font-semibold">Athlete notes:</span> {item.notes}
-        </p>
+        <div className="mb-3 text-xs text-gray-600 dark:text-gray-400">
+          <span className="font-semibold">Athlete notes:</span>{" "}
+          <LinkifiedText
+            text={item.notes}
+            as="span"
+            className="inline whitespace-pre-wrap"
+          />
+        </div>
       ) : null}
 
       {uploaded ? (

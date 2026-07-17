@@ -20,6 +20,7 @@ import { FormCheckAthleteNotesBlocks } from "@/components/shared/FormCheckAthlet
 import { FormCheckWeekBadge } from "@/components/form-check/FormCheckWeekFilterBar";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { FormCheckPresetCommentChips } from "@/components/shared/FormCheckPresetCommentChips";
+import { LinkifiedText } from "@/components/shared/LinkifiedText";
 import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
@@ -207,9 +208,10 @@ function SavedCoachFeedback({
           </span>
         ) : null}
       </div>
-      <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
-        {comment}
-      </p>
+      <LinkifiedText
+        text={comment}
+        className="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+      />
       {fromPriorUpload ? (
         <p className="mt-1.5 text-[10px] text-amber-700 dark:text-amber-400">
           From a previous upload of this set — latest video still needs review.
@@ -226,9 +228,10 @@ function SavedCoachFeedback({
               </span>
             ) : null}
           </p>
-          <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
-            {reply}
-          </p>
+          <LinkifiedText
+            text={reply}
+            className="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          />
         </div>
       ) : null}
     </div>

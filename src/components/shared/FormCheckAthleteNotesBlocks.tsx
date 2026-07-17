@@ -1,3 +1,5 @@
+import { LinkifiedText } from "@/components/shared/LinkifiedText";
+
 interface FormCheckAthleteNotesBlocksProps {
   setNotes?: string | null;
   setNumber?: number;
@@ -24,9 +26,11 @@ export function FormCheckAthleteNotesBlocks({
           <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
             Set {setNumber ?? "?"} notes
           </p>
-          <p className="mt-0.5 whitespace-pre-wrap text-xs text-amber-950 dark:text-amber-100">
-            {set}
-          </p>
+          <LinkifiedText
+            text={set}
+            className="mt-0.5 text-xs text-amber-950 dark:text-amber-100"
+            linkClassName="break-all font-medium text-amber-900 underline underline-offset-2 hover:opacity-90 dark:text-amber-200"
+          />
         </div>
       ) : null}
       {legacy ? (
@@ -34,9 +38,11 @@ export function FormCheckAthleteNotesBlocks({
           <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
             Athlete notes
           </p>
-          <p className="mt-0.5 whitespace-pre-wrap text-xs text-amber-950 dark:text-amber-100">
-            {legacy}
-          </p>
+          <LinkifiedText
+            text={legacy}
+            className="mt-0.5 text-xs text-amber-950 dark:text-amber-100"
+            linkClassName="break-all font-medium text-amber-900 underline underline-offset-2 hover:opacity-90 dark:text-amber-200"
+          />
         </div>
       ) : null}
     </div>

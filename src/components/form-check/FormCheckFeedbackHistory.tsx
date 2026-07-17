@@ -9,6 +9,7 @@ import {
   formatProgramDayLabel,
   formatProgramWeekLabel,
 } from "@/utils/formCheckWeekUtils";
+import { LinkifiedText } from "@/components/shared/LinkifiedText";
 import { cn } from "@/utils/cn";
 
 function formatReviewedAt(iso: string | null | undefined): string | null {
@@ -77,9 +78,10 @@ function FeedbackRow({
             </span>
           )}
         </div>
-        <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
-          {comment}
-        </p>
+        <LinkifiedText
+          text={comment}
+          className="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+        />
         {reviewedAt ? (
           <p className="mt-2 text-[10px] text-gray-500 dark:text-gray-400">
             Reviewed {reviewedAt}
@@ -97,9 +99,10 @@ function FeedbackRow({
               </span>
             ) : null}
           </p>
-          <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
-            {video.athleteReply}
-          </p>
+          <LinkifiedText
+            text={video.athleteReply}
+            className="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          />
         </div>
       ) : null}
     </article>

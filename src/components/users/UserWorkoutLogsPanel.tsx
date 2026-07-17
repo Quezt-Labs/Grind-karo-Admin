@@ -16,6 +16,7 @@ import { workoutVideoCommentService } from "@/services/workoutVideoCommentServic
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
 import { Select } from "@/components/ui/Select";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
+import { LinkifiedText } from "@/components/shared/LinkifiedText";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/utils/cn";
 import type { Purchase } from "@/types/user";
@@ -176,9 +177,10 @@ function SetVideoCommentEditor({
               </span>
             ) : null}
           </div>
-          <p className="text-xs leading-relaxed text-gray-900 whitespace-pre-wrap dark:text-gray-100">
-            {savedComment}
-          </p>
+          <LinkifiedText
+            text={savedComment}
+            className="text-xs leading-relaxed text-gray-900 dark:text-gray-100"
+          />
         </div>
       ) : null}
       {hadComment && !isEditing ? (
