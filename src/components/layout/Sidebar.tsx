@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -42,6 +43,7 @@ import { APP_NAME } from "@/utils/constants";
 import toast from "react-hot-toast";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { useFormCheckPendingCount } from "@/hooks/useFormCheckPendingCount";
+import { chatService } from "@/services/chatService";
 
 type NavItem = {
   path: string;
@@ -421,11 +423,18 @@ export function Sidebar() {
   const closeMobile = useCallback(() => setMobileOpen(false), [setMobileOpen]);
   const showRail = isCollapsed && !isMobileOpen;
   const { data: formCheckPending = 0 } = useFormCheckPendingCount();
+  const { data: chatUnread = 0 } = useQuery({
+    queryKey: ["chat-unread-total"],
+    queryFn: () => chatService.getUnreadTotal(),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
   const badgeByPath = useMemo((): Record<string, number> | undefined => {
-    return formCheckPending > 0
-      ? { "/form-checks": formCheckPending }
-      : undefined;
-  }, [formCheckPending]);
+    const badges: Record<string, number> = {};
+    if (formCheckPending > 0) badges["/form-checks"] = formCheckPending;
+    if (chatUnread > 0) badges["/chat"] = chatUnread;
+    return Object.keys(badges).length > 0 ? badges : undefined;
+  }, [formCheckPending, chatUnread]);
 
   const navSections = useMemo(() => {
     if (user?.role === "ASSISTANT_COACH") {

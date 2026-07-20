@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useVirtualList } from "@/hooks/useVirtualList";
 import {
@@ -16,6 +16,8 @@ import {
   Search,
   X,
   Reply,
+  ExternalLink,
+  Video,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { chatService } from "@/services/chatService";
@@ -34,6 +36,8 @@ import { isChatVideoMessage } from "@/utils/mediaUrl";
 import { Spinner } from "@/components/ui/Spinner";
 import type { ChatInboxItem, ChatMessage } from "@/types/chat";
 import type { AdminUserPushStatus } from "@/types/push";
+
+type InboxFilter = "all" | "unread";
 
 // ---------- helpers ----------
 
@@ -74,6 +78,7 @@ export function ChatPage() {
   const activeReply =
     replyTo?.userId === selectedUserId ? replyTo.message : null;
   const [userSearch, setUserSearch] = useState("");
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const debouncedUserSearch = useDebounce(userSearch.trim(), 300);
   const [uploading, setUploading] = useState(false);
   const [windowFocused, setWindowFocused] = useState(
@@ -105,6 +110,27 @@ export function ChatPage() {
     refetchInterval: 15_000,
     refetchOnWindowFocus: true,
   });
+
+  const filteredInbox = useMemo(() => {
+    const base =
+      inboxFilter === "unread"
+        ? inbox.filter((i) => i.unreadCount > 0)
+        : [...inbox];
+    return base.sort((a, b) => {
+      if (b.unreadCount > 0 !== a.unreadCount > 0) {
+        return b.unreadCount > 0 ? 1 : -1;
+      }
+      return (
+        new Date(b.latestMessage.createdAt).getTime() -
+        new Date(a.latestMessage.createdAt).getTime()
+      );
+    });
+  }, [inbox, inboxFilter]);
+
+  const unreadConversationCount = useMemo(
+    () => inbox.filter((i) => i.unreadCount > 0).length,
+    [inbox],
+  );
 
   const selectedInboxItem = inbox.find((i) => i.userId === selectedUserId);
 
@@ -317,7 +343,7 @@ export function ChatPage() {
   // ── Inbox virtualizer ──────────────────────────────────────
   const inboxScrollRef = useRef<HTMLDivElement>(null);
   const inboxVirtualizer = useVirtualList({
-    count: inbox.length,
+    count: filteredInbox.length,
     getScrollElement: () => inboxScrollRef.current,
     estimateSize: () => 72,
     overscan: 5,
@@ -359,7 +385,38 @@ export function ChatPage() {
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {inbox.length} conversation{inbox.length !== 1 ? "s" : ""}
+            {unreadConversationCount > 0
+              ? ` · ${unreadConversationCount} unread`
+              : ""}
           </p>
+          <div className="mt-2 flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-gray-600 dark:bg-gray-800/80">
+            {(
+              [
+                { id: "all" as const, label: "All" },
+                {
+                  id: "unread" as const,
+                  label:
+                    unreadConversationCount > 0
+                      ? `Unread (${unreadConversationCount})`
+                      : "Unread",
+                },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setInboxFilter(opt.id)}
+                className={cn(
+                  "flex-1 rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                  inboxFilter === opt.id
+                    ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                    : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-emerald-50 px-2 py-1.5 text-[10px] leading-snug text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">
             <Info className="mt-0.5 h-3 w-3 shrink-0" />
             Clients with notifications enabled get a push when you reply (if
@@ -431,10 +488,23 @@ export function ChatPage() {
             <div className="flex justify-center pt-8">
               <Spinner />
             </div>
-          ) : inbox.length === 0 ? (
+          ) : filteredInbox.length === 0 ? (
             <div className="pt-12 text-center">
               <MessageCircle className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />
-              <p className="mt-2 text-sm text-gray-400">No conversations yet</p>
+              <p className="mt-2 text-sm text-gray-400">
+                {inboxFilter === "unread"
+                  ? "No unread conversations"
+                  : "No conversations yet"}
+              </p>
+              {inboxFilter === "unread" && inbox.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setInboxFilter("all")}
+                  className="mt-2 text-xs font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
+                >
+                  Show all
+                </button>
+              ) : null}
             </div>
           ) : (
             <div
@@ -455,9 +525,9 @@ export function ChatPage() {
                   }}
                 >
                   <InboxRow
-                    item={inbox[vi.index]}
-                    selected={inbox[vi.index].userId === selectedUserId}
-                    onClick={() => selectUser(inbox[vi.index].userId)}
+                    item={filteredInbox[vi.index]}
+                    selected={filteredInbox[vi.index].userId === selectedUserId}
+                    onClick={() => selectUser(filteredInbox[vi.index].userId)}
                   />
                 </div>
               ))}
@@ -500,6 +570,22 @@ export function ChatPage() {
                       {selectedDisplayEmail}
                     </p>
                   )}
+                <div className="mt-1 flex flex-wrap gap-2">
+                  <Link
+                    to={`/users/${selectedUserId}?tab=activity`}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+                  >
+                    Profile
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                  <Link
+                    to={`/form-checks?userId=${encodeURIComponent(selectedUserId)}&review=pending`}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 hover:underline dark:text-indigo-400"
+                  >
+                    <Video className="h-3 w-3" />
+                    Form checks
+                  </Link>
+                </div>
               </div>
               {pushStatus && <PushStatusBadge status={pushStatus} />}
             </div>
@@ -697,6 +783,7 @@ function InboxRow({
   selected: boolean;
   onClick: () => void;
 }) {
+  const hasUnread = item.unreadCount > 0;
   const preview =
     item.latestMessage.type === "TEXT"
       ? item.latestMessage.content
@@ -713,7 +800,9 @@ function InboxRow({
         "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors",
         selected
           ? "bg-emerald-50 dark:bg-emerald-900/20"
-          : "hover:bg-gray-50 dark:hover:bg-gray-800",
+          : hasUnread
+            ? "bg-emerald-50/40 hover:bg-emerald-50/70 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30"
+            : "hover:bg-gray-50 dark:hover:bg-gray-800",
       )}
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -726,12 +815,21 @@ function InboxRow({
               "truncate text-sm",
               selected
                 ? "font-semibold text-emerald-700 dark:text-emerald-400"
-                : "font-medium text-gray-900 dark:text-white",
+                : hasUnread
+                  ? "font-bold text-gray-900 dark:text-white"
+                  : "font-medium text-gray-900 dark:text-white",
             )}
           >
             {item.userName ?? item.userEmail}
           </p>
-          <span className="shrink-0 text-[10px] text-gray-400">
+          <span
+            className={cn(
+              "shrink-0 text-[10px]",
+              hasUnread
+                ? "font-semibold text-emerald-600 dark:text-emerald-400"
+                : "text-gray-400",
+            )}
+          >
             {new Date(item.latestMessage.createdAt).toLocaleTimeString(
               "en-IN",
               {
@@ -741,13 +839,20 @@ function InboxRow({
             )}
           </span>
         </div>
-        <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+        <p
+          className={cn(
+            "truncate text-xs",
+            hasUnread
+              ? "font-medium text-gray-700 dark:text-gray-200"
+              : "text-gray-500 dark:text-gray-400",
+          )}
+        >
           {preview}
         </p>
       </div>
-      {item.unreadCount > 0 && (
-        <span className="mt-1 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white">
-          {item.unreadCount}
+      {hasUnread && (
+        <span className="mt-1 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-white shadow-sm shadow-emerald-500/30">
+          {item.unreadCount > 99 ? "99+" : item.unreadCount}
         </span>
       )}
     </button>
