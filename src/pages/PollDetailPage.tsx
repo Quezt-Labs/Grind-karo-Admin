@@ -52,7 +52,7 @@ export function PollDetailPage() {
   const revealMut = useMutation({
     mutationFn: () => pollService.revealResults(id!),
     onSuccess: () => {
-      toast.success("Results are now public");
+      toast.success("Results public — participation coupon emails queued");
       invalidate();
     },
     onError: () => toast.error("Failed to show results"),
@@ -62,7 +62,7 @@ export function PollDetailPage() {
     mutationFn: (winningOptionId: string) =>
       pollService.resolve(id!, winningOptionId),
     onSuccess: () => {
-      toast.success("Poll resolved");
+      toast.success("Winner set — claim emails queued to correct voters");
       setResolveOptionId(null);
       invalidate();
     },
@@ -257,7 +257,7 @@ export function PollDetailPage() {
       <ConfirmModal
         open={!!resolveOptionId}
         title="Resolve poll?"
-        message={`Mark "${resolveLabel}" as the winner? Correct voters can then claim the winner coupon.`}
+        message={`Mark "${resolveLabel}" as the winner? Correct voters get an email to claim the winner coupon.`}
         confirmLabel="Resolve"
         variant="primary"
         onConfirm={() => resolveOptionId && resolveMut.mutate(resolveOptionId)}
