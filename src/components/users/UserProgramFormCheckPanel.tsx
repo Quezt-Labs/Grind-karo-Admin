@@ -71,6 +71,8 @@ interface UserProgramFormCheckPanelProps {
    * pending queue even if the coach had switched to reviewed/all.
    */
   pendingSignal?: number;
+  /** When true, open on Needs review instead of All videos. */
+  preferPending?: boolean;
 }
 
 export function UserProgramFormCheckPanel({
@@ -80,10 +82,13 @@ export function UserProgramFormCheckPanel({
   showBilling = false,
   onBillingUpdated,
   pendingSignal,
+  preferPending = false,
 }: UserProgramFormCheckPanelProps) {
-  // Default to "all" so reviewed/legacy uploads are visible (pending-only
-  // looks empty when the athlete's queue is fully reviewed).
-  const [reviewFilter, setReviewFilter] = useState<UserReviewFilter>("all");
+  // Prefer pending when the athlete has videos waiting; otherwise show all so
+  // a fully reviewed queue doesn't look empty.
+  const [reviewFilter, setReviewFilter] = useState<UserReviewFilter>(() =>
+    preferPending ? "pending" : "all",
+  );
   const [layout, setLayout] = useState<InboxLayout>("videos");
   const [weekNumber, setWeekNumberState] = useState<number | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(null);

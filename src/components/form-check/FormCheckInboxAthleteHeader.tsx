@@ -85,13 +85,19 @@ export function FormCheckInboxAthleteHeader({
             />
           ) : null}
           <Link
-            to={`/users/${selectedUserId}`}
+            to={`/users/${selectedUserId}?tab=activity&section=videos`}
             className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
           >
             {selectedAthlete
               ? athleteLabel(selectedAthlete)
               : "Athlete profile"}
             <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+          <Link
+            to={`/users/${selectedUserId}?tab=activity&section=logs`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 underline-offset-2 hover:underline dark:text-gray-300"
+          >
+            Workout logs
           </Link>
           <ReviewFilterBar
             filter={reviewFilter}

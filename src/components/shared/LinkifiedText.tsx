@@ -22,7 +22,7 @@ function normalizeHref(raw: string): string | null {
 const DEFAULT_LINK_CLASS =
   "break-all font-medium text-primary-600 underline underline-offset-2 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300";
 
-export function linkifyText(
+function linkifyText(
   text: string,
   linkClassName = DEFAULT_LINK_CLASS,
 ): ReactNode[] {

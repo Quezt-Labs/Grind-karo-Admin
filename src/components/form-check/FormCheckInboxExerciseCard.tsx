@@ -477,6 +477,8 @@ export const FormCheckInboxExerciseCard = forwardRef<
     isNavActive?: boolean;
     onGoToNextExercise?: () => void;
     hasNextPendingExercise?: boolean;
+    /** Prefer this set video when deep-linking from notifications. */
+    focusVideoId?: string | null;
   }
 >(function FormCheckInboxExerciseCard(
   {
@@ -486,6 +488,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
     isNavActive = false,
     onGoToNextExercise,
     hasNextPendingExercise = false,
+    focusVideoId = null,
   },
   forwardedRef,
 ) {
@@ -497,11 +500,24 @@ export const FormCheckInboxExerciseCard = forwardRef<
   const pendingCount = videos.filter((v) => isFormCheckPending(v)).length;
 
   const defaultIndex = useMemo(() => {
+    if (focusVideoId) {
+      const focused = videos.findIndex((v) => v.id === focusVideoId);
+      if (focused >= 0) return focused;
+    }
     const pending = videos.findIndex((v) => isFormCheckPending(v));
     return pending >= 0 ? pending : 0;
-  }, [videos]);
+  }, [videos, focusVideoId]);
 
-  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(
+    () => focusVideoId,
+  );
+
+  // Adopt a new deep-link focus when the URL videoId changes.
+  const [prevFocusVideoId, setPrevFocusVideoId] = useState(focusVideoId);
+  if (focusVideoId !== prevFocusVideoId) {
+    setPrevFocusVideoId(focusVideoId);
+    if (focusVideoId) setActiveVideoId(focusVideoId);
+  }
 
   const activeIndex = useMemo(() => {
     if (activeVideoId) {
@@ -580,7 +596,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
           <div className="min-w-0 flex-1">
             {showAthleteLink ? (
               <Link
-                to={`/users/${head.userId}`}
+                to={`/users/${head.userId}?tab=activity&section=videos`}
                 className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
               >
                 {athleteName}
@@ -597,6 +613,15 @@ export const FormCheckInboxExerciseCard = forwardRef<
               {head.exerciseName}
             </h3>
             <ExerciseContextChips video={active} />
+            {active.workoutLogId ? (
+              <Link
+                to={`/users/${head.userId}?tab=activity&section=logs&logId=${encodeURIComponent(active.workoutLogId)}`}
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 underline-offset-2 hover:underline dark:text-gray-300"
+              >
+                Open workout session
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            ) : null}
           </div>
           <div className="flex shrink-0 items-start gap-2">
             <div className="flex flex-col items-end gap-1.5">

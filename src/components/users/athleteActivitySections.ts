@@ -55,7 +55,7 @@ export function buildAthleteActivityTabs(opts: {
     tabs.push({
       key: "videos",
       label: "Form-check review",
-      description: "Program workout videos, athlete notes, and coach comments",
+      description: "Primary place to watch set videos and leave coach feedback",
       icon: Video,
       badge: pendingVideoCount > 0 ? pendingVideoCount : undefined,
     });
@@ -65,7 +65,7 @@ export function buildAthleteActivityTabs(opts: {
     tabs.push({
       key: "logs",
       label: "Program workouts",
-      description: "In-app workout logs and set videos",
+      description: "Logged sets and metrics — review videos in Form Checks",
       icon: ClipboardList,
     });
   }

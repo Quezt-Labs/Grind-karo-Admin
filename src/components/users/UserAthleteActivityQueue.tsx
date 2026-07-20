@@ -4,6 +4,7 @@ import type { FormCheckQuota } from "@/types/user";
 import { cn } from "@/utils/cn";
 
 interface UserAthleteActivityQueueProps {
+  userId: string;
   pendingVideoCount: number;
   formCheckQuota?: FormCheckQuota;
   onReviewClick?: () => void;
@@ -11,12 +12,16 @@ interface UserAthleteActivityQueueProps {
 }
 
 export function UserAthleteActivityQueue({
+  userId,
   pendingVideoCount,
   formCheckQuota,
   onReviewClick,
   className,
 }: UserAthleteActivityQueueProps) {
   const hasPending = pendingVideoCount > 0;
+  const inboxHref = hasPending
+    ? `/form-checks?userId=${encodeURIComponent(userId)}&review=pending`
+    : `/form-checks?userId=${encodeURIComponent(userId)}`;
 
   return (
     <div
@@ -73,7 +78,7 @@ export function UserAthleteActivityQueue({
           </button>
         ) : null}
         <Link
-          to="/form-checks"
+          to={inboxHref}
           className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
         >
           Open inbox

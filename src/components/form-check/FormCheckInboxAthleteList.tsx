@@ -243,6 +243,33 @@ export function FormCheckInboxTierTabs({
   );
 }
 
+type AthleteSort = "oldest_waiting" | "newest" | "most_pending";
+
+function sortAthletes(
+  athletes: FormCheckInboxAthlete[],
+  sort: AthleteSort,
+): FormCheckInboxAthlete[] {
+  const copy = [...athletes];
+  const time = (iso: string | null) =>
+    iso ? new Date(iso).getTime() : Number.POSITIVE_INFINITY;
+
+  copy.sort((a, b) => {
+    if (sort === "most_pending") {
+      if (b.pendingCount !== a.pendingCount) {
+        return b.pendingCount - a.pendingCount;
+      }
+      return time(a.latestVideoAt) - time(b.latestVideoAt);
+    }
+    if (sort === "oldest_waiting") {
+      // Oldest latest-upload first = waiting longest for attention.
+      return time(a.latestVideoAt) - time(b.latestVideoAt);
+    }
+    // newest
+    return time(b.latestVideoAt) - time(a.latestVideoAt);
+  });
+  return copy;
+}
+
 export function FormCheckInboxAthleteList({
   planTier,
   tierAthletes,
@@ -267,6 +294,9 @@ export function FormCheckInboxAthleteList({
   onHandlerFilterChange: (filter: HandlerFilter) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<AthleteSort>(() =>
+    reviewFilter === "pending" ? "oldest_waiting" : "newest",
+  );
   const debouncedSearch = useDebounce(search.trim().toLowerCase(), 300);
 
   const filteredAthletes = useMemo(() => {
@@ -279,9 +309,12 @@ export function FormCheckInboxAthleteList({
   }, [tierAthletes, debouncedSearch]);
 
   const filteredByHandler = useMemo(() => {
-    if (handlerFilter === "all") return filteredAthletes;
-    return filteredAthletes.filter((a) => a.formCheckHandler === handlerFilter);
-  }, [filteredAthletes, handlerFilter]);
+    const byHandler =
+      handlerFilter === "all"
+        ? filteredAthletes
+        : filteredAthletes.filter((a) => a.formCheckHandler === handlerFilter);
+    return sortAthletes(byHandler, sort);
+  }, [filteredAthletes, handlerFilter, sort]);
 
   const showHandlerFilteredEmpty =
     handlerFilter !== "all" && filteredByHandler.length === 0 && !isLoading;
@@ -303,25 +336,50 @@ export function FormCheckInboxAthleteList({
         />
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search athletes by name or email…"
-          className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-8 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-        />
-        {search ? (
-          <button
-            type="button"
-            onClick={() => setSearch("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600"
-            aria-label="Clear search"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[220px] flex-1 max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search athletes by name or email…"
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-8 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+          />
+          {search ? (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {(
+            [
+              { value: "oldest_waiting", label: "Oldest waiting" },
+              { value: "newest", label: "Newest upload" },
+              { value: "most_pending", label: "Most pending" },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setSort(opt.value)}
+              className={cn(
+                "rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors",
+                sort === opt.value
+                  ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                  : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (

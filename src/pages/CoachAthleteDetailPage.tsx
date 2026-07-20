@@ -1,5 +1,10 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useCallback, useMemo } from "react";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -22,14 +27,28 @@ import { formatAthleteLocation } from "@/lib/indianStates";
 
 type CoachActivityTab = "plan" | "program" | "videos" | "logs" | "chat";
 
+const COACH_TABS: CoachActivityTab[] = [
+  "plan",
+  "program",
+  "videos",
+  "logs",
+  "chat",
+];
+
+function parseCoachTab(value: string | null): CoachActivityTab | null {
+  if (COACH_TABS.includes(value as CoachActivityTab)) {
+    return value as CoachActivityTab;
+  }
+  return null;
+}
+
 export function CoachAthleteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [tabState, setTabState] = useState<{
-    athleteId: string;
-    tab: CoachActivityTab;
-  } | null>(null);
+  const tabParam = parseCoachTab(searchParams.get("tab"));
+  const logIdParam = searchParams.get("logId");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["coach-athlete-summary", id],
@@ -47,12 +66,6 @@ export function CoachAthleteDetailPage() {
     if (isAssigned) return "plan";
     return "chat";
   }, [isAssigned]);
-
-  const tab = id && tabState?.athleteId === id ? tabState.tab : defaultTab;
-  const setTab = (next: CoachActivityTab) => {
-    if (!id) return;
-    setTabState({ athleteId: id, tab: next });
-  };
 
   const { data: purchaseData } = useQuery({
     queryKey: ["coach-athlete-purchases", id],
@@ -101,6 +114,27 @@ export function CoachAthleteDetailPage() {
     }
     return items;
   }, [assignment, isAssigned]);
+
+  const tab = useMemo((): CoachActivityTab => {
+    if (tabParam && tabs.some((t) => t.key === tabParam)) return tabParam;
+    return defaultTab;
+  }, [tabParam, tabs, defaultTab]);
+
+  const setTab = useCallback(
+    (next: CoachActivityTab) => {
+      setSearchParams(
+        (prev) => {
+          const nextParams = new URLSearchParams(prev);
+          if (next === defaultTab) nextParams.delete("tab");
+          else nextParams.set("tab", next);
+          if (next !== "logs") nextParams.delete("logId");
+          return nextParams;
+        },
+        { replace: true },
+      );
+    },
+    [defaultTab, setSearchParams],
+  );
 
   const refreshPurchases = () => {
     void queryClient.invalidateQueries({
@@ -204,6 +238,7 @@ export function CoachAthleteDetailPage() {
           purchases={purchaseData?.purchases ?? []}
           showBilling
           onBillingUpdated={refreshPurchases}
+          preferPending
         />
       )}
 
@@ -212,6 +247,7 @@ export function CoachAthleteDetailPage() {
           userId={id}
           coachMode
           purchases={purchaseData?.purchases ?? []}
+          initialExpandedLogId={logIdParam}
         />
       )}
 

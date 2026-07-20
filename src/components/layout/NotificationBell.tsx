@@ -120,13 +120,20 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       return;
     }
     if (n.type === "FORM_CHECK_VIDEO_UPLOAD") {
-      // Deep-link straight to the athlete's pending queue instead of the
-      // generic inbox, so the coach lands on the exact video to review.
-      navigate(
-        userId
-          ? `/form-checks?userId=${userId}&review=pending`
-          : "/form-checks",
-      );
+      // Deep-link to the athlete's pending queue, and the exact video when
+      // the notification payload includes videoId.
+      const videoId =
+        typeof n.payload.videoId === "string" ? n.payload.videoId : undefined;
+      if (userId) {
+        const params = new URLSearchParams({
+          userId,
+          review: "pending",
+        });
+        if (videoId) params.set("videoId", videoId);
+        navigate(`/form-checks?${params.toString()}`);
+      } else {
+        navigate("/form-checks");
+      }
       onClose();
       return;
     }

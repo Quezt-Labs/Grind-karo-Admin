@@ -68,6 +68,7 @@ export function useFormCheckInboxRoute() {
   const view = parseView(searchParams.get("view"));
   const tier = parseTier(searchParams.get("tier"));
   const selectedUserId = searchParams.get("userId");
+  const focusVideoId = searchParams.get("videoId");
   const reviewFilter = parseReview(searchParams.get("review"));
   const layout = parseLayout(searchParams.get("layout"), reviewFilter);
   const weekNumber = parseWeek(searchParams.get("week"));
@@ -112,6 +113,7 @@ export function useFormCheckInboxRoute() {
       patchParams({
         view: next === "inbox" ? null : next,
         userId: null,
+        videoId: null,
         week: null,
         day: null,
       });
@@ -121,14 +123,21 @@ export function useFormCheckInboxRoute() {
 
   const setPlanTier = useCallback(
     (next: PlanTier) => {
-      patchParams({ tier: next, userId: null });
+      patchParams({ tier: next, userId: null, videoId: null });
     },
     [patchParams],
   );
 
   const setSelectedUserId = useCallback(
     (userId: string | null) => {
-      patchParams({ userId, week: null, day: null });
+      patchParams({ userId, videoId: null, week: null, day: null });
+    },
+    [patchParams],
+  );
+
+  const setFocusVideoId = useCallback(
+    (videoId: string | null) => {
+      patchParams({ videoId });
     },
     [patchParams],
   );
@@ -180,7 +189,7 @@ export function useFormCheckInboxRoute() {
   );
 
   const clearAthleteSelection = useCallback(() => {
-    patchParams({ userId: null, week: null, day: null });
+    patchParams({ userId: null, videoId: null, week: null, day: null });
   }, [patchParams]);
 
   return useMemo(
@@ -188,6 +197,7 @@ export function useFormCheckInboxRoute() {
       view,
       tier,
       selectedUserId,
+      focusVideoId,
       reviewFilter,
       layout,
       handlerFilter,
@@ -196,6 +206,7 @@ export function useFormCheckInboxRoute() {
       setView,
       setPlanTier,
       setSelectedUserId,
+      setFocusVideoId,
       setReviewFilter,
       setLayout,
       setHandlerFilter,
@@ -207,6 +218,7 @@ export function useFormCheckInboxRoute() {
       view,
       tier,
       selectedUserId,
+      focusVideoId,
       reviewFilter,
       layout,
       handlerFilter,
@@ -215,6 +227,7 @@ export function useFormCheckInboxRoute() {
       setView,
       setPlanTier,
       setSelectedUserId,
+      setFocusVideoId,
       setReviewFilter,
       setLayout,
       setHandlerFilter,

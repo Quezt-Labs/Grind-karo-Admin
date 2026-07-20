@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Video } from "lucide-react";
+import { AlertTriangle, Search, Video, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
@@ -58,6 +58,7 @@ export function FormCheckInboxPage() {
     view,
     tier: planTier,
     selectedUserId,
+    focusVideoId,
     reviewFilter,
     layout,
     handlerFilter,
@@ -75,6 +76,7 @@ export function FormCheckInboxPage() {
   } = route;
 
   const isMissingView = view === "missing";
+  const [exerciseSearch, setExerciseSearch] = useState("");
 
   // Reset pagination whenever the filter/scope changes. Handled during render
   // (not an effect) to avoid a cascading re-render.
@@ -129,6 +131,30 @@ export function FormCheckInboxPage() {
   });
 
   const { bulkApply } = useFormCheckMutations(selectedUserId ?? undefined);
+
+  // Deep-linked video may already be reviewed — widen filter so it can surface.
+  useEffect(() => {
+    if (!focusVideoId || !selectedUserId || videosLoading) return;
+    const found = videos.some((v) => v.id === focusVideoId);
+    if (!found && reviewFilter === "pending") {
+      setReviewFilter("all");
+    }
+  }, [
+    focusVideoId,
+    selectedUserId,
+    videos,
+    videosLoading,
+    reviewFilter,
+    setReviewFilter,
+  ]);
+
+  const filteredExerciseGroups = useMemo(() => {
+    const q = exerciseSearch.trim().toLowerCase();
+    if (!q) return exerciseGroups;
+    return exerciseGroups.filter((g) =>
+      g.representative.exerciseName.toLowerCase().includes(q),
+    );
+  }, [exerciseGroups, exerciseSearch]);
 
   const feedbackCount = useMemo(
     () => sortFeedbackVideos(videos).length,
@@ -252,11 +278,13 @@ export function FormCheckInboxPage() {
     (userId: string | null) => {
       if (!userId) {
         setSelectedUserId(null);
+        setExerciseSearch("");
         return;
       }
       const all = [...megaAthletes, ...ultraAthletes];
       const athlete = all.find((a) => a.userId === userId);
       setSelectedUserId(userId);
+      setExerciseSearch("");
       // Fully-reviewed athletes have nothing under "Needs review" — show history.
       if (
         athlete &&
@@ -494,15 +522,45 @@ export function FormCheckInboxPage() {
                 />
               </div>
 
-              <FormCheckInboxExerciseList
-                listKey={`${selectedUserId}-${reviewFilter}-${weekNumber ?? "all"}-${dayNumber ?? "all"}`}
-                exerciseGroups={exerciseGroups}
-                pendingCount={pendingTargets.length}
-                onBulkApply={handleBulkApply}
-                hasMore={false}
-                onAllPendingReviewed={handleAllPendingReviewed}
-                showBulkBar={false}
-              />
+              <div className="relative max-w-md">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="search"
+                  value={exerciseSearch}
+                  onChange={(e) => setExerciseSearch(e.target.value)}
+                  placeholder="Filter exercises by name…"
+                  className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-8 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                />
+                {exerciseSearch ? (
+                  <button
+                    type="button"
+                    onClick={() => setExerciseSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear exercise filter"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+
+              {filteredExerciseGroups.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center dark:border-gray-600 dark:bg-gray-800">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No exercises match &ldquo;{exerciseSearch}&rdquo;.
+                  </p>
+                </div>
+              ) : (
+                <FormCheckInboxExerciseList
+                  listKey={`${selectedUserId}-${reviewFilter}-${weekNumber ?? "all"}-${dayNumber ?? "all"}-${exerciseSearch}`}
+                  exerciseGroups={filteredExerciseGroups}
+                  pendingCount={pendingTargets.length}
+                  onBulkApply={handleBulkApply}
+                  hasMore={false}
+                  onAllPendingReviewed={handleAllPendingReviewed}
+                  showBulkBar={false}
+                  focusVideoId={focusVideoId}
+                />
+              )}
             </>
           )}
         </div>

@@ -96,6 +96,22 @@ function parseTab(value: string | null): UserDetailTab {
   return "activity";
 }
 
+const ACTIVITY_SECTIONS: AthleteActivitySection[] = [
+  "videos",
+  "logs",
+  "checkins",
+  "summaries",
+];
+
+function parseActivitySection(
+  value: string | null,
+): AthleteActivitySection | null {
+  if (ACTIVITY_SECTIONS.includes(value as AthleteActivitySection)) {
+    return value as AthleteActivitySection;
+  }
+  return null;
+}
+
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -131,13 +147,29 @@ export function UserDetailPage() {
     );
   };
 
-  const [activitySection, setActivitySection] =
-    useState<AthleteActivitySection>("videos");
   // Bumped when the coach clicks "Review now" so the form-check panel snaps
   // back to the pending queue even if it was left on reviewed/all.
   const [reviewPendingSignal, setReviewPendingSignal] = useState(0);
 
   const subscriptionIdParam = searchParams.get("subscriptionId") ?? undefined;
+  const sectionParam = parseActivitySection(searchParams.get("section"));
+  const logIdParam = searchParams.get("logId");
+
+  const setActivitySection = useCallback(
+    (section: AthleteActivitySection) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (section === "videos") next.delete("section");
+          else next.set("section", section);
+          if (section !== "logs") next.delete("logId");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const {
     user,
@@ -193,12 +225,12 @@ export function UserDetailPage() {
   );
 
   const resolvedActivitySection = useMemo((): AthleteActivitySection => {
-    if (activityTabs.length === 0) return activitySection;
-    if (activityTabs.some((tab) => tab.key === activitySection)) {
-      return activitySection;
+    if (activityTabs.length === 0) return sectionParam ?? "videos";
+    if (sectionParam && activityTabs.some((tab) => tab.key === sectionParam)) {
+      return sectionParam;
     }
     return defaultAthleteActivitySection(activityTabs);
-  }, [activityTabs, activitySection]);
+  }, [activityTabs, sectionParam]);
 
   const activeActivityTab = activityTabs.find(
     (tab) => tab.key === resolvedActivitySection,
@@ -516,6 +548,7 @@ export function UserDetailPage() {
 
           {showCoachingActivity ? (
             <UserAthleteActivityQueue
+              userId={user.id}
               pendingVideoCount={pendingVideoCount}
               formCheckQuota={formCheckQuota}
               onReviewClick={() => {
@@ -573,6 +606,7 @@ export function UserDetailPage() {
                     showBilling={isStaff}
                     onBillingUpdated={invalidatePurchases}
                     pendingSignal={reviewPendingSignal}
+                    preferPending={pendingVideoCount > 0}
                   />
                 )}
                 {resolvedActivitySection === "logs" && (
@@ -580,6 +614,7 @@ export function UserDetailPage() {
                     userId={user.id}
                     purchases={purchases}
                     activityScope={scope}
+                    initialExpandedLogId={logIdParam}
                   />
                 )}
                 {resolvedActivitySection === "summaries" && (

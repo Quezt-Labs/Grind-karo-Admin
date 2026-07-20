@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronLeft,
@@ -7,13 +8,10 @@ import {
   ClipboardList,
   Dumbbell,
   CheckCircle2,
-  Loader2,
+  ExternalLink,
   MessageSquare,
 } from "lucide-react";
-import toast from "react-hot-toast";
 import { userService } from "@/services/userService";
-import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
-import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
 import { Select } from "@/components/ui/Select";
 import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { LinkifiedText } from "@/components/shared/LinkifiedText";
@@ -25,10 +23,6 @@ import type {
   AdminWorkoutLogsResponse,
   SetVideoEntryDto,
 } from "@/types/workoutLogs";
-import {
-  bulkUpsertFormCheckComments,
-  type FormCheckCommentTarget,
-} from "@/utils/bulkFormCheckComments";
 import {
   isWithinSubscriptionRange,
   type UserActivityScope,
@@ -54,218 +48,88 @@ function rowHasSetVideos(
   return (row.setVideos?.length ?? 0) > 0;
 }
 
-function collectPendingProgramVideoTargets(
-  log: AdminWorkoutLog,
-): FormCheckCommentTarget[] {
-  return log.rows.flatMap((row) => {
-    if (!rowHasSetVideos(row)) return [];
-    return row.setVideos
-      .filter((v) => !v.coachComment?.trim())
-      .map((v) => ({
-        source: "program" as const,
-        exerciseLogId: row.id,
-        setNumber: v.setNumber,
-        label: `${row.exerciseName ?? "Exercise"} · Set ${v.setNumber}`,
-      }));
-  });
+function countPendingVideos(log: AdminWorkoutLog): number {
+  return log.rows.reduce((sum, row) => {
+    if (!rowHasSetVideos(row)) return sum;
+    return sum + row.setVideos.filter((v) => !v.coachComment?.trim()).length;
+  }, 0);
 }
 
-function ExpandedWorkoutBulkComment({
-  log,
+function SessionFormCheckCta({
   userId,
-  queryKey,
-}: {
-  log: AdminWorkoutLog;
-  userId: string;
-  queryKey: unknown[];
-}) {
-  const queryClient = useQueryClient();
-  const pendingTargets = useMemo(
-    () => collectPendingProgramVideoTargets(log),
-    [log],
-  );
-
-  const handleBulkApply = async (comment: string) => {
-    const result = await bulkUpsertFormCheckComments(pendingTargets, comment);
-    if (result.succeeded > 0) {
-      void queryClient.invalidateQueries({ queryKey });
-      void queryClient.invalidateQueries({
-        queryKey: ["admin-user-purchases", userId],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["form-check-pending-count"],
-      });
-      void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
-    }
-    return result;
-  };
-
-  return (
-    <BulkFormCheckCommentBar
-      pendingCount={pendingTargets.length}
-      onApply={handleBulkApply}
-      className="mb-3"
-    />
-  );
-}
-
-function SetVideoCommentEditor({
-  userId,
-  exerciseLogId,
-  video,
-  queryKey,
+  pendingCount,
 }: {
   userId: string;
-  exerciseLogId: string;
-  video: SetVideoEntryDto;
-  queryKey: unknown[];
+  pendingCount: number;
 }) {
-  const queryClient = useQueryClient();
-  const savedComment = video.coachComment?.trim() ?? "";
-  const hadComment = savedComment.length > 0;
-  const [isEditing, setIsEditing] = useState(() => !hadComment);
-  const [comment, setComment] = useState(() =>
-    hadComment ? "" : (video.coachComment ?? ""),
-  );
-
-  const saveMutation = useMutation({
-    mutationFn: () =>
-      workoutVideoCommentService.upsert({
-        exerciseLogId,
-        setNumber: video.setNumber,
-        comment: comment.trim(),
-      }),
-    onSuccess: () => {
-      toast.success("Comment saved");
-      void queryClient.invalidateQueries({ queryKey });
-      if (!hadComment) {
-        void queryClient.invalidateQueries({
-          queryKey: ["admin-user-purchases", userId],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: ["form-check-pending-count"],
-        });
-        void queryClient.invalidateQueries({ queryKey: ["form-check-inbox"] });
-      }
-      if (hadComment) {
-        setComment("");
-        setIsEditing(false);
-      }
-    },
-  });
-
+  if (pendingCount <= 0) return null;
   return (
-    <div className="border-t border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-800/60">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-        <MessageSquare className="h-3 w-3" />
-        Coach comment
-      </div>
-      {savedComment && !isEditing ? (
-        <div className="mb-2 rounded-lg border border-indigo-200 bg-indigo-50/90 px-2.5 py-2 dark:border-indigo-800/50 dark:bg-indigo-950/30">
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-            <CheckCircle2 className="h-3 w-3" />
-            Saved coach feedback
-            {video.coachCommentUpdatedAt ? (
-              <span className="font-normal normal-case text-gray-500 dark:text-gray-400">
-                ·{" "}
-                {new Date(video.coachCommentUpdatedAt).toLocaleString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            ) : null}
-          </div>
-          <LinkifiedText
-            text={savedComment}
-            className="text-xs leading-relaxed text-gray-900 dark:text-gray-100"
-          />
-        </div>
-      ) : null}
-      {hadComment && !isEditing ? (
-        <button
-          type="button"
-          onClick={() => {
-            setComment(savedComment);
-            setIsEditing(true);
-          }}
-          className="mb-2 rounded-md border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
-        >
-          Edit feedback
-        </button>
-      ) : (
-        <>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={2}
-            placeholder="Form-check feedback for the client…"
-            className="w-full resize-y rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-          />
-          <div className="mt-1.5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={!comment.trim() || saveMutation.isPending}
-              onClick={() => saveMutation.mutate()}
-              className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
-            >
-              {saveMutation.isPending && (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              )}
-              Save comment
-            </button>
-            {hadComment ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setComment("");
-                  setIsEditing(false);
-                }}
-                className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-              >
-                Cancel
-              </button>
-            ) : null}
-          </div>
-        </>
-      )}
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 dark:border-indigo-800/60 dark:bg-indigo-950/30">
+      <p className="text-xs text-indigo-900 dark:text-indigo-100">
+        {pendingCount} set video{pendingCount === 1 ? "" : "s"} waiting for
+        review — comment in Form Checks (primary coach queue).
+      </p>
+      <Link
+        to={`/form-checks?userId=${encodeURIComponent(userId)}&review=pending`}
+        className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
+      >
+        Review in Form Checks
+        <ExternalLink className="h-3 w-3" />
+      </Link>
     </div>
   );
 }
 
 function SetVideosGrid({
   userId,
-  exerciseLogId,
   videos,
-  queryKey,
 }: {
   userId: string;
-  exerciseLogId: string;
   videos: SetVideoEntryDto[];
-  queryKey: unknown[];
 }) {
   const sorted = [...videos].sort((a, b) => a.setNumber - b.setNumber);
   return (
     <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-      {sorted.map((v) => (
-        <div
-          key={`${v.setNumber}-${v.videoUrl}`}
-          className="overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-900/40"
-        >
-          <div className="border-b border-gray-200 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-400">
-            Set {v.setNumber}
+      {sorted.map((v) => {
+        const savedComment = v.coachComment?.trim() ?? "";
+        return (
+          <div
+            key={`${v.setNumber}-${v.videoUrl}`}
+            className="overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-900/40"
+          >
+            <div className="border-b border-gray-200 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-400">
+              Set {v.setNumber}
+            </div>
+            <FormCheckVideoPlayer src={v.videoUrl} compact />
+            <div className="space-y-2 border-t border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-800/60">
+              {savedComment ? (
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/90 px-2.5 py-2 dark:border-indigo-800/50 dark:bg-indigo-950/30">
+                  <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Coach feedback
+                  </div>
+                  <LinkifiedText
+                    text={savedComment}
+                    className="text-xs leading-relaxed text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-start gap-1.5 text-[11px] text-amber-800 dark:text-amber-200">
+                  <MessageSquare className="mt-0.5 h-3 w-3 shrink-0" />
+                  Pending review — leave feedback in Form Checks.
+                </div>
+              )}
+              <Link
+                to={`/form-checks?userId=${encodeURIComponent(userId)}&review=${savedComment ? "reviewed" : "pending"}`}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+              >
+                {savedComment ? "Edit in Form Checks" : "Review in Form Checks"}
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
           </div>
-          <FormCheckVideoPlayer src={v.videoUrl} compact />
-          <SetVideoCommentEditor
-            key={`${exerciseLogId}-${v.setNumber}-${v.coachComment ?? ""}`}
-            userId={userId}
-            exerciseLogId={exerciseLogId}
-            video={v}
-            queryKey={queryKey}
-          />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -275,6 +139,8 @@ interface UserWorkoutLogsPanelProps {
   purchases?: Purchase[];
   coachMode?: boolean;
   activityScope?: UserActivityScope;
+  /** Expand this workout log when opening from a Form Check deep link. */
+  initialExpandedLogId?: string | null;
 }
 
 export function UserWorkoutLogsPanel({
@@ -282,10 +148,20 @@ export function UserWorkoutLogsPanel({
   purchases = [],
   coachMode = false,
   activityScope = { mode: "all" },
+  initialExpandedLogId = null,
 }: UserWorkoutLogsPanelProps) {
   const [offset, setOffset] = useState(0);
   const [programId, setProgramId] = useState<string>("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(
+    () => initialExpandedLogId,
+  );
+  const [prevExpandedLogId, setPrevExpandedLogId] =
+    useState(initialExpandedLogId);
+
+  if (initialExpandedLogId !== prevExpandedLogId) {
+    setPrevExpandedLogId(initialExpandedLogId);
+    if (initialExpandedLogId) setExpandedId(initialExpandedLogId);
+  }
 
   const programOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -438,10 +314,9 @@ export function UserWorkoutLogsPanel({
 
                   {expanded && (
                     <div className="space-y-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700">
-                      <ExpandedWorkoutBulkComment
-                        log={log}
+                      <SessionFormCheckCta
                         userId={userId}
-                        queryKey={[...queryKey]}
+                        pendingCount={countPendingVideos(log)}
                       />
                       {log.rows.map((row) => (
                         <div
@@ -501,9 +376,7 @@ export function UserWorkoutLogsPanel({
                           {rowHasSetVideos(row) && (
                             <SetVideosGrid
                               userId={userId}
-                              exerciseLogId={row.id}
                               videos={row.setVideos}
-                              queryKey={[...queryKey]}
                             />
                           )}
                         </div>

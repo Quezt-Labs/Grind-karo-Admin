@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
 import { FormCheckInboxExerciseCard } from "@/components/form-check/FormCheckInboxExerciseCard";
@@ -20,6 +20,7 @@ export function FormCheckInboxExerciseList({
   showBulkBar = true,
   bulkBarSticky = true,
   bulkBarStickyTopClassName = "top-0",
+  focusVideoId = null,
 }: {
   exerciseGroups: FormCheckInboxGroup[];
   pendingCount: number;
@@ -32,21 +33,38 @@ export function FormCheckInboxExerciseList({
   showBulkBar?: boolean;
   bulkBarSticky?: boolean;
   bulkBarStickyTopClassName?: string;
+  focusVideoId?: string | null;
 }) {
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const prevPendingRef = useRef(pendingCount);
 
+  const focusGroupKey = useMemo(() => {
+    if (!focusVideoId) return null;
+    return (
+      exerciseGroups.find((g) => g.videos.some((v) => v.id === focusVideoId))
+        ?.key ?? null
+    );
+  }, [exerciseGroups, focusVideoId]);
+
   const defaultActiveKey =
+    focusGroupKey ??
     exerciseGroups.find((g) => g.pendingCount > 0)?.key ??
     exerciseGroups[0]?.key ??
     null;
 
   const [activeKey, setActiveKey] = useState<string | null>(defaultActiveKey);
   const [prevListKey, setPrevListKey] = useState(listKey);
+  const [prevFocusVideoId, setPrevFocusVideoId] = useState(focusVideoId);
 
   if (listKey !== prevListKey) {
     setPrevListKey(listKey);
     setActiveKey(defaultActiveKey);
+  }
+
+  // Deep-link: adopt focused exercise during render (not in an effect).
+  if (focusVideoId !== prevFocusVideoId) {
+    setPrevFocusVideoId(focusVideoId);
+    if (focusGroupKey) setActiveKey(focusGroupKey);
   }
 
   const scrollToCard = useCallback((key: string) => {
@@ -63,6 +81,12 @@ export function FormCheckInboxExerciseList({
     },
     [scrollToCard],
   );
+
+  // DOM scroll only — activeKey already set during render for deep links.
+  useEffect(() => {
+    if (!focusVideoId || !focusGroupKey) return;
+    scrollToCard(focusGroupKey);
+  }, [focusVideoId, focusGroupKey, scrollToCard]);
 
   useEffect(() => {
     if (
@@ -126,6 +150,11 @@ export function FormCheckInboxExerciseList({
             }}
             videos={group.videos}
             showAthleteLink={false}
+            focusVideoId={
+              focusVideoId && group.videos.some((v) => v.id === focusVideoId)
+                ? focusVideoId
+                : null
+            }
             isNavActive={group.key === activeKey}
             onGoToNextExercise={
               nextPendingGroup && group.key === activeKey
