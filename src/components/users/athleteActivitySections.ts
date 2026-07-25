@@ -73,7 +73,8 @@ export function buildAthleteActivityTabs(opts: {
   tabs.push({
     key: "checkins",
     label: "Check-ins",
-    description: "Progress photos and Big 3 PR history",
+    description:
+      "Progress photos, bodyweight, nutrition, and competition countdown",
     icon: HeartPulse,
   });
 
