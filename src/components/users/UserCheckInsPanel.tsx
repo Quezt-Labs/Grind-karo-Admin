@@ -5,7 +5,12 @@ import { UserBigLiftPrPanel } from "@/components/users/UserBigLiftPrPanel";
 import { UserTrackersPanel } from "@/components/users/UserTrackersPanel";
 import type { UserActivityScope } from "@/utils/userActivityScope";
 
-type CheckInSection = "progress" | "bigLiftPr" | "weight" | "nutrition";
+type CheckInSection =
+  | "progress"
+  | "bigLiftPr"
+  | "weight"
+  | "nutrition"
+  | "competition";
 
 interface UserCheckInsPanelProps {
   userId: string;
@@ -26,6 +31,7 @@ export function UserCheckInsPanel({
             { key: "progress" as const, label: "Progress photos" },
             { key: "weight" as const, label: "Bodyweight" },
             { key: "nutrition" as const, label: "Nutrition" },
+            { key: "competition" as const, label: "Comp countdown" },
             { key: "bigLiftPr" as const, label: "Big 3 PRs" },
           ] as const
         ).map((tab) => (
@@ -57,6 +63,9 @@ export function UserCheckInsPanel({
       )}
       {section === "nutrition" && (
         <UserTrackersPanel userId={userId} kind="nutrition" />
+      )}
+      {section === "competition" && (
+        <UserTrackersPanel userId={userId} kind="competition" />
       )}
       {section === "bigLiftPr" && (
         <UserBigLiftPrPanel
