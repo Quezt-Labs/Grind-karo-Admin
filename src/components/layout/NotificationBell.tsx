@@ -137,6 +137,22 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       onClose();
       return;
     }
+    if (n.type === "FORM_CHECK_ATHLETE_REPLY") {
+      const videoId =
+        typeof n.payload.videoId === "string" ? n.payload.videoId : undefined;
+      if (userId) {
+        const params = new URLSearchParams({
+          userId,
+          review: "all",
+        });
+        if (videoId) params.set("videoId", videoId);
+        navigate(`/form-checks?${params.toString()}`);
+      } else {
+        navigate("/form-checks");
+      }
+      onClose();
+      return;
+    }
     if (n.type === "CLIENT_UPLOAD_FAILED") {
       navigate("/upload-failures");
       onClose();

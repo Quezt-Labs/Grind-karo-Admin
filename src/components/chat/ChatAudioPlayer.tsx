@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
+import { inferAudioMimeType } from "@/lib/audioMime";
 
 function formatAudioTime(sec: number): string {
   if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -23,6 +24,7 @@ export function ChatAudioPlayer({ src, isFromUser }: ChatAudioPlayerProps) {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const resolvedMime = useMemo(() => inferAudioMimeType(src), [src]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -49,7 +51,7 @@ export function ChatAudioPlayer({ src, isFromUser }: ChatAudioPlayerProps) {
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("ended", onEnded);
     };
-  }, [src]);
+  }, [src, resolvedMime]);
 
   const togglePlay = useCallback(() => {
     const el = audioRef.current;
@@ -74,7 +76,9 @@ export function ChatAudioPlayer({ src, isFromUser }: ChatAudioPlayerProps) {
 
   return (
     <div className="flex items-center gap-2.5" style={{ minWidth: "220px" }}>
-      <audio ref={audioRef} src={src} preload="metadata" className="hidden" />
+      <audio ref={audioRef} preload="metadata" className="hidden" src={src}>
+        {resolvedMime ? <source src={src} type={resolvedMime} /> : null}
+      </audio>
 
       <button
         type="button"
