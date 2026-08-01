@@ -54,6 +54,7 @@ export function CoachDashboardPage() {
     queryKey: ["coach-revenue-overview"],
     queryFn: () => athleteAssignmentService.getRevenueOverview(),
     refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 
   const overview = data?.overview;

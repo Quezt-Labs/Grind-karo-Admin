@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { chatService } from "@/services/chatService";
+import {
+  chatKeys,
+  useChatInbox,
+  useChatUnreadTotal,
+} from "@/hooks/useChatBadges";
 import type { ChatInboxItem } from "@/types/chat";
 
 function timeAgo(iso: string): string {
@@ -34,26 +39,18 @@ export function ChatBell() {
   const queryClient = useQueryClient();
   const prevUnreadRef = useRef<number | null>(null);
 
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["chat-unread-total"],
-    queryFn: () => chatService.getUnreadTotal(),
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
-  });
+  const { data: unreadCount = 0 } = useChatUnreadTotal();
 
-  const { data: inbox = [] } = useQuery({
-    queryKey: ["chat-inbox"],
-    queryFn: () => chatService.getInbox(),
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
-  });
+  // The inbox list only backs the popover and the new-message toast, so it is
+  // fetched on demand rather than polled continuously in the app shell.
+  const { data: inbox = [] } = useChatInbox({ poll: open });
 
   useEffect(() => {
     const prev = prevUnreadRef.current;
     if (prev != null && unreadCount > prev) {
       void queryClient
         .fetchQuery({
-          queryKey: ["chat-inbox"],
+          queryKey: chatKeys.inbox(),
           queryFn: () => chatService.getInbox(),
         })
         .then((freshInbox) => {

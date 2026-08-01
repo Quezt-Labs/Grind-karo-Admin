@@ -108,6 +108,7 @@ export function ChatPage() {
     queryKey: ["chat-inbox"],
     queryFn: () => chatService.getInbox(),
     refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 

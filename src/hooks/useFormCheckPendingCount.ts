@@ -7,6 +7,7 @@ export function useFormCheckPendingCount() {
     queryKey: formCheckKeys.pendingCount(),
     queryFn: () => formCheckInboxService.pendingCount(),
     refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     select: (data) => data.pendingCount,
   });

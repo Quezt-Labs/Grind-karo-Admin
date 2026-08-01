@@ -57,6 +57,7 @@ export function DashboardPage() {
     queryKey: ["dashboard-overview"],
     queryFn: dashboardService.getOverview,
     refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 
   const overview = data?.overview;
