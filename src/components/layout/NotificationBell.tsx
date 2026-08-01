@@ -15,7 +15,7 @@ import {
 import { cn } from "@/utils/cn";
 import { notificationService } from "@/services/notificationService";
 import { useNotificationStore } from "@/store/notificationStore";
-import type { AdminNotification } from "@/types/user";
+import type { AdminNotification, NotificationListResponse } from "@/types/user";
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -42,6 +42,7 @@ export function NotificationBell() {
       return count;
     },
     refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
 
   // Click outside to close
@@ -89,10 +90,38 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
 
   const markReadMutation = useMutation({
     mutationFn: (id: string) => notificationService.markRead(id),
-    onSuccess: () => {
-      decrement();
-      queryClient.invalidateQueries({
+    // The panel only lists unread notifications, so a read item simply leaves
+    // the list. Drop it locally instead of refetching all 20 rows.
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({
         queryKey: ["notifications-unread-list"],
+      });
+      const previous = queryClient.getQueryData<NotificationListResponse>([
+        "notifications-unread-list",
+      ]);
+      if (previous) {
+        queryClient.setQueryData<NotificationListResponse>(
+          ["notifications-unread-list"],
+          {
+            ...previous,
+            items: previous.items.filter((n) => n.id !== id),
+            total: Math.max(0, previous.total - 1),
+            unreadCount: Math.max(0, previous.unreadCount - 1),
+          },
+        );
+      }
+      decrement();
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          ["notifications-unread-list"],
+          context.previous,
+        );
+      }
+      void queryClient.invalidateQueries({
+        queryKey: ["notification-unread-count"],
       });
     },
   });

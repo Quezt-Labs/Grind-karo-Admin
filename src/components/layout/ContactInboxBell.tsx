@@ -14,6 +14,7 @@ export function ContactInboxBell() {
     queryKey: ["contact-unread-bell"],
     queryFn: () => contactService.getAll({ unreadOnly: true, limit: 5 }),
     refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
 
   const unreadCount = data?.unreadCount ?? 0;
