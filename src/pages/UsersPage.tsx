@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { Users, ShoppingCart, ClipboardList, Plus, Upload } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -75,6 +75,7 @@ export function UsersPage() {
         limit: 500,
       }),
     enabled: tab === "all",
+    placeholderData: keepPreviousData,
   });
 
   const {
@@ -89,6 +90,7 @@ export function UsersPage() {
         limit: 500,
       }),
     enabled: tab === "purchasers",
+    placeholderData: keepPreviousData,
   });
 
   const {
@@ -110,6 +112,7 @@ export function UsersPage() {
         limit: 500,
       }),
     enabled: tab === "coaching-setup",
+    placeholderData: keepPreviousData,
   });
 
   const userRows = useMemo(() => {
