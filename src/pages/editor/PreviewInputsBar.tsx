@@ -17,6 +17,12 @@ export function PreviewInputsBar({ slots }: { slots: MovementSlot[] }) {
         Reference 1RMs
       </p>
 
+      <p className="mb-3 text-[11px] text-indigo-800/70 dark:text-indigo-200/70">
+        Sample values for previewing loads while authoring. Edit to match your
+        athlete, or load a specific athlete&rsquo;s profile to see their real
+        numbers.
+      </p>
+
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <Input
           id="preview-squat"
