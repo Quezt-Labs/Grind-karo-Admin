@@ -39,6 +39,7 @@ export interface FormCheckSlaMetrics {
 }
 
 const SLA_ENDPOINTS = [
+  "/admin/form-check-videos/sla-metrics",
   "/admin/form-check/sla",
   "/admin/form-check/sla/metrics",
   "/admin/form-checks/sla",
@@ -75,6 +76,12 @@ function pickNumber(...values: unknown[]): number | null {
 function normalizeWindow(value: string | null | undefined): FormCheckSlaWindow {
   if (value === "24h" || value === "7d" || value === "30d") return value;
   return "7d";
+}
+
+function windowToDays(window: FormCheckSlaWindow): number {
+  if (window === "24h") return 1;
+  if (window === "30d") return 30;
+  return 7;
 }
 
 function normalizeAssistantLoad(
@@ -228,6 +235,7 @@ export const formCheckSlaService = {
   }): Promise<FormCheckSlaMetrics> {
     const selectedWindow = params?.window ?? "7d";
     const query = {
+      windowDays: windowToDays(selectedWindow),
       window: selectedWindow,
     };
 

@@ -51,6 +51,7 @@ export interface FormCheckActionQueueResponse {
 }
 
 const ACTION_QUEUE_ENDPOINTS = [
+  "/admin/form-check-videos/action-queue",
   "/admin/form-check/action-queue",
   "/admin/form-checks/action-queue",
   "/coach/form-check/action-queue",
