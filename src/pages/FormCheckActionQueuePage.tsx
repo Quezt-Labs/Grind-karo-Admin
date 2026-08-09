@@ -27,6 +27,31 @@ const TABS: Array<{ key: FormCheckQueueTab; label: string }> = [
   { key: "resolved", label: "Resolved / Replied" },
 ];
 
+function basePollInterval(tab: FormCheckQueueTab): number {
+  return tab === "resolved" ? 45_000 : 20_000;
+}
+
+function nextPollInterval(baseMs: number, failures: number): number {
+  if (failures <= 0) return baseMs;
+  return Math.min(Math.round(baseMs * Math.pow(1.5, failures)), 120_000);
+}
+
+function isBusyError(error: unknown): boolean {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status ?? null;
+    return error.code === "ECONNABORTED" || status === 408 || status === 429 || (status != null && status >= 500);
+  }
+  if (typeof error === "object" && error != null) {
+    const maybeBusy = (error as { busy?: unknown }).busy;
+    if (maybeBusy === true) return true;
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === "number") {
+      return status === 408 || status === 429 || status >= 500;
+    }
+  }
+  return false;
+}
+
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (seconds < 60) return "just now";
@@ -174,6 +199,9 @@ export function FormCheckActionQueuePage() {
   const [quickReplyId, setQuickReplyId] = useState<string | null>(null);
   const [draftById, setDraftById] = useState<Record<string, string>>({});
   const sinceCursorRef = useRef<string | null>(null);
+  const timeoutFailuresRef = useRef(0);
+  const [pollMs, setPollMs] = useState(basePollInterval("needs_reply"));
+  const [busyRetrying, setBusyRetrying] = useState(false);
 
   function advanceSince(candidate: string | null | undefined) {
     if (!candidate) return;
@@ -189,43 +217,62 @@ export function FormCheckActionQueuePage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["form-check-action-queue", tab, search],
     queryFn: async () => {
-      const queryKey = ["form-check-action-queue", tab, search] as const;
-      const previous = queryClient.getQueryData<FormCheckActionQueueResponse>(queryKey);
-      const polled = await formCheckActionQueueService.list({
-        tab,
-        q: search || undefined,
-        limit: 100,
-        since: sinceCursorRef.current ?? undefined,
-      });
-      advanceSince(polled.since);
-
-      if (polled.hasChanges === false && previous) {
-        return {
-          ...previous,
-          since: polled.since ?? previous.since,
-          hasChanges: false,
-        };
-      }
-      if (polled.hasChanges === true && polled.items.length === 0 && previous) {
-        const full = await formCheckActionQueueService.list({
+      try {
+        const queryKey = ["form-check-action-queue", tab, search] as const;
+        const previous = queryClient.getQueryData<FormCheckActionQueueResponse>(queryKey);
+        const polled = await formCheckActionQueueService.list({
           tab,
           q: search || undefined,
           limit: 100,
+          since: sinceCursorRef.current ?? undefined,
         });
-        advanceSince(full.since);
-        return full;
+        advanceSince(polled.since);
+
+        let response: FormCheckActionQueueResponse;
+        if (polled.hasChanges === false && previous) {
+          response = {
+            ...previous,
+            since: polled.since ?? previous.since,
+            hasChanges: false,
+          };
+        } else if (polled.hasChanges === true && polled.items.length === 0 && previous) {
+          const full = await formCheckActionQueueService.list({
+            tab,
+            q: search || undefined,
+            limit: 100,
+          });
+          advanceSince(full.since);
+          response = full;
+        } else if (polled.isDelta && previous) {
+          response = mergeDelta(previous, polled);
+        } else {
+          response = polled;
+        }
+
+        timeoutFailuresRef.current = 0;
+        setBusyRetrying(false);
+        setPollMs(basePollInterval(tab));
+        return response;
+      } catch (queryError) {
+        if (isBusyError(queryError)) {
+          timeoutFailuresRef.current += 1;
+          setBusyRetrying(true);
+          setPollMs(nextPollInterval(basePollInterval(tab), timeoutFailuresRef.current));
+        } else {
+          timeoutFailuresRef.current = 0;
+          setBusyRetrying(false);
+          setPollMs(basePollInterval(tab));
+        }
+        throw queryError;
       }
-      if (polled.isDelta && previous) {
-        return mergeDelta(previous, polled);
-      }
-      return polled;
     },
     staleTime: 5_000,
+    retry: false,
     refetchInterval: () => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") {
         return false;
       }
-      return tab === "resolved" ? 45_000 : 15_000;
+      return pollMs;
     },
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -258,6 +305,7 @@ export function FormCheckActionQueuePage() {
   });
 
   const items = useMemo(() => sortQueue(data?.items ?? [], tab), [data?.items, tab]);
+  const busyState = isError && (busyRetrying || isBusyError(error));
 
   return (
     <div className="space-y-6">
@@ -278,6 +326,9 @@ export function FormCheckActionQueuePage() {
               type="button"
               onClick={() => {
                 sinceCursorRef.current = null;
+                timeoutFailuresRef.current = 0;
+                setBusyRetrying(false);
+                setPollMs(basePollInterval(entry.key));
                 setTab(entry.key);
               }}
               className={cn(
@@ -297,6 +348,9 @@ export function FormCheckActionQueuePage() {
         <DebouncedSearch
           onSearch={(value) => {
             sinceCursorRef.current = null;
+            timeoutFailuresRef.current = 0;
+            setBusyRetrying(false);
+            setPollMs(basePollInterval(tab));
             setSearch(value);
           }}
           placeholder="Search athlete, exercise, message..."
@@ -304,7 +358,13 @@ export function FormCheckActionQueuePage() {
         />
       </div>
 
-      {isError ? (
+      {busyState ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+          Server busy, retrying automatically in {Math.ceil(pollMs / 1000)}s.
+        </div>
+      ) : null}
+
+      {isError && !busyState ? (
         <ErrorAlert
           message={
             error instanceof Error
@@ -312,10 +372,16 @@ export function FormCheckActionQueuePage() {
               : "Failed to load form-check action queue."
           }
         />
-      ) : isLoading ? (
+      ) : isLoading && !data ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, index) => (
             <Shimmer key={index} className="h-28 rounded-xl" />
+          ))}
+        </div>
+      ) : busyState && !data ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Shimmer key={index} className="h-24 rounded-xl" />
           ))}
         </div>
       ) : items.length === 0 ? (

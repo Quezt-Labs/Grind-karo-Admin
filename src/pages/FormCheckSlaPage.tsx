@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { Clock3, ListChecks, TimerReset, Users } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -45,27 +46,72 @@ function loadBarWidth(value: number | null): string {
   return `${clamped}%`;
 }
 
+function isBusyError(error: unknown): boolean {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status ?? null;
+    return error.code === "ECONNABORTED" || status === 408 || status === 429 || (status != null && status >= 500);
+  }
+  if (typeof error === "object" && error != null) {
+    const maybeBusy = (error as { busy?: unknown }).busy;
+    if (maybeBusy === true) return true;
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === "number") {
+      return status === 408 || status === 429 || status >= 500;
+    }
+  }
+  return false;
+}
+
+function nextCooldown(baseMs: number, failures: number): number {
+  if (failures <= 0) return baseMs;
+  return Math.min(Math.round(baseMs * Math.pow(2, failures - 1)), 180_000);
+}
+
 export function FormCheckSlaPage() {
+  const BASE_POLL_MS = 30_000;
   const { user } = useAuth();
   const isAssistant = user?.role === "ASSISTANT_COACH";
-  const [windowKey, setWindowKey] = useState<FormCheckSlaWindow>("7d");
+  const [windowKey, setWindowKey] = useState<FormCheckSlaWindow>("24h");
+  const [pollMs, setPollMs] = useState(BASE_POLL_MS);
+  const [busyRetrying, setBusyRetrying] = useState(false);
+  const busyFailuresRef = useRef(0);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["form-check-sla", windowKey],
-    queryFn: () =>
-      formCheckSlaService.getMetrics({
-        window: windowKey,
-      }),
+    queryFn: async () => {
+      try {
+        const metrics = await formCheckSlaService.getMetrics({
+          window: windowKey,
+        });
+        busyFailuresRef.current = 0;
+        setBusyRetrying(false);
+        setPollMs(BASE_POLL_MS);
+        return metrics;
+      } catch (queryError) {
+        if (isBusyError(queryError)) {
+          busyFailuresRef.current += 1;
+          setBusyRetrying(true);
+          setPollMs(nextCooldown(BASE_POLL_MS, busyFailuresRef.current));
+        } else {
+          busyFailuresRef.current = 0;
+          setBusyRetrying(false);
+          setPollMs(BASE_POLL_MS);
+        }
+        throw queryError;
+      }
+    },
     staleTime: 10_000,
+    retry: false,
     refetchInterval: () =>
       typeof document !== "undefined" && document.visibilityState === "visible"
-        ? 30_000
+        ? pollMs
         : false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 
   const loadRows = useMemo(() => data?.assistantLoadSplit ?? [], [data?.assistantLoadSplit]);
+  const busyState = isError && (busyRetrying || isBusyError(error));
 
   return (
     <div className="space-y-6">
@@ -83,7 +129,12 @@ export function FormCheckSlaPage() {
           <button
             key={window.key}
             type="button"
-            onClick={() => setWindowKey(window.key)}
+            onClick={() => {
+              busyFailuresRef.current = 0;
+              setBusyRetrying(false);
+              setPollMs(BASE_POLL_MS);
+              setWindowKey(window.key);
+            }}
             className={cn(
               "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
               windowKey === window.key
@@ -99,19 +150,25 @@ export function FormCheckSlaPage() {
         </span>
       </div>
 
-      {isError ? (
+      {busyState ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+          Server busy, retrying automatically in {Math.ceil(pollMs / 1000)}s.
+        </div>
+      ) : null}
+
+      {isError && !busyState ? (
         <ErrorAlert
           message={
             error instanceof Error ? error.message : "Failed to load SLA metrics."
           }
         />
-      ) : isLoading ? (
+      ) : isLoading && !data ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, index) => (
             <Shimmer key={index} className="h-24 rounded-xl" />
           ))}
         </div>
-      ) : (
+      ) : data ? (
         <>
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <article className="rounded-xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/50 dark:bg-rose-950/30">
@@ -207,7 +264,13 @@ export function FormCheckSlaPage() {
             )}
           </section>
         </>
-      )}
+      ) : busyState ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Shimmer key={index} className="h-20 rounded-xl" />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

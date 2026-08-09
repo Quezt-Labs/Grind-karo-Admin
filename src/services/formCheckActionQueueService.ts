@@ -59,6 +59,10 @@ const ACTION_QUEUE_ENDPOINTS = [
 
 let resolvedEndpoint: string | null = null;
 
+function isBusyStatus(status: number | null): boolean {
+  return status == null || status === 408 || status === 429 || status >= 500;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
@@ -354,16 +358,61 @@ function normalizeResponse(payload: unknown): FormCheckActionQueueResponse {
 async function tryFetch(
   endpoint: string,
   params: Record<string, unknown>,
-): Promise<{ ok: true; payload: unknown } | { ok: false }> {
-  const response = await api.get(endpoint, {
-    params,
-    validateStatus: (status) =>
-      (status >= 200 && status < 300) || status === 404 || status === 405,
-  });
-  if (response.status >= 200 && response.status < 300) {
-    return { ok: true, payload: response.data?.data ?? response.data };
+) : Promise<
+  | { ok: true; payload: unknown }
+  | { ok: false; status: number | null }
+> {
+  try {
+    const response = await api.get(endpoint, {
+      params,
+      validateStatus: (status) =>
+        (status >= 200 && status < 300) ||
+        status === 400 ||
+        status === 408 ||
+        status === 404 ||
+        status === 405 ||
+        status === 422 ||
+        status === 429 ||
+        status >= 500,
+    });
+    if (response.status >= 200 && response.status < 300) {
+      return { ok: true, payload: response.data?.data ?? response.data };
+    }
+    return { ok: false, status: response.status };
+  } catch (error) {
+    const status =
+      typeof error === "object" &&
+      error != null &&
+      "response" in error &&
+      typeof (error as { response?: { status?: unknown } }).response?.status ===
+        "number"
+        ? ((error as { response?: { status?: number } }).response?.status ?? null)
+        : null;
+    return { ok: false, status };
   }
-  return { ok: false };
+}
+
+function tabToCategory(tab: FormCheckQueueTab | undefined): string | undefined {
+  if (!tab) return undefined;
+  return tab;
+}
+
+async function tryFetchWithParamFallback(
+  endpoint: string,
+  primaryParams: Record<string, unknown>,
+  legacyParams: Record<string, unknown>,
+): Promise<
+  | { ok: true; payload: unknown }
+  | { ok: false; status: number | null }
+> {
+  const primary = await tryFetch(endpoint, primaryParams);
+  if (primary.ok) return primary;
+
+  // Legacy rollout compatibility: only retry with tab when category appears rejected.
+  if (primary.status === 400 || primary.status === 422) {
+    return tryFetch(endpoint, legacyParams);
+  }
+  return primary;
 }
 
 export const formCheckActionQueueService = {
@@ -374,27 +423,57 @@ export const formCheckActionQueueService = {
     offset?: number;
     since?: string;
   }): Promise<FormCheckActionQueueResponse> {
-    const query = {
-      tab: params?.tab,
+    const commonQuery = {
       q: params?.q,
       limit: params?.limit ?? 100,
       offset: params?.offset ?? 0,
       since: params?.since,
     };
+    const primaryQuery = {
+      ...commonQuery,
+      category: tabToCategory(params?.tab),
+    };
+    const legacyQuery = {
+      ...commonQuery,
+      tab: params?.tab,
+    };
+    let lastStatus: number | null = null;
+    let seenBusy = false;
 
     if (resolvedEndpoint) {
-      const hit = await tryFetch(resolvedEndpoint, query);
+      const hit = await tryFetchWithParamFallback(
+        resolvedEndpoint,
+        primaryQuery,
+        legacyQuery,
+      );
       if (hit.ok) return normalizeResponse(hit.payload);
+      lastStatus = hit.status;
+      seenBusy = seenBusy || isBusyStatus(hit.status);
       resolvedEndpoint = null;
     }
 
     for (const endpoint of ACTION_QUEUE_ENDPOINTS) {
-      const result = await tryFetch(endpoint, query);
-      if (!result.ok) continue;
+      const result = await tryFetchWithParamFallback(
+        endpoint,
+        primaryQuery,
+        legacyQuery,
+      );
+      if (!result.ok) {
+        lastStatus = result.status;
+        seenBusy = seenBusy || isBusyStatus(result.status);
+        continue;
+      }
       resolvedEndpoint = endpoint;
       return normalizeResponse(result.payload);
     }
 
-    throw new Error("Form check action queue endpoint is not available yet.");
+    const error = new Error(
+      seenBusy
+        ? "Action queue server busy, retrying automatically."
+        : "Form check action queue endpoint is not available yet.",
+    ) as Error & { status?: number | null; busy?: boolean };
+    error.status = lastStatus;
+    error.busy = seenBusy;
+    throw error;
   },
 };

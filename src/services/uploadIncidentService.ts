@@ -38,12 +38,21 @@ export interface UploadIncidentListResponse {
 }
 
 const UPLOAD_INCIDENT_ENDPOINTS = [
+  "/admin/upload-incidents",
   "/admin/upload/incidents",
   "/admin/uploads/incidents",
   "/coach/upload/incidents",
 ];
 
+const UPLOAD_INCIDENT_SUMMARY_ENDPOINTS = [
+  "/admin/upload-incidents/summary",
+  "/admin/upload/incidents/summary",
+  "/admin/uploads/incidents/summary",
+  "/coach/upload/incidents/summary",
+];
+
 let resolvedEndpoint: string | null = null;
+let resolvedSummaryEndpoint: string | null = null;
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -207,6 +216,36 @@ function normalizeStateCounts(
   return counts;
 }
 
+function parseStateCounts(
+  payload: Record<string, unknown> | null,
+): Record<UploadIncidentState, number> | null {
+  const raw =
+    asRecord(payload?.stateCounts) ??
+    asRecord(payload?.state_counts) ??
+    payload;
+  if (!raw) return null;
+  return {
+    failed: pickNumber(raw.failed) ?? 0,
+    stuck: pickNumber(raw.stuck) ?? 0,
+    retrying: pickNumber(raw.retrying, raw.retry) ?? 0,
+    resolved: pickNumber(raw.resolved) ?? 0,
+    unknown: pickNumber(raw.unknown) ?? 0,
+  };
+}
+
+function isStateCountsLikelyFallback(
+  counts: Record<UploadIncidentState, number>,
+  total: number,
+): boolean {
+  const sum =
+    counts.failed +
+    counts.stuck +
+    counts.retrying +
+    counts.resolved +
+    counts.unknown;
+  return total > 0 && sum === 0;
+}
+
 function normalizeResponse(payload: unknown): UploadIncidentListResponse {
   const record = asRecord(payload);
   const rows = Array.isArray(record?.items)
@@ -246,6 +285,30 @@ async function tryFetch(
   return { ok: false };
 }
 
+async function fetchSummaryCounts(
+  params: Record<string, unknown>,
+): Promise<Record<UploadIncidentState, number> | null> {
+  if (resolvedSummaryEndpoint) {
+    const hit = await tryFetch(resolvedSummaryEndpoint, params);
+    if (hit.ok) {
+      const parsed = parseStateCounts(asRecord(hit.payload));
+      if (parsed) return parsed;
+    } else {
+      resolvedSummaryEndpoint = null;
+    }
+  }
+
+  for (const endpoint of UPLOAD_INCIDENT_SUMMARY_ENDPOINTS) {
+    const result = await tryFetch(endpoint, params);
+    if (!result.ok) continue;
+    const parsed = parseStateCounts(asRecord(result.payload));
+    if (!parsed) continue;
+    resolvedSummaryEndpoint = endpoint;
+    return parsed;
+  }
+  return null;
+}
+
 export const uploadIncidentService = {
   async list(params?: {
     state?: UploadIncidentState | "all";
@@ -264,7 +327,19 @@ export const uploadIncidentService = {
 
     if (resolvedEndpoint) {
       const hit = await tryFetch(resolvedEndpoint, query);
-      if (hit.ok) return normalizeResponse(hit.payload);
+      if (hit.ok) {
+        const normalized = normalizeResponse(hit.payload);
+        if (isStateCountsLikelyFallback(normalized.stateCounts, normalized.total)) {
+          const summaryCounts = await fetchSummaryCounts(query);
+          if (summaryCounts) {
+            return {
+              ...normalized,
+              stateCounts: summaryCounts,
+            };
+          }
+        }
+        return normalized;
+      }
       resolvedEndpoint = null;
     }
 
@@ -272,7 +347,17 @@ export const uploadIncidentService = {
       const result = await tryFetch(endpoint, query);
       if (!result.ok) continue;
       resolvedEndpoint = endpoint;
-      return normalizeResponse(result.payload);
+      const normalized = normalizeResponse(result.payload);
+      if (isStateCountsLikelyFallback(normalized.stateCounts, normalized.total)) {
+        const summaryCounts = await fetchSummaryCounts(query);
+        if (summaryCounts) {
+          return {
+            ...normalized,
+            stateCounts: summaryCounts,
+          };
+        }
+      }
+      return normalized;
     }
 
     throw new Error("Upload incident endpoint is not available yet.");

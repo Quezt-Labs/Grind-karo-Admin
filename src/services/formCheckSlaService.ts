@@ -48,6 +48,10 @@ const SLA_ENDPOINTS = [
 
 let resolvedEndpoint: string | null = null;
 
+function isBusyStatus(status: number | null): boolean {
+  return status == null || status === 408 || status === 429 || status >= 500;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
@@ -217,41 +221,79 @@ function normalizeMetrics(
 async function tryFetch(
   endpoint: string,
   params: Record<string, unknown>,
-): Promise<{ ok: true; payload: unknown } | { ok: false }> {
-  const response = await api.get(endpoint, {
-    params,
-    validateStatus: (status) =>
-      (status >= 200 && status < 300) || status === 404 || status === 405,
-  });
-  if (response.status >= 200 && response.status < 300) {
-    return { ok: true, payload: response.data?.data ?? response.data };
+): Promise<
+  | { ok: true; payload: unknown }
+  | { ok: false; status: number | null }
+> {
+  try {
+    const response = await api.get(endpoint, {
+      params,
+      validateStatus: (status) =>
+        (status >= 200 && status < 300) ||
+        status === 400 ||
+        status === 404 ||
+        status === 405 ||
+        status === 408 ||
+        status === 422 ||
+        status === 429 ||
+        status >= 500,
+    });
+    if (response.status >= 200 && response.status < 300) {
+      return { ok: true, payload: response.data?.data ?? response.data };
+    }
+    return { ok: false, status: response.status };
+  } catch (error) {
+    const status =
+      typeof error === "object" &&
+      error != null &&
+      "response" in error &&
+      typeof (error as { response?: { status?: unknown } }).response?.status ===
+        "number"
+        ? ((error as { response?: { status?: number } }).response?.status ?? null)
+        : null;
+    return { ok: false, status };
   }
-  return { ok: false };
 }
 
 export const formCheckSlaService = {
   async getMetrics(params?: {
     window?: FormCheckSlaWindow;
   }): Promise<FormCheckSlaMetrics> {
-    const selectedWindow = params?.window ?? "7d";
+    const selectedWindow = params?.window ?? "24h";
     const query = {
+      source: "program",
       windowDays: windowToDays(selectedWindow),
       window: selectedWindow,
     };
+    let lastStatus: number | null = null;
+    let seenBusy = false;
 
     if (resolvedEndpoint) {
       const hit = await tryFetch(resolvedEndpoint, query);
       if (hit.ok) return normalizeMetrics(hit.payload, selectedWindow);
+      lastStatus = hit.status;
+      seenBusy = seenBusy || isBusyStatus(hit.status);
       resolvedEndpoint = null;
     }
 
     for (const endpoint of SLA_ENDPOINTS) {
       const result = await tryFetch(endpoint, query);
-      if (!result.ok) continue;
+      if (!result.ok) {
+        lastStatus = result.status;
+        seenBusy = seenBusy || isBusyStatus(result.status);
+        continue;
+      }
       resolvedEndpoint = endpoint;
       return normalizeMetrics(result.payload, selectedWindow);
     }
 
-    throw new Error("Form-check SLA endpoint is not available yet.");
+    const error = new Error(
+      seenBusy
+        ? "SLA server busy, retrying automatically."
+        : "Form-check SLA endpoint is not available yet.",
+    ) as Error & { status?: number | null; busy?: boolean };
+    error.status = lastStatus;
+    error.busy = seenBusy;
+    throw error;
   },
 };
