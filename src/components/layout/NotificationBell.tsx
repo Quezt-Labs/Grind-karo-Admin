@@ -15,16 +15,27 @@ import {
   Upload,
   Bug,
   Send,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { notificationService } from "@/services/notificationService";
 import {
   workoutVideoCommentService,
+  type FormCheckCommentThread,
   type FormCheckThreadType,
 } from "@/services/workoutVideoCommentService";
 import { useNotificationStore } from "@/store/notificationStore";
 import type { AdminNotification, NotificationListResponse } from "@/types/user";
 import { useAuth } from "@/hooks/useAuth";
+import { LinkifiedText } from "@/components/shared/LinkifiedText";
+import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/ShadDialog";
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -145,6 +156,76 @@ function parseThreadType(value: unknown): FormCheckThreadType | null {
   return null;
 }
 
+function pickUrlString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    if (
+      trimmed.startsWith("http://") ||
+      trimmed.startsWith("https://") ||
+      trimmed.startsWith("/") ||
+      trimmed.startsWith("blob:")
+    ) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
+function formatThreadMessageDate(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+type ThreadRole = "athlete" | "coach" | "assistant_coach" | "admin" | "system";
+
+function normalizeThreadRole(value: string | null | undefined): ThreadRole {
+  const role = (value ?? "").trim().toLowerCase();
+  if (role.includes("athlete") || role === "user") return "athlete";
+  if (role.includes("assistant")) return "assistant_coach";
+  if (role.includes("admin")) return "admin";
+  if (role.includes("coach")) return "coach";
+  return "system";
+}
+
+function roleLabel(role: ThreadRole): string {
+  switch (role) {
+    case "athlete":
+      return "Athlete";
+    case "assistant_coach":
+      return "Assistant Coach";
+    case "coach":
+      return "Coach";
+    case "admin":
+      return "Admin";
+    default:
+      return "System";
+  }
+}
+
+function roleChipClass(role: ThreadRole): string {
+  switch (role) {
+    case "athlete":
+      return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200";
+    case "assistant_coach":
+      return "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200";
+    case "coach":
+      return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200";
+    case "admin":
+      return "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200";
+    default:
+      return "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200";
+  }
+}
+
 type FormCheckActionState = "unread" | "needs_reply" | "replied" | "resolved";
 
 type FormCheckNotificationMeta = {
@@ -162,6 +243,8 @@ type FormCheckNotificationMeta = {
   stateReason: string | null;
   repliesRemaining: number | null;
   replyBlocked: boolean;
+  fullMessage: string;
+  videoUrl: string | null;
   groupKey: string;
 };
 
@@ -293,6 +376,27 @@ function formCheckMeta(n: AdminNotification): FormCheckNotificationMeta {
   const preview =
     pickString(payload.preview, payload.messagePreview, payload.comment, n.message) ??
     n.message;
+  const fullMessage =
+    pickString(
+      payload.fullMessage,
+      payload.full_message,
+      payload.latestMessage,
+      payload.latest_message,
+      payload.comment,
+      payload.message,
+      preview,
+      n.message,
+    ) ?? n.message;
+  const videoUrl = pickUrlString(
+    payload.videoUrl,
+    payload.video_url,
+    payload.uploadUrl,
+    payload.upload_url,
+    payload.mediaUrl,
+    payload.media_url,
+    payload.fileUrl,
+    payload.file_url,
+  );
   const groupKey =
     pickString(
       payload.groupKey,
@@ -316,6 +420,8 @@ function formCheckMeta(n: AdminNotification): FormCheckNotificationMeta {
     stateReason,
     repliesRemaining,
     replyBlocked,
+    fullMessage,
+    videoUrl,
     groupKey,
   };
 }
@@ -449,6 +555,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   const [quickReplyDrafts, setQuickReplyDrafts] = useState<
     Record<string, string>
   >({});
+  const [modalContext, setModalContext] = useState<{
+    notification: AdminNotification;
+    meta: FormCheckNotificationMeta;
+  } | null>(null);
+  const [modalReplyDraft, setModalReplyDraft] = useState("");
 
   const markReadMutation = useMutation({
     mutationFn: (id: string) => notificationService.markRead(id),
@@ -543,6 +654,25 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     },
   });
 
+  const modalThreadQuery = useQuery<FormCheckCommentThread>({
+    queryKey: [
+      "notification-form-check-thread",
+      modalContext?.meta.threadType,
+      modalContext?.meta.commentId,
+    ],
+    queryFn: () => {
+      if (!modalContext?.meta.commentId) {
+        throw new Error("Missing comment id");
+      }
+      return modalContext.meta.threadType === "sheets"
+        ? workoutVideoCommentService.getSheetsThread(modalContext.meta.commentId)
+        : workoutVideoCommentService.getWorkoutThread(modalContext.meta.commentId);
+    },
+    enabled: !!modalContext?.meta.commentId,
+    staleTime: 15_000,
+    retry: false,
+  });
+
   function buildFormCheckRoute(
     meta: FormCheckNotificationMeta,
     action?: string,
@@ -560,6 +690,35 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     return `/form-checks?${params.toString()}`;
   }
 
+  function closeModal() {
+    setModalContext(null);
+    setModalReplyDraft("");
+  }
+
+  function openFormCheckModal(notification: AdminNotification) {
+    const meta = formCheckMeta(notification);
+    if (!meta.userId && !meta.commentId) {
+      const action = meta.state === "needs_reply" ? "reply" : undefined;
+      openFormCheckNotification(notification, action);
+      return;
+    }
+    markReadMutation.mutate(notification.id);
+    setModalContext({ notification, meta });
+    setModalReplyDraft(quickReplyDrafts[notification.id] ?? "");
+  }
+
+  function openThreadFromModal(action?: "reply") {
+    if (!modalContext) return;
+    const derivedAction =
+      action ??
+      (modalContext.meta.state === "needs_reply" ||
+      priorityWeight(modalContext.notification.priority) >= 4
+        ? "reply"
+        : undefined);
+    openFormCheckNotification(modalContext.notification, derivedAction);
+    closeModal();
+  }
+
   function openFormCheckNotification(
     notification: AdminNotification,
     action?: string,
@@ -572,9 +731,7 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
 
   function handleClickNotification(n: AdminNotification) {
     if (isFormCheckNotification(n)) {
-      const meta = formCheckMeta(n);
-      const action = meta.state === "needs_reply" ? "reply" : undefined;
-      openFormCheckNotification(n, action);
+      openFormCheckModal(n);
       return;
     }
     markReadMutation.mutate(n.id);
@@ -694,8 +851,21 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     return Array.from(map.entries());
   }, [formCheckGroupIds, sortedItems]);
 
+  const modalMeta = modalContext?.meta ?? null;
+  const modalNotification = modalContext?.notification ?? null;
+  const modalThreadMessages = modalThreadQuery.data?.messages ?? [];
+  const modalRepliesRemaining =
+    modalThreadQuery.data?.repliesRemaining ?? modalMeta?.repliesRemaining ?? null;
+  const modalReplyBlocked =
+    modalMeta?.replyBlocked === true ||
+    modalThreadQuery.data?.canAthleteReply === false ||
+    (modalRepliesRemaining != null && modalRepliesRemaining <= 0);
+  const modalReplyReason =
+    modalThreadQuery.data?.replyLockReason ?? modalMeta?.stateReason ?? null;
+
   return (
-    <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:w-96">
+    <>
+      <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:w-96">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3 dark:border-gray-700">
         <div className="flex items-center gap-2">
@@ -821,32 +991,38 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                         key={group.key}
                         className="rounded-lg border border-rose-200 bg-white p-2.5 dark:border-rose-800/40 dark:bg-gray-900/70"
                       >
-                        <div className="mb-1.5 flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                              {meta.athleteName ?? primary.title}
-                            </p>
-                            <p className="truncate text-[11px] text-gray-600 dark:text-gray-300">
-                              {meta.videoReference ?? "Form-check thread"}
-                            </p>
+                        <button
+                          type="button"
+                          onClick={() => openFormCheckModal(primary)}
+                          className="w-full rounded-md text-left hover:bg-rose-50/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 dark:hover:bg-rose-900/10"
+                        >
+                          <div className="mb-1.5 flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                                {meta.athleteName ?? primary.title}
+                              </p>
+                              <p className="truncate text-[11px] text-gray-600 dark:text-gray-300">
+                                {meta.videoReference ?? "Form-check thread"}
+                              </p>
+                            </div>
+                            <span
+                              className={cn(
+                                "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                                priorityToneClass(primary.priority),
+                              )}
+                            >
+                              {primary.priority ?? "normal"}
+                            </span>
                           </div>
-                          <span
-                            className={cn(
-                              "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                              priorityToneClass(primary.priority),
-                            )}
-                          >
-                            {primary.priority ?? "normal"}
-                          </span>
-                        </div>
-                        <p className="mb-1 text-xs font-medium text-gray-800 dark:text-gray-100">
-                          {groupedCount > 1
-                            ? `${groupedCount} updates · ${meta.activityLabel.toLowerCase()}`
-                            : meta.activityLabel}
-                        </p>
-                        <p className="line-clamp-2 text-xs text-gray-600 dark:text-gray-300">
-                          {meta.preview}
-                        </p>
+                          <p className="mb-1 text-xs font-medium text-gray-800 dark:text-gray-100">
+                            {groupedCount > 1
+                              ? `${groupedCount} updates · ${meta.activityLabel.toLowerCase()}`
+                              : meta.activityLabel}
+                          </p>
+                          <p className="line-clamp-2 text-xs text-gray-600 dark:text-gray-300">
+                            {meta.preview}
+                          </p>
+                        </button>
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           <span
                             className={cn(
@@ -965,7 +1141,7 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                   return (
                     <button
                       key={group.key}
-                      onClick={() => openFormCheckNotification(primary)}
+                      onClick={() => openFormCheckModal(primary)}
                       className="flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-gray-50 last:border-b-0 dark:border-gray-700 dark:hover:bg-gray-700/50"
                     >
                       <div className="mt-0.5 shrink-0 rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-300">
@@ -1064,6 +1240,186 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
           </div>
         )}
       </div>
-    </div>
+      </div>
+      <Dialog open={modalContext != null} onOpenChange={(next) => !next && closeModal()}>
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {modalMeta?.athleteName
+                ? `${modalMeta.athleteName} · Form check thread`
+                : "Form check thread"}
+            </DialogTitle>
+            <DialogDescription>
+              {modalMeta?.videoReference ?? "Open full context and reply quickly."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {modalNotification && modalMeta ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/50">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                      stateToneClass(modalMeta.state),
+                    )}
+                  >
+                    {stateLabel(modalMeta.state)}
+                  </span>
+                  {modalRepliesRemaining != null ? (
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                      {modalRepliesRemaining} repl
+                      {modalRepliesRemaining === 1 ? "y" : "ies"} left
+                    </span>
+                  ) : null}
+                  {modalReplyReason ? (
+                    <span className="text-[11px] text-rose-700 dark:text-rose-300">
+                      {modalReplyReason}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {modalMeta.activityLabel}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200">
+                  {modalMeta.fullMessage}
+                </p>
+              </div>
+
+              {modalMeta.videoUrl ? (
+                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                  <FormCheckVideoPlayer src={modalMeta.videoUrl} />
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Thread context
+                  </h4>
+                  {modalThreadQuery.isLoading ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Loading…
+                    </span>
+                  ) : null}
+                </div>
+
+                {!modalMeta.commentId ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                    Thread identifier unavailable for this notification.
+                  </div>
+                ) : modalThreadQuery.isError ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                    Unable to load full thread context right now. Open thread for complete details.
+                  </div>
+                ) : modalThreadMessages.length === 0 ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300">
+                    No thread replies available yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900/60">
+                    {modalThreadMessages.map((message) => {
+                      const role = normalizeThreadRole(message.role);
+                      return (
+                        <div
+                          key={message.id}
+                          className="rounded-md border border-gray-100 bg-gray-50 p-2.5 dark:border-gray-700 dark:bg-gray-800/60"
+                        >
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <span
+                              className={cn(
+                                "rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                                roleChipClass(role),
+                              )}
+                            >
+                              {roleLabel(role)}
+                            </span>
+                            {formatThreadMessageDate(message.createdAt) ? (
+                              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                {formatThreadMessageDate(message.createdAt)}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="text-sm text-gray-700 dark:text-gray-200">
+                            <LinkifiedText text={message.message} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {modalMeta.commentId ? (
+                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/70">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                    Quick reply
+                  </p>
+                  <textarea
+                    value={modalReplyDraft}
+                    onChange={(event) => setModalReplyDraft(event.target.value)}
+                    rows={3}
+                    placeholder="Reply to athlete…"
+                    className="w-full resize-y rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                      {modalReplyBlocked
+                        ? modalReplyReason ?? "Replies are currently blocked for this thread."
+                        : "Reply sends immediately and marks this notification read."}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={
+                        quickReplyMutation.isPending ||
+                        !modalReplyDraft.trim() ||
+                        modalReplyBlocked
+                      }
+                      onClick={() =>
+                        quickReplyMutation.mutate(
+                          {
+                            notificationId: modalNotification.id,
+                            commentId: modalMeta.commentId!,
+                            threadType: modalMeta.threadType,
+                            reply: modalReplyDraft,
+                          },
+                          {
+                            onSuccess: () => {
+                              closeModal();
+                            },
+                          },
+                        )
+                      }
+                      className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      Send
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => openThreadFromModal()}
+                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+                >
+                  Open thread
+                </button>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
