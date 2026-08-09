@@ -22,6 +22,7 @@ import { notificationService } from "@/services/notificationService";
 import {
   workoutVideoCommentService,
   type FormCheckCommentThread,
+  type FormCheckThreadVideoContext,
   type FormCheckThreadType,
 } from "@/services/workoutVideoCommentService";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -672,6 +673,26 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     staleTime: 15_000,
     retry: false,
   });
+  const modalVideoContextQuery = useQuery<FormCheckThreadVideoContext>({
+    queryKey: [
+      "notification-form-check-video-context",
+      modalContext?.meta.threadType,
+      modalContext?.meta.commentId,
+    ],
+    queryFn: () => {
+      if (!modalContext?.meta.commentId) {
+        throw new Error("Missing comment id");
+      }
+      return workoutVideoCommentService.getThreadVideoContext(
+        modalContext.meta.threadType,
+        modalContext.meta.commentId,
+      );
+    },
+    enabled:
+      !!modalContext?.meta.commentId && !modalContext?.meta.videoUrl,
+    staleTime: 15_000,
+    retry: false,
+  });
 
   function buildFormCheckRoute(
     meta: FormCheckNotificationMeta,
@@ -862,6 +883,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     (modalRepliesRemaining != null && modalRepliesRemaining <= 0);
   const modalReplyReason =
     modalThreadQuery.data?.replyLockReason ?? modalMeta?.stateReason ?? null;
+  const modalDiscussionVideoUrl =
+    modalMeta?.videoUrl ??
+    modalThreadQuery.data?.videoUrl ??
+    modalVideoContextQuery.data?.videoUrl ??
+    null;
 
   return (
     <>
@@ -1286,11 +1312,22 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                 </p>
               </div>
 
-              {modalMeta.videoUrl ? (
-                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                  <FormCheckVideoPlayer src={modalMeta.videoUrl} />
-                </div>
-              ) : null}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Discussion video
+                </h4>
+                {modalDiscussionVideoUrl ? (
+                  <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                    <FormCheckVideoPlayer src={modalDiscussionVideoUrl} />
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300">
+                    {modalVideoContextQuery.isLoading
+                      ? "Resolving video context…"
+                      : "Video unavailable in this notification context."}
+                  </div>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">

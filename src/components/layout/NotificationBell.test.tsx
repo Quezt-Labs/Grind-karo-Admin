@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   markAllRead: vi.fn(),
   getWorkoutThread: vi.fn(),
   getSheetsThread: vi.fn(),
+  getThreadVideoContext: vi.fn(),
   replyThread: vi.fn(),
 }));
 
@@ -53,6 +54,7 @@ vi.mock("@/services/workoutVideoCommentService", () => ({
   workoutVideoCommentService: {
     getWorkoutThread: mocks.getWorkoutThread,
     getSheetsThread: mocks.getSheetsThread,
+    getThreadVideoContext: mocks.getThreadVideoContext,
     replyThread: mocks.replyThread,
   },
 }));
@@ -143,6 +145,7 @@ describe("NotificationBell form-check modal flow", () => {
     mocks.markAllRead.mockReset();
     mocks.getWorkoutThread.mockReset();
     mocks.getSheetsThread.mockReset();
+    mocks.getThreadVideoContext.mockReset();
     mocks.replyThread.mockReset();
 
     const notification = makeFormCheckNotification();
@@ -165,6 +168,7 @@ describe("NotificationBell form-check modal flow", () => {
       repliesRemaining: 2,
       canAthleteReply: true,
       replyLockReason: null,
+      videoUrl: null,
     });
     mocks.getSheetsThread.mockResolvedValue({
       messages: [],
@@ -173,7 +177,9 @@ describe("NotificationBell form-check modal flow", () => {
       repliesRemaining: null,
       canAthleteReply: null,
       replyLockReason: null,
+      videoUrl: null,
     });
+    mocks.getThreadVideoContext.mockResolvedValue({ videoUrl: null });
   });
 
   afterEach(() => {
@@ -230,5 +236,103 @@ describe("NotificationBell form-check modal flow", () => {
     expect(
       within(dialog).getByRole("button", { name: "Open thread" }),
     ).toBeInTheDocument();
+  });
+
+  it("renders discussion video player when URL is present in notification payload", async () => {
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    await user.click(screen.getByText("Preview text from notification payload"));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Discussion video")).toBeInTheDocument();
+    expect(within(dialog).getByTestId("form-check-video-player")).toHaveTextContent(
+      "https://cdn.example.com/video-1.mp4",
+    );
+  });
+
+  it("fetches and renders discussion video when payload lacks URL but thread context provides one", async () => {
+    const user = userEvent.setup();
+    mocks.getAll.mockResolvedValue(
+      makeUnreadResponse(
+        makeFormCheckNotification({
+          payload: {
+            ...makeFormCheckNotification().payload,
+            videoUrl: undefined,
+          },
+        }),
+      ),
+    );
+    mocks.getWorkoutThread.mockResolvedValue({
+      messages: [
+        {
+          id: "m1",
+          role: "athlete",
+          message: "Athlete thread message",
+          createdAt: "2026-08-10T00:00:00.000Z",
+        },
+      ],
+      replyLimit: 3,
+      repliesUsed: 1,
+      repliesRemaining: 2,
+      canAthleteReply: true,
+      replyLockReason: null,
+      videoUrl: "https://cdn.example.com/video-from-thread.mp4",
+    });
+
+    renderBell();
+    await openPanel(user);
+
+    await user.click(screen.getByText("Preview text from notification payload"));
+
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => {
+      expect(within(dialog).getByTestId("form-check-video-player")).toHaveTextContent(
+        "https://cdn.example.com/video-from-thread.mp4",
+      );
+    });
+  });
+
+  it("shows discussion video fallback text when no video URL is available", async () => {
+    const user = userEvent.setup();
+    mocks.getAll.mockResolvedValue(
+      makeUnreadResponse(
+        makeFormCheckNotification({
+          payload: {
+            ...makeFormCheckNotification().payload,
+            videoUrl: undefined,
+          },
+        }),
+      ),
+    );
+    mocks.getWorkoutThread.mockResolvedValue({
+      messages: [
+        {
+          id: "m1",
+          role: "athlete",
+          message: "Athlete thread message",
+          createdAt: "2026-08-10T00:00:00.000Z",
+        },
+      ],
+      replyLimit: 3,
+      repliesUsed: 1,
+      repliesRemaining: 2,
+      canAthleteReply: true,
+      replyLockReason: null,
+    });
+
+    renderBell();
+    await openPanel(user);
+
+    await user.click(screen.getByText("Preview text from notification payload"));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Discussion video")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        within(dialog).getByText("Video unavailable in this notification context."),
+      ).toBeInTheDocument();
+    });
   });
 });

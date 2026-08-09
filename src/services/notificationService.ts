@@ -107,8 +107,26 @@ export const notificationService = {
   },
 
   async markRead(id: string): Promise<AdminNotification> {
-    const { data } = await api.post(`/admin/notifications/${id}/read`);
-    return data;
+    const endpoint = `/admin/notifications/${id}/read`;
+    const run = (method: "patch" | "post") =>
+      api.request({
+        method,
+        url: endpoint,
+        validateStatus: (status) =>
+          (status >= 200 && status < 300) ||
+          status === 404 ||
+          status === 405,
+      });
+
+    const response = await run("patch");
+    if (response.status >= 200 && response.status < 300) {
+      return response.data.data ?? response.data;
+    }
+    const fallback = await run("post");
+    if (fallback.status >= 200 && fallback.status < 300) {
+      return fallback.data.data ?? fallback.data;
+    }
+    throw new Error("Failed to mark notification as read.");
   },
 
   async markAllRead(): Promise<{ markedRead: number }> {

@@ -36,6 +36,77 @@ export interface FormCheckCommentThread {
   repliesRemaining: number | null;
   canAthleteReply: boolean | null;
   replyLockReason: string | null;
+  videoUrl: string | null;
+}
+
+export interface FormCheckThreadVideoContext {
+  videoUrl: string | null;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function pickUrlString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    if (
+      trimmed.startsWith("http://") ||
+      trimmed.startsWith("https://") ||
+      trimmed.startsWith("/") ||
+      trimmed.startsWith("blob:")
+    ) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
+function extractVideoUrl(payload: Record<string, unknown>): string | null {
+  const video = asRecord(payload.video);
+  const workoutSetVideo = asRecord(payload.workoutSetVideo);
+  const sheetsSetVideo = asRecord(payload.sheetsSetVideo);
+  const comment = asRecord(payload.comment);
+  const target = asRecord(payload.target);
+
+  return pickUrlString(
+    payload.videoUrl,
+    payload.video_url,
+    payload.mediaUrl,
+    payload.media_url,
+    payload.uploadUrl,
+    payload.upload_url,
+    payload.fileUrl,
+    payload.file_url,
+    payload.url,
+    video?.url,
+    video?.videoUrl,
+    video?.video_url,
+    video?.mediaUrl,
+    video?.media_url,
+    video?.uploadUrl,
+    workoutSetVideo?.videoUrl,
+    workoutSetVideo?.video_url,
+    workoutSetVideo?.uploadUrl,
+    workoutSetVideo?.upload_url,
+    workoutSetVideo?.mediaUrl,
+    workoutSetVideo?.media_url,
+    sheetsSetVideo?.videoUrl,
+    sheetsSetVideo?.video_url,
+    sheetsSetVideo?.uploadUrl,
+    sheetsSetVideo?.upload_url,
+    sheetsSetVideo?.mediaUrl,
+    sheetsSetVideo?.media_url,
+    comment?.videoUrl,
+    comment?.video_url,
+    comment?.uploadUrl,
+    comment?.upload_url,
+    target?.videoUrl,
+    target?.video_url,
+  );
 }
 
 function normalizeThread(payload: Record<string, unknown>): FormCheckCommentThread {
@@ -84,6 +155,7 @@ function normalizeThread(payload: Record<string, unknown>): FormCheckCommentThre
       (payload.replyLockReason as string | null | undefined) ??
       (payload.reply_lock_reason as string | null | undefined) ??
       null,
+    videoUrl: extractVideoUrl(payload),
   };
 }
 
@@ -125,6 +197,43 @@ export const workoutVideoCommentService = {
       `/admin/sheets-set-video-comments/${commentId}/thread`,
     );
     return normalizeThread((data.data ?? data) as Record<string, unknown>);
+  },
+
+  async getThreadVideoContext(
+    threadType: FormCheckThreadType,
+    commentId: string,
+  ): Promise<FormCheckThreadVideoContext> {
+    const endpoints =
+      threadType === "sheets"
+        ? [
+            `/admin/sheets-set-video-comments/${commentId}`,
+            `/admin/sheets-set-video-comments/${commentId}/context`,
+            `/admin/form-check/comments/${commentId}`,
+          ]
+        : [
+            `/admin/workout-set-video-comments/${commentId}`,
+            `/admin/workout-set-video-comments/${commentId}/context`,
+            `/admin/form-check/comments/${commentId}`,
+          ];
+
+    for (const endpoint of endpoints) {
+      const response = await api.get(endpoint, {
+        validateStatus: (status) =>
+          (status >= 200 && status < 300) ||
+          status === 400 ||
+          status === 403 ||
+          status === 404 ||
+          status === 405 ||
+          status === 422,
+      });
+      if (response.status < 200 || response.status >= 300) continue;
+      const payload = asRecord(response.data?.data ?? response.data);
+      if (!payload) continue;
+      const videoUrl = extractVideoUrl(payload);
+      if (videoUrl) return { videoUrl };
+    }
+
+    return { videoUrl: null };
   },
 
   async replySheets(
