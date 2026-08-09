@@ -18,6 +18,7 @@ import { formCheckKeys } from "@/hooks/formCheckQueryKeys";
 import { useFormCheckPendingCount } from "@/hooks/useFormCheckPendingCount";
 import { coachOpsService } from "@/services/coachOpsService";
 import { userService } from "@/services/userService";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/utils/cn";
 import { formatWeekDateRange } from "@/utils/weekDates";
 import type { CoachingSetupMember } from "@/types/user";
@@ -96,6 +97,8 @@ type FocusItem = {
 };
 
 export function WorkspacePage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const today = todayIsoDate();
   const todayLabel = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -115,6 +118,7 @@ export function WorkspacePage() {
         status: "awaiting_program",
         limit: 8,
       }),
+    enabled: isAdmin,
   });
 
   const { data: pendingVideoCount = 0 } = useFormCheckPendingCount();
@@ -156,8 +160,11 @@ export function WorkspacePage() {
     queryFn: () => coachOpsService.getBoard({ date: today }),
   });
 
-  const awaitingProgram = setupData?.counts.awaitingProgram ?? 0;
-  const pendingPrograms = setupData?.items ?? [];
+  const awaitingProgram = isAdmin
+    ? (setupData?.counts.awaitingProgram ?? 0)
+    : (opsBoard?.items ?? []).filter((item) => item.setupStatus !== "ready")
+        .length;
+  const pendingPrograms = isAdmin ? setupData?.items ?? [] : [];
 
   const fcAthletes = [
     ...(athletesData?.mega ?? []),
@@ -270,7 +277,7 @@ export function WorkspacePage() {
             value={awaitingProgram}
             subtitle="Awaiting first / next program"
             icon={ClipboardList}
-            to="/users?tab=coaching-setup"
+            to={isAdmin ? "/users?tab=coaching-setup" : "/coach/ops-board"}
             tone="indigo"
             error={setupError}
           />

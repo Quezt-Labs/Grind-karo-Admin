@@ -8,6 +8,7 @@ import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { athleteEngagementService } from "@/services/athleteEngagementService";
+import { useIsAdmin } from "@/hooks/useRole";
 import type { Column } from "@/types/dashboard";
 
 type Row = {
@@ -61,6 +62,7 @@ function formatDeadliftCell(checkin: {
 }
 
 export function BigLiftPrPage() {
+  const isAdmin = useIsAdmin();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-big-lift-pr"],
     queryFn: () => athleteEngagementService.listBigLiftPrSummaries(),
@@ -116,7 +118,9 @@ export function BigLiftPrPage() {
       sortable: false,
       render: (_value, row) => (
         <Link
-          to={`/users/${row.userId}`}
+          to={
+            isAdmin ? `/users/${row.userId}` : `/coach/athletes/${row.userId}`
+          }
           className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
         >
           View

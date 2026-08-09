@@ -28,8 +28,10 @@ import {
 } from "@/hooks/useFormCheckInbox";
 import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
 import { useFormCheckInboxRoute } from "@/hooks/useFormCheckInboxRoute";
+import { useIsAdmin } from "@/hooks/useRole";
 import type { FormCheckInboxAthlete } from "@/services/formCheckInboxService";
 import { formCheckInboxService } from "@/services/formCheckInboxService";
+import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import { userService } from "@/services/userService";
 import {
   formatProgramDayLabel,
@@ -53,6 +55,7 @@ function filterAthletesByHandler(
 }
 
 export function FormCheckInboxPage() {
+  const isAdmin = useIsAdmin();
   const route = useFormCheckInboxRoute();
   const {
     view,
@@ -164,8 +167,14 @@ export function FormCheckInboxPage() {
   const showFeedbackLog = reviewFilter !== "pending" && layout === "feedback";
 
   const { data: purchasesData } = useQuery({
-    queryKey: formCheckKeys.purchases(selectedUserId ?? ""),
-    queryFn: () => userService.getPurchases(selectedUserId!),
+    queryKey: [
+      ...(isAdmin ? formCheckKeys.purchases(selectedUserId ?? "") : []),
+      ...(isAdmin ? [] : ["coach-athlete-purchases", selectedUserId ?? ""]),
+    ],
+    queryFn: () =>
+      isAdmin
+        ? userService.getPurchases(selectedUserId!)
+        : athleteAssignmentService.getCoachAthletePurchases(selectedUserId!),
     enabled: !!selectedUserId && !isMissingView,
   });
 

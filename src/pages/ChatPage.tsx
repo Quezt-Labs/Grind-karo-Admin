@@ -70,6 +70,9 @@ export function ChatPage() {
   const isAdmin = authUser?.role === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedUserId = searchParams.get("userId") ?? "";
+  const selectedAthleteHref = isAdmin
+    ? `/users/${selectedUserId}?tab=activity`
+    : `/coach/athletes/${selectedUserId}?tab=chat`;
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<{
     userId: string;
@@ -573,7 +576,7 @@ export function ChatPage() {
                   )}
                 <div className="mt-1 flex flex-wrap gap-2">
                   <Link
-                    to={`/users/${selectedUserId}?tab=activity`}
+                    to={selectedAthleteHref}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
                   >
                     Profile

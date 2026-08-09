@@ -28,7 +28,6 @@ import {
 } from "@/utils/coachingBilling";
 import type { Purchase } from "@/types/user";
 import { COACHING_DAYS_PER_BILLING_PERIOD } from "@/utils/coachingBillingPeriod";
-import { useIsAdmin } from "@/hooks/useRole";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 
 function formatDate(iso: string): string {
@@ -59,7 +58,6 @@ export function CoachingFeeAdjustmentsPanel({
   purchases,
   onUpdated,
 }: Props) {
-  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [manualPlanId, setManualPlanId] = useState("");
@@ -235,7 +233,7 @@ export function CoachingFeeAdjustmentsPanel({
         try {
           return await coachingSubscriptionService.removeIncorrectPayment(
             target.subscriptionId,
-            "Incorrect manual payment entry removed by admin",
+            "Incorrect manual payment entry removed by staff",
           );
         } catch (error) {
           if (axios.isAxiosError(error)) {
@@ -579,7 +577,7 @@ export function CoachingFeeAdjustmentsPanel({
                     <span className="text-xs text-gray-500">
                       {formatDate(row.createdAt)}
                     </span>
-                    {isAdmin && row.type === "MANUAL_PAYMENT" ? (
+                    {row.type === "MANUAL_PAYMENT" ? (
                       <button
                         type="button"
                         disabled={deleteAdjustmentMutation.isPending}

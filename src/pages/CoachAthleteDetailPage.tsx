@@ -6,6 +6,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import {
   ArrowLeft,
   ClipboardList,
@@ -52,7 +53,7 @@ export function CoachAthleteDetailPage() {
   const tabParam = parseCoachTab(searchParams.get("tab"));
   const logIdParam = searchParams.get("logId");
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["coach-athlete-summary", id],
     queryFn: () => athleteAssignmentService.getCoachAthleteSummary(id!),
     enabled: !!id,
@@ -149,6 +150,12 @@ export function CoachAthleteDetailPage() {
     });
   };
 
+  const denyMessage =
+    axios.isAxiosError(error) &&
+    (error.response?.status === 403 || error.response?.status === 404)
+      ? "This athlete is not assigned to you right now. Ask an admin to update assignments if you need access."
+      : "Failed to load athlete details.";
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-20">
@@ -158,7 +165,7 @@ export function CoachAthleteDetailPage() {
   }
 
   if (isError || !athlete) {
-    return <ErrorAlert message="Failed to load athlete details." />;
+    return <ErrorAlert message={denyMessage} />;
   }
 
   return (

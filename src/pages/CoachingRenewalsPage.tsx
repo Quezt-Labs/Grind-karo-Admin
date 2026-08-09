@@ -11,6 +11,7 @@ import {
   coachingSubscriptionService,
   type CoachingRenewalRow,
 } from "@/services/coachingSubscriptionService";
+import { useIsAdmin } from "@/hooks/useRole";
 
 const WINDOW_OPTIONS = [7, 14, 30] as const;
 
@@ -27,6 +28,7 @@ function formatINR(amount: number): string {
 }
 
 export function CoachingRenewalsPage() {
+  const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const [expiringWithinDays, setExpiringWithinDays] = useState<number>(7);
 
@@ -83,7 +85,13 @@ export function CoachingRenewalsPage() {
             emptyLabel={`No overdue athletes inside the ${graceDays}-day grace window.`}
             description={`Payment overdue but still has access for up to ${graceDays} days. Record payment to continue from the due date.`}
             rows={data?.overdueGrace ?? []}
-            onOpen={(row) => navigate(`/users/${row.userId}?tab=coaching`)}
+            onOpen={(row) =>
+              navigate(
+                isAdmin
+                  ? `/users/${row.userId}?tab=coaching`
+                  : `/coach/athletes/${row.userId}?tab=plan`,
+              )
+            }
           />
 
           <RenewalSection
@@ -93,7 +101,13 @@ export function CoachingRenewalsPage() {
             emptyLabel="No plans expiring in this window."
             description="Active plans approaching their renewal date."
             rows={data?.expiringSoon ?? []}
-            onOpen={(row) => navigate(`/users/${row.userId}?tab=coaching`)}
+            onOpen={(row) =>
+              navigate(
+                isAdmin
+                  ? `/users/${row.userId}?tab=coaching`
+                  : `/coach/athletes/${row.userId}?tab=plan`,
+              )
+            }
           />
 
           <RenewalSection
@@ -103,7 +117,13 @@ export function CoachingRenewalsPage() {
             emptyLabel="No recently expired plans."
             description="Access has ended but the athlete can still be renewed."
             rows={data?.recentlyExpired ?? []}
-            onOpen={(row) => navigate(`/users/${row.userId}?tab=coaching`)}
+            onOpen={(row) =>
+              navigate(
+                isAdmin
+                  ? `/users/${row.userId}?tab=coaching`
+                  : `/coach/athletes/${row.userId}?tab=plan`,
+              )
+            }
           />
         </div>
       )}

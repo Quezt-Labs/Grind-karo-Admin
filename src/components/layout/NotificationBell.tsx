@@ -16,6 +16,7 @@ import { cn } from "@/utils/cn";
 import { notificationService } from "@/services/notificationService";
 import { useNotificationStore } from "@/store/notificationStore";
 import type { AdminNotification, NotificationListResponse } from "@/types/user";
+import { useAuth } from "@/hooks/useAuth";
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -112,6 +113,8 @@ export function NotificationBell() {
 }
 
 function NotificationPanel({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { decrement, reset } = useNotificationStore();
@@ -226,7 +229,9 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       return;
     }
     if (userId) {
-      navigate(`/users/${userId}`);
+      navigate(
+        isAdmin ? `/users/${userId}` : `/coach/athletes/${userId}?tab=plan`,
+      );
       onClose();
     }
   }

@@ -23,6 +23,7 @@ import { FormCheckVideoPlayer } from "@/components/shared/FormCheckVideoPlayer";
 import { FormCheckPresetCommentChips } from "@/components/shared/FormCheckPresetCommentChips";
 import { LinkifiedText } from "@/components/shared/LinkifiedText";
 import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
+import { useIsAdmin } from "@/hooks/useRole";
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
 import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
@@ -592,6 +593,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
   },
   forwardedRef,
 ) {
+  const isAdmin = useIsAdmin();
   const cardRef = useRef<HTMLElement>(null);
   const draftByVideoId = useRef(new Map<string, string>());
   const head = videos[0];
@@ -671,6 +673,14 @@ export const FormCheckInboxExerciseCard = forwardRef<
 
   const active = videos[activeIndex] ?? head;
   const athleteName = head.userName ?? head.userEmail;
+  const athleteVideosHref = isAdmin
+    ? `/users/${head.userId}?tab=activity&section=videos`
+    : `/coach/athletes/${head.userId}?tab=videos`;
+  const workoutSessionHref = active.workoutLogId
+    ? isAdmin
+      ? `/users/${head.userId}?tab=activity&section=logs&logId=${encodeURIComponent(active.workoutLogId)}`
+      : `/coach/athletes/${head.userId}?tab=logs&logId=${encodeURIComponent(active.workoutLogId)}`
+    : null;
 
   const setArticleRef = (el: HTMLElement | null) => {
     cardRef.current = el;
@@ -696,7 +706,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
           <div className="min-w-0 flex-1">
             {showAthleteLink ? (
               <Link
-                to={`/users/${head.userId}?tab=activity&section=videos`}
+                to={athleteVideosHref}
                 className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
               >
                 {athleteName}
@@ -713,9 +723,9 @@ export const FormCheckInboxExerciseCard = forwardRef<
               {head.exerciseName}
             </h3>
             <ExerciseContextChips video={active} />
-            {active.workoutLogId ? (
+            {workoutSessionHref ? (
               <Link
-                to={`/users/${head.userId}?tab=activity&section=logs&logId=${encodeURIComponent(active.workoutLogId)}`}
+                to={workoutSessionHref}
                 className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 underline-offset-2 hover:underline dark:text-gray-300"
               >
                 Open workout session

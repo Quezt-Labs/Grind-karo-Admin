@@ -11,6 +11,7 @@ import {
   type FormCheckMissingAthlete,
 } from "@/services/formCheckInboxService";
 import type { PlanTier } from "@/hooks/useFormCheckInboxRoute";
+import { useIsAdmin } from "@/hooks/useRole";
 import { apiErrorMessage } from "@/utils/apiErrorMessage";
 import { cn } from "@/utils/cn";
 
@@ -29,6 +30,7 @@ export function FormCheckMissingList({
   athletes: FormCheckMissingAthlete[];
   isLoading: boolean;
 }) {
+  const isAdmin = useIsAdmin();
   const [sendingUserId, setSendingUserId] = useState<string | null>(null);
 
   const remindMutation = useMutation({
@@ -89,7 +91,11 @@ export function FormCheckMissingList({
             </div>
             <div className="min-w-0 flex-1">
               <Link
-                to={`/users/${athlete.userId}`}
+                to={
+                  isAdmin
+                    ? `/users/${athlete.userId}`
+                    : `/coach/athletes/${athlete.userId}`
+                }
                 className="inline-flex items-center gap-1 truncate text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
               >
                 {athleteLabel(athlete)}

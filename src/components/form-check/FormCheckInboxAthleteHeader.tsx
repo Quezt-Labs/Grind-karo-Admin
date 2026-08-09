@@ -15,6 +15,7 @@ import {
   formatProgramWeekLabel,
 } from "@/utils/formCheckWeekUtils";
 import { cn } from "@/utils/cn";
+import { useIsAdmin } from "@/hooks/useRole";
 
 function athleteLabel(
   athlete: Pick<FormCheckInboxAthlete, "userName" | "userEmail">,
@@ -57,6 +58,13 @@ export function FormCheckInboxAthleteHeader({
   feedbackCount?: number;
   onLayoutChange?: (layout: InboxLayout) => void;
 }) {
+  const isAdmin = useIsAdmin();
+  const profileHref = isAdmin
+    ? `/users/${selectedUserId}?tab=activity&section=videos`
+    : `/coach/athletes/${selectedUserId}?tab=videos`;
+  const logsHref = isAdmin
+    ? `/users/${selectedUserId}?tab=activity&section=logs`
+    : `/coach/athletes/${selectedUserId}?tab=logs`;
   const progressPct =
     totalSetCount > 0
       ? Math.round((reviewedSetCount / totalSetCount) * 100)
@@ -85,7 +93,7 @@ export function FormCheckInboxAthleteHeader({
             />
           ) : null}
           <Link
-            to={`/users/${selectedUserId}?tab=activity&section=videos`}
+            to={profileHref}
             className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
           >
             {selectedAthlete
@@ -94,7 +102,7 @@ export function FormCheckInboxAthleteHeader({
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
           <Link
-            to={`/users/${selectedUserId}?tab=activity&section=logs`}
+            to={logsHref}
             className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 underline-offset-2 hover:underline dark:text-gray-300"
           >
             Workout logs
