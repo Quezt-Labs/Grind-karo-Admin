@@ -1,4 +1,5 @@
 import api from "./api";
+import axios from "axios";
 
 export interface UpsertVideoCommentPayload {
   exerciseLogId: string;
@@ -9,6 +10,8 @@ export interface UpsertVideoCommentPayload {
 export interface ReplyVideoCommentPayload {
   reply: string;
 }
+
+export type FormCheckThreadType = "workout" | "sheets";
 
 export interface VideoCommentResponse {
   id: string;
@@ -144,5 +147,28 @@ export const workoutVideoCommentService = {
       payload,
     );
     return data.data ?? data;
+  },
+
+  async replyThread(
+    threadType: FormCheckThreadType,
+    commentId: string,
+    payload: ReplyVideoCommentPayload,
+  ): Promise<VideoCommentResponse> {
+    const sendReply =
+      threadType === "sheets"
+        ? this.replySheets.bind(this)
+        : this.replyWorkout.bind(this);
+    try {
+      return await sendReply(commentId, payload);
+    } catch (error) {
+      // Fall back to the legacy endpoint during rollout/mixed deployments.
+      if (
+        axios.isAxiosError(error) &&
+        [403, 404, 405].includes(error.response?.status ?? 0)
+      ) {
+        return this.replyLegacy(commentId, { comment: payload.reply });
+      }
+      throw error;
+    }
   },
 };

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { BulkFormCheckCommentBar } from "@/components/shared/BulkFormCheckCommentBar";
 import { FormCheckInboxExerciseCard } from "@/components/form-check/FormCheckInboxExerciseCard";
+import type { ThreadFocusType } from "@/hooks/useFormCheckInboxRoute";
 import type { BulkCommentResult } from "@/utils/bulkFormCheckComments";
 import type { FormCheckInboxGroup } from "@/utils/groupFormCheckInboxItems";
 import { formCheckExerciseDomId } from "@/utils/groupFormCheckInboxItems";
@@ -21,6 +22,10 @@ export function FormCheckInboxExerciseList({
   bulkBarSticky = true,
   bulkBarStickyTopClassName = "top-0",
   focusVideoId = null,
+  focusCommentId = null,
+  focusMessageId = null,
+  focusThreadType = null,
+  focusAction = null,
 }: {
   exerciseGroups: FormCheckInboxGroup[];
   pendingCount: number;
@@ -34,6 +39,10 @@ export function FormCheckInboxExerciseList({
   bulkBarSticky?: boolean;
   bulkBarStickyTopClassName?: string;
   focusVideoId?: string | null;
+  focusCommentId?: string | null;
+  focusMessageId?: string | null;
+  focusThreadType?: ThreadFocusType | null;
+  focusAction?: string | null;
 }) {
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const prevPendingRef = useRef(pendingCount);
@@ -155,6 +164,10 @@ export function FormCheckInboxExerciseList({
                 ? focusVideoId
                 : null
             }
+            focusCommentId={focusCommentId}
+            focusMessageId={focusMessageId}
+            focusThreadType={focusThreadType}
+            focusAction={focusAction}
             isNavActive={group.key === activeKey}
             onGoToNextExercise={
               nextPendingGroup && group.key === activeKey

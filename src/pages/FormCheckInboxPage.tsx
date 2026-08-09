@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Search, Video, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   FormCheckInboxAthleteList,
@@ -62,6 +63,10 @@ export function FormCheckInboxPage() {
     tier: planTier,
     selectedUserId,
     focusVideoId,
+    focusCommentId,
+    focusMessageId,
+    focusThreadType,
+    focusAction,
     reviewFilter,
     layout,
     handlerFilter,
@@ -137,13 +142,20 @@ export function FormCheckInboxPage() {
 
   // Deep-linked video may already be reviewed — widen filter so it can surface.
   useEffect(() => {
-    if (!focusVideoId || !selectedUserId || videosLoading) return;
-    const found = videos.some((v) => v.id === focusVideoId);
+    if ((!focusVideoId && !focusCommentId) || !selectedUserId || videosLoading) {
+      return;
+    }
+    const found = videos.some(
+      (v) =>
+        v.id === focusVideoId ||
+        (!!focusCommentId && v.coachCommentId === focusCommentId),
+    );
     if (!found && reviewFilter === "pending") {
       setReviewFilter("all");
     }
   }, [
     focusVideoId,
+    focusCommentId,
     selectedUserId,
     videos,
     videosLoading,
@@ -165,6 +177,13 @@ export function FormCheckInboxPage() {
   );
 
   const showFeedbackLog = reviewFilter !== "pending" && layout === "feedback";
+  const effectiveFocusVideoId = useMemo(() => {
+    if (focusVideoId) return focusVideoId;
+    if (!focusCommentId) return null;
+    return (
+      videos.find((video) => video.coachCommentId === focusCommentId)?.id ?? null
+    );
+  }, [focusVideoId, focusCommentId, videos]);
 
   const { data: purchasesData } = useQuery({
     queryKey: [
@@ -383,6 +402,17 @@ export function FormCheckInboxPage() {
           athletes={missingTierAthletes}
           isLoading={missingLoading}
         />
+      ) : selectedUserId && !athletesLoading && !selectedAthlete ? (
+        <div className="space-y-3">
+          <ErrorAlert message="You don’t have access to this athlete’s form-check thread. Ask an admin to update your assignment if this athlete should be in your queue." />
+          <button
+            type="button"
+            onClick={clearAthleteSelection}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+          >
+            Back to athlete list
+          </button>
+        </div>
       ) : selectedUserId ? (
         <div className="space-y-4">
           <FormCheckInboxAthleteHeader
@@ -567,7 +597,11 @@ export function FormCheckInboxPage() {
                   hasMore={false}
                   onAllPendingReviewed={handleAllPendingReviewed}
                   showBulkBar={false}
-                  focusVideoId={focusVideoId}
+                  focusVideoId={effectiveFocusVideoId}
+                  focusCommentId={focusCommentId}
+                  focusMessageId={focusMessageId}
+                  focusThreadType={focusThreadType}
+                  focusAction={focusAction}
                 />
               )}
             </>

@@ -7,6 +7,7 @@ export type ReviewFilter = "pending" | "reviewed" | "all";
 export type InboxLayout = "videos" | "feedback";
 export type HandlerFilter = "all" | "assistant_coach" | "admin";
 export type InboxView = "inbox" | "missing";
+export type ThreadFocusType = "workout" | "sheets";
 
 const TIER_VALUES: PlanTier[] = ["mega", "ultra"];
 const REVIEW_VALUES: ReviewFilter[] = ["pending", "reviewed", "all"];
@@ -61,6 +62,11 @@ function parseDay(value: string | null): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function parseThreadType(value: string | null): ThreadFocusType | null {
+  if (!value) return null;
+  return value === "sheets" ? "sheets" : value === "workout" ? "workout" : null;
+}
+
 export function useFormCheckInboxRoute() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isAssistantCoach = useIsAssistantCoach();
@@ -69,6 +75,10 @@ export function useFormCheckInboxRoute() {
   const tier = parseTier(searchParams.get("tier"));
   const selectedUserId = searchParams.get("userId");
   const focusVideoId = searchParams.get("videoId");
+  const focusCommentId = searchParams.get("commentId");
+  const focusMessageId = searchParams.get("messageId");
+  const focusThreadType = parseThreadType(searchParams.get("threadType"));
+  const focusAction = searchParams.get("action");
   const reviewFilter = parseReview(searchParams.get("review"));
   const layout = parseLayout(searchParams.get("layout"), reviewFilter);
   const weekNumber = parseWeek(searchParams.get("week"));
@@ -114,6 +124,10 @@ export function useFormCheckInboxRoute() {
         view: next === "inbox" ? null : next,
         userId: null,
         videoId: null,
+        commentId: null,
+        messageId: null,
+        threadType: null,
+        action: null,
         week: null,
         day: null,
       });
@@ -123,24 +137,50 @@ export function useFormCheckInboxRoute() {
 
   const setPlanTier = useCallback(
     (next: PlanTier) => {
-      patchParams({ tier: next, userId: null, videoId: null });
+      patchParams({
+        tier: next,
+        userId: null,
+        videoId: null,
+        commentId: null,
+        messageId: null,
+        threadType: null,
+        action: null,
+      });
     },
     [patchParams],
   );
 
   const setSelectedUserId = useCallback(
     (userId: string | null) => {
-      patchParams({ userId, videoId: null, week: null, day: null });
+      patchParams({
+        userId,
+        videoId: null,
+        commentId: null,
+        messageId: null,
+        threadType: null,
+        action: null,
+        week: null,
+        day: null,
+      });
     },
     [patchParams],
   );
 
   const setFocusVideoId = useCallback(
     (videoId: string | null) => {
-      patchParams({ videoId });
+      patchParams({ videoId, commentId: null, messageId: null, action: null });
     },
     [patchParams],
   );
+
+  const clearThreadFocus = useCallback(() => {
+    patchParams({
+      commentId: null,
+      messageId: null,
+      threadType: null,
+      action: null,
+    });
+  }, [patchParams]);
 
   const setReviewFilter = useCallback(
     (next: ReviewFilter) => {
@@ -189,7 +229,16 @@ export function useFormCheckInboxRoute() {
   );
 
   const clearAthleteSelection = useCallback(() => {
-    patchParams({ userId: null, videoId: null, week: null, day: null });
+    patchParams({
+      userId: null,
+      videoId: null,
+      commentId: null,
+      messageId: null,
+      threadType: null,
+      action: null,
+      week: null,
+      day: null,
+    });
   }, [patchParams]);
 
   return useMemo(
@@ -198,6 +247,10 @@ export function useFormCheckInboxRoute() {
       tier,
       selectedUserId,
       focusVideoId,
+      focusCommentId,
+      focusMessageId,
+      focusThreadType,
+      focusAction,
       reviewFilter,
       layout,
       handlerFilter,
@@ -207,6 +260,7 @@ export function useFormCheckInboxRoute() {
       setPlanTier,
       setSelectedUserId,
       setFocusVideoId,
+      clearThreadFocus,
       setReviewFilter,
       setLayout,
       setHandlerFilter,
@@ -219,6 +273,10 @@ export function useFormCheckInboxRoute() {
       tier,
       selectedUserId,
       focusVideoId,
+      focusCommentId,
+      focusMessageId,
+      focusThreadType,
+      focusAction,
       reviewFilter,
       layout,
       handlerFilter,
@@ -228,6 +286,7 @@ export function useFormCheckInboxRoute() {
       setPlanTier,
       setSelectedUserId,
       setFocusVideoId,
+      clearThreadFocus,
       setReviewFilter,
       setLayout,
       setHandlerFilter,

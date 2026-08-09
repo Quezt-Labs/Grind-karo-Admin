@@ -25,7 +25,10 @@ import { LinkifiedText } from "@/components/shared/LinkifiedText";
 import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
 import { useIsAdmin } from "@/hooks/useRole";
 import type { FormCheckInboxItem } from "@/services/formCheckInboxService";
-import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
+import {
+  workoutVideoCommentService,
+  type FormCheckThreadType,
+} from "@/services/workoutVideoCommentService";
 import { pendingTargetsForVideos } from "@/utils/formCheckCommentTargets";
 import {
   isFormCheckPending,
@@ -170,6 +173,52 @@ function formatReviewDate(iso: string | null | undefined): string | null {
   });
 }
 
+type ThreadRole =
+  | "athlete"
+  | "coach"
+  | "assistant_coach"
+  | "admin"
+  | "system";
+
+function normalizeThreadRole(value: string | null | undefined): ThreadRole {
+  const role = (value ?? "").trim().toLowerCase();
+  if (role.includes("athlete") || role === "user") return "athlete";
+  if (role.includes("assistant")) return "assistant_coach";
+  if (role.includes("admin")) return "admin";
+  if (role.includes("coach")) return "coach";
+  return "system";
+}
+
+function roleLabel(role: ThreadRole): string {
+  switch (role) {
+    case "athlete":
+      return "Athlete";
+    case "assistant_coach":
+      return "Assistant Coach";
+    case "coach":
+      return "Coach";
+    case "admin":
+      return "Admin";
+    default:
+      return "System";
+  }
+}
+
+function roleChipClass(role: ThreadRole): string {
+  switch (role) {
+    case "athlete":
+      return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200";
+    case "assistant_coach":
+      return "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200";
+    case "coach":
+      return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200";
+    case "admin":
+      return "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200";
+    default:
+      return "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200";
+  }
+}
+
 function SavedCoachFeedback({
   comment,
   updatedAt,
@@ -249,6 +298,10 @@ function SetCommentPanelWithBulk({
   userId,
   onGoToNextExercise,
   hasNextPendingExercise,
+  focusCommentId,
+  focusMessageId,
+  focusThreadType,
+  focusAction,
 }: {
   video: FormCheckInboxItem;
   allVideos: FormCheckInboxItem[];
@@ -257,15 +310,26 @@ function SetCommentPanelWithBulk({
   userId: string;
   onGoToNextExercise?: () => void;
   hasNextPendingExercise?: boolean;
+  focusCommentId?: string | null;
+  focusMessageId?: string | null;
+  focusThreadType?: FormCheckThreadType | null;
+  focusAction?: string | null;
 }) {
   const { saveCommentMutation, bulkApplyMutation } =
     useFormCheckMutations(userId);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const threadMessageRefs = useRef(new Map<string, HTMLDivElement>());
 
   const savedComment = video.coachComment?.trim() ?? "";
   const showSavedFeedback = savedComment.length > 0;
   const feedbackFromPriorUpload =
     showSavedFeedback && isFormCheckPending(video);
   const feedbackLocked = showSavedFeedback && isFormCheckReviewed(video);
+  const effectiveThreadType: FormCheckThreadType = focusThreadType ?? "workout";
+  const isFocusedThread =
+    !!focusCommentId &&
+    !!video.coachCommentId &&
+    video.coachCommentId === focusCommentId;
   const [isEditing, setIsEditing] = useState(() => {
     const draft = draftByVideoId.current.get(video.id);
     const locked =
@@ -282,11 +346,23 @@ function SetCommentPanelWithBulk({
   const [replyingToAthlete, setReplyingToAthlete] = useState(false);
   const athleteReplyText = video.athleteReply?.trim() ?? "";
   const { data: threadState } = useQuery({
-    queryKey: ["form-check-comment-thread", "workout", video.coachCommentId],
-    queryFn: () => workoutVideoCommentService.getWorkoutThread(video.coachCommentId!),
-    enabled: !!video.coachCommentId && !!athleteReplyText,
+    queryKey: ["form-check-comment-thread", effectiveThreadType, video.coachCommentId],
+    queryFn: () =>
+      effectiveThreadType === "sheets"
+        ? workoutVideoCommentService.getSheetsThread(video.coachCommentId!)
+        : workoutVideoCommentService.getWorkoutThread(video.coachCommentId!),
+    enabled: !!video.coachCommentId,
     staleTime: 30_000,
   });
+  const threadMessages = useMemo(
+    () => threadState?.messages ?? [],
+    [threadState?.messages],
+  );
+  const latestThreadMessage =
+    threadMessages.length > 0 ? threadMessages[threadMessages.length - 1] : null;
+  const latestMessageRole = normalizeThreadRole(latestThreadMessage?.role);
+  const needsReplyFromThread =
+    latestThreadMessage != null && latestMessageRole === "athlete";
   const effectiveReplyLimit =
     threadState?.replyLimit ??
     video.coachReplyLimit ??
@@ -338,6 +414,27 @@ function SetCommentPanelWithBulk({
     const base = savedComment ? `${savedComment}\n\n` : "";
     updateComment(`${base}${intro}\n${quoted}\n\n`);
   };
+
+  useEffect(() => {
+    if (!isFocusedThread) return;
+    if (focusAction !== "reply") return;
+    requestAnimationFrame(() => {
+      composerRef.current?.focus();
+      composerRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }, [isFocusedThread, focusAction]);
+
+  useEffect(() => {
+    if (!isFocusedThread || !focusMessageId) return;
+    const el = threadMessageRefs.current.get(focusMessageId);
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }, [isFocusedThread, focusMessageId, threadMessages]);
 
   const cancelEditing = () => {
     if (!feedbackLocked) return;
@@ -424,6 +521,78 @@ function SetCommentPanelWithBulk({
         </button>
       ) : (
         <>
+          {threadMessages.length > 0 ? (
+            <div className="mb-2 rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-900/50">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                  Thread activity
+                </p>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    needsReplyFromThread
+                      ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
+                  )}
+                >
+                  {needsReplyFromThread ? "Needs reply" : "Replied"}
+                </span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                  {threadMessages.length} message
+                  {threadMessages.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <div className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
+                {threadMessages.map((message, index) => {
+                  const role = normalizeThreadRole(message.role);
+                  const isNewest = index === threadMessages.length - 1;
+                  const isTargeted =
+                    !!focusMessageId && message.id === focusMessageId;
+                  return (
+                    <div
+                      key={message.id}
+                      ref={(el) => {
+                        if (el) threadMessageRefs.current.set(message.id, el);
+                        else threadMessageRefs.current.delete(message.id);
+                      }}
+                      className={cn(
+                        "rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 dark:border-gray-700 dark:bg-gray-800/60",
+                        isNewest &&
+                          "border-indigo-300 bg-indigo-50/70 dark:border-indigo-700 dark:bg-indigo-900/20",
+                        isTargeted &&
+                          "ring-1 ring-amber-400 dark:ring-amber-500",
+                      )}
+                    >
+                      <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                            roleChipClass(role),
+                          )}
+                        >
+                          {roleLabel(role)}
+                        </span>
+                        {message.createdAt ? (
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                            {formatReviewDate(message.createdAt)}
+                          </span>
+                        ) : null}
+                        {isNewest ? (
+                          <span className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-300">
+                            Newest
+                          </span>
+                        ) : null}
+                      </div>
+                      <LinkifiedText
+                        text={message.message}
+                        className="text-xs leading-relaxed text-gray-800 dark:text-gray-100"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           {athleteReplyText ? (
             <div className="mb-2 rounded-lg border border-gray-200 bg-gray-50/80 p-2.5 dark:border-gray-600 dark:bg-gray-900/40">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
@@ -467,6 +636,7 @@ function SetCommentPanelWithBulk({
             </div>
           ) : null}
           <textarea
+            ref={composerRef}
             value={comment}
             onChange={(e) => updateComment(e.target.value)}
             rows={4}
@@ -497,7 +667,7 @@ function SetCommentPanelWithBulk({
                       replyingToAthlete && video.coachCommentId
                         ? video.coachCommentId
                         : null,
-                    replyThreadType: "workout",
+                    replyThreadType: effectiveThreadType,
                     setLabel: replyingToAthlete
                       ? `Set ${video.setNumber} reply sent`
                       : `Set ${video.setNumber}`,
@@ -580,6 +750,14 @@ export const FormCheckInboxExerciseCard = forwardRef<
     hasNextPendingExercise?: boolean;
     /** Prefer this set video when deep-linking from notifications. */
     focusVideoId?: string | null;
+    /** Focus a specific thread/comment when deep-linking from notifications. */
+    focusCommentId?: string | null;
+    /** Focus a specific message in the thread timeline. */
+    focusMessageId?: string | null;
+    /** Thread source for replies. */
+    focusThreadType?: FormCheckThreadType | null;
+    /** Optional action hint from notifications (e.g. reply). */
+    focusAction?: string | null;
   }
 >(function FormCheckInboxExerciseCard(
   {
@@ -590,6 +768,10 @@ export const FormCheckInboxExerciseCard = forwardRef<
     onGoToNextExercise,
     hasNextPendingExercise = false,
     focusVideoId = null,
+    focusCommentId = null,
+    focusMessageId = null,
+    focusThreadType = null,
+    focusAction = null,
   },
   forwardedRef,
 ) {
@@ -606,9 +788,15 @@ export const FormCheckInboxExerciseCard = forwardRef<
       const focused = videos.findIndex((v) => v.id === focusVideoId);
       if (focused >= 0) return focused;
     }
+    if (focusCommentId) {
+      const focusedByComment = videos.findIndex(
+        (v) => v.coachCommentId === focusCommentId,
+      );
+      if (focusedByComment >= 0) return focusedByComment;
+    }
     const pending = videos.findIndex((v) => isFormCheckPending(v));
     return pending >= 0 ? pending : 0;
-  }, [videos, focusVideoId]);
+  }, [videos, focusVideoId, focusCommentId]);
 
   const [activeVideoId, setActiveVideoId] = useState<string | null>(
     () => focusVideoId,
@@ -845,6 +1033,10 @@ export const FormCheckInboxExerciseCard = forwardRef<
             userId={head.userId}
             onGoToNextExercise={onGoToNextExercise}
             hasNextPendingExercise={hasNextPendingExercise}
+            focusCommentId={focusCommentId}
+            focusMessageId={focusMessageId}
+            focusThreadType={focusThreadType}
+            focusAction={focusAction}
           />
         </div>
       </div>

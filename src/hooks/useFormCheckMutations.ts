@@ -37,41 +37,21 @@ export function useFormCheckMutations(userId?: string) {
     }) => {
       const comment = payload.comment.trim();
       if (payload.replyToCommentId) {
-        const sendReply =
-          payload.replyThreadType === "sheets"
-            ? workoutVideoCommentService.replySheets.bind(
-                workoutVideoCommentService,
-              )
-            : workoutVideoCommentService.replyWorkout.bind(
-                workoutVideoCommentService,
-              );
-        return sendReply(payload.replyToCommentId, { reply: comment })
+        return workoutVideoCommentService
+          .replyThread(
+            payload.replyThreadType ?? "workout",
+            payload.replyToCommentId,
+            { reply: comment },
+          )
           .catch(async (error: unknown) => {
             if (axios.isAxiosError(error)) {
               const status = error.response?.status;
               if (status === 403 || status === 404 || status === 405) {
-                try {
-                  return await workoutVideoCommentService.replyLegacy(
-                    payload.replyToCommentId!,
-                    { comment },
-                  );
-                } catch (legacyError) {
-                  if (axios.isAxiosError(legacyError)) {
-                    const legacyStatus = legacyError.response?.status;
-                    if (
-                      legacyStatus === 403 ||
-                      legacyStatus === 404 ||
-                      legacyStatus === 405
-                    ) {
-                      return workoutVideoCommentService.upsert({
-                        exerciseLogId: payload.exerciseLogId,
-                        setNumber: payload.setNumber,
-                        comment,
-                      });
-                    }
-                  }
-                  throw legacyError;
-                }
+                return workoutVideoCommentService.upsert({
+                  exerciseLogId: payload.exerciseLogId,
+                  setNumber: payload.setNumber,
+                  comment,
+                });
               }
             }
             throw error;
