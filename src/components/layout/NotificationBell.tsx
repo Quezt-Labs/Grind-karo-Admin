@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import toast from "react-hot-toast";
 import {
   AlertCircle,
@@ -48,11 +49,14 @@ function inferCategory(n: AdminNotification): string {
 
 function priorityWeight(value: string | null | undefined): number {
   switch ((value ?? "normal").toLowerCase()) {
+    case "p0":
     case "critical":
     case "urgent":
       return 4;
+    case "p1":
     case "high":
       return 3;
+    case "p2":
     case "medium":
     case "normal":
       return 2;
@@ -61,6 +65,41 @@ function priorityWeight(value: string | null | undefined): number {
     default:
       return 2;
   }
+}
+
+function replyErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) return "Unable to send reply";
+  const payload = (error.response?.data ?? null) as
+    | Record<string, unknown>
+    | null;
+  const lockReason = pickString(
+    payload?.replyLockReason,
+    payload?.reply_lock_reason,
+    payload?.reason,
+  );
+  if (lockReason) return lockReason;
+  const code = pickString(payload?.code, payload?.errorCode, payload?.error_code);
+  if (code === "REPLY_LIMIT_REACHED") {
+    const remaining = pickNumber(
+      payload?.repliesRemaining,
+      payload?.replies_remaining,
+    );
+    if (remaining != null) {
+      return remaining <= 0
+        ? "Reply limit reached for this thread."
+        : `${remaining} repl${remaining === 1 ? "y" : "ies"} remaining.`;
+    }
+    return "Reply limit reached for this thread.";
+  }
+  const message = payload?.message;
+  if (typeof message === "string" && message.trim().length > 0) return message;
+  if (Array.isArray(message)) {
+    const joined = message
+      .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+      .join(", ");
+    if (joined.length > 0) return joined;
+  }
+  return "Unable to send reply";
 }
 
 function formatLabel(value: string): string {
@@ -398,6 +437,13 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
         { unreadOnly: true, limit: 20 },
         { gracefulForbidden: true },
       ),
+    staleTime: 5_000,
+    refetchInterval: () =>
+      typeof document !== "undefined" && document.visibilityState === "visible"
+        ? 15_000
+        : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
   const [quickReplyOpenId, setQuickReplyOpenId] = useState<string | null>(null);
   const [quickReplyDrafts, setQuickReplyDrafts] = useState<
@@ -489,8 +535,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
         ],
       });
     },
-    onError: () => {
-      toast.error("Unable to send reply");
+    onError: (error) => {
+      toast.error(replyErrorMessage(error));
+      void queryClient.invalidateQueries({
+        queryKey: ["notifications-unread-list"],
+      });
     },
   });
 
@@ -710,8 +759,12 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                     const meta = group.meta;
                     const quickReplyDraft = quickReplyDrafts[primary.id] ?? "";
                     const groupedCount = group.notifications.length;
+                    const isP0 = priorityWeight(primary.priority) >= 4;
                     const canQuickReply =
-                      !!meta.commentId && !meta.replyBlocked && !quickReplyMutation.isPending;
+                      !!meta.commentId &&
+                      !meta.replyBlocked &&
+                      !quickReplyMutation.isPending &&
+                      (isP0 || meta.state === "needs_reply");
                     return (
                       <div
                         key={group.key}
@@ -773,14 +826,16 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                             onClick={() =>
                               openFormCheckNotification(
                                 primary,
-                                meta.state === "needs_reply" ? "reply" : undefined,
+                                meta.state === "needs_reply" || isP0
+                                  ? "reply"
+                                  : undefined,
                               )
                             }
                             className="rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
                           >
                             Open thread
                           </button>
-                          {meta.commentId ? (
+                          {meta.commentId && (isP0 || meta.state === "needs_reply") ? (
                             <button
                               type="button"
                               disabled={!canQuickReply}

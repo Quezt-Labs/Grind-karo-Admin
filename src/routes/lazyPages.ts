@@ -121,6 +121,10 @@ export const FormCheckActionQueuePage = lazyPage(
   () => import("@/pages/FormCheckActionQueuePage"),
   "FormCheckActionQueuePage",
 );
+export const FormCheckSlaPage = lazyPage(
+  () => import("@/pages/FormCheckSlaPage"),
+  "FormCheckSlaPage",
+);
 export const WorkspacePage = lazyPage(
   () => import("@/pages/WorkspacePage"),
   "WorkspacePage",

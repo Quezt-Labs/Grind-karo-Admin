@@ -32,6 +32,7 @@ import {
   Briefcase,
   CalendarClock,
   Calculator,
+  Gauge,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -78,6 +79,7 @@ const NAV_SECTIONS: NavSection[] = [
         label: "Form-check queue",
         icon: ClipboardCheck,
       },
+      { path: "/form-check-sla", label: "Form-check SLA", icon: Gauge },
       { path: "/chat", label: "Chat", icon: MessageCircle },
       {
         path: "/upload-incidents",
@@ -155,6 +157,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
         label: "Action queue",
         icon: ClipboardCheck,
       },
+      { path: "/form-check-sla", label: "SLA", icon: Gauge },
       {
         path: "/upload-incidents",
         label: "Upload incidents",

@@ -22,6 +22,7 @@ import {
   CoachAthletesPage,
   CoachAthletesLocationPage,
   FormCheckActionQueuePage,
+  FormCheckSlaPage,
   FormCheckInboxPage,
   WorkspacePage,
   CoachingRenewalsPage,
@@ -126,6 +127,7 @@ export default function App() {
                     path="/form-check-action-queue"
                     element={<FormCheckActionQueuePage />}
                   />
+                  <Route path="/form-check-sla" element={<FormCheckSlaPage />} />
                   <Route
                     path="/upload-incidents"
                     element={<UploadIncidentMonitorPage />}

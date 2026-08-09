@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { AlertCircle, MessageSquareReply, Send } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
@@ -12,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   formCheckActionQueueService,
   type FormCheckActionQueueItem,
+  type FormCheckActionQueueResponse,
   type FormCheckQueuePriority,
   type FormCheckQueueState,
   type FormCheckQueueTab,
@@ -113,6 +115,55 @@ function sortQueue(items: FormCheckActionQueueItem[], tab: FormCheckQueueTab) {
   return copy;
 }
 
+function mergeDelta(
+  previous: FormCheckActionQueueResponse,
+  delta: FormCheckActionQueueResponse,
+): FormCheckActionQueueResponse {
+  const removed = new Set(delta.removedIds);
+  const map = new Map(previous.items.map((item) => [item.id, item]));
+  for (const id of removed) map.delete(id);
+  for (const item of delta.items) map.set(item.id, item);
+  const items = Array.from(map.values());
+  return {
+    ...previous,
+    ...delta,
+    items,
+    total: delta.total || items.length,
+    limit: delta.limit || previous.limit,
+    offset: delta.offset,
+  };
+}
+
+function replyErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) return "Failed to send reply";
+  const payload = (error.response?.data ?? null) as
+    | Record<string, unknown>
+    | null;
+  const lockReason =
+    (payload?.replyLockReason as string | undefined) ??
+    (payload?.reply_lock_reason as string | undefined) ??
+    (payload?.reason as string | undefined) ??
+    null;
+  if (lockReason && lockReason.trim().length > 0) return lockReason;
+  const code =
+    (payload?.code as string | undefined) ??
+    (payload?.errorCode as string | undefined) ??
+    (payload?.error_code as string | undefined) ??
+    null;
+  if (code === "REPLY_LIMIT_REACHED") {
+    return "Reply limit reached for this thread.";
+  }
+  const message = payload?.message;
+  if (typeof message === "string" && message.trim().length > 0) return message;
+  if (Array.isArray(message)) {
+    const joined = message
+      .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+      .join(", ");
+    if (joined.length > 0) return joined;
+  }
+  return "Failed to send reply";
+}
+
 export function FormCheckActionQueuePage() {
   const { user } = useAuth();
   const isAssistant = user?.role === "ASSISTANT_COACH";
@@ -122,15 +173,62 @@ export function FormCheckActionQueuePage() {
   const [search, setSearch] = useState("");
   const [quickReplyId, setQuickReplyId] = useState<string | null>(null);
   const [draftById, setDraftById] = useState<Record<string, string>>({});
+  const sinceCursorRef = useRef<string | null>(null);
+
+  function advanceSince(candidate: string | null | undefined) {
+    if (!candidate) return;
+    if (!sinceCursorRef.current) {
+      sinceCursorRef.current = candidate;
+      return;
+    }
+    if (new Date(candidate).getTime() > new Date(sinceCursorRef.current).getTime()) {
+      sinceCursorRef.current = candidate;
+    }
+  }
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["form-check-action-queue", tab, search],
-    queryFn: () =>
-      formCheckActionQueueService.list({
+    queryFn: async () => {
+      const queryKey = ["form-check-action-queue", tab, search] as const;
+      const previous = queryClient.getQueryData<FormCheckActionQueueResponse>(queryKey);
+      const polled = await formCheckActionQueueService.list({
         tab,
         q: search || undefined,
         limit: 100,
-      }),
+        since: sinceCursorRef.current ?? undefined,
+      });
+      advanceSince(polled.since);
+
+      if (polled.hasChanges === false && previous) {
+        return {
+          ...previous,
+          since: polled.since ?? previous.since,
+          hasChanges: false,
+        };
+      }
+      if (polled.hasChanges === true && polled.items.length === 0 && previous) {
+        const full = await formCheckActionQueueService.list({
+          tab,
+          q: search || undefined,
+          limit: 100,
+        });
+        advanceSince(full.since);
+        return full;
+      }
+      if (polled.isDelta && previous) {
+        return mergeDelta(previous, polled);
+      }
+      return polled;
+    },
+    staleTime: 5_000,
+    refetchInterval: () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return false;
+      }
+      return tab === "resolved" ? 45_000 : 15_000;
+    },
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
   const quickReplyMutation = useMutation({
@@ -154,8 +252,8 @@ export function FormCheckActionQueuePage() {
         });
       }
     },
-    onError: () => {
-      toast.error("Failed to send reply");
+    onError: (error) => {
+      toast.error(replyErrorMessage(error));
     },
   });
 
@@ -178,7 +276,10 @@ export function FormCheckActionQueuePage() {
             <button
               key={entry.key}
               type="button"
-              onClick={() => setTab(entry.key)}
+              onClick={() => {
+                sinceCursorRef.current = null;
+                setTab(entry.key);
+              }}
               className={cn(
                 "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
                 tab === entry.key
@@ -194,7 +295,10 @@ export function FormCheckActionQueuePage() {
           ))}
         </div>
         <DebouncedSearch
-          onSearch={setSearch}
+          onSearch={(value) => {
+            sinceCursorRef.current = null;
+            setSearch(value);
+          }}
           placeholder="Search athlete, exercise, message..."
           className="w-full lg:w-80"
         />

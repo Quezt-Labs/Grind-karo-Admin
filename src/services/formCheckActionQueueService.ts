@@ -44,6 +44,10 @@ export interface FormCheckActionQueueResponse {
   offset: number;
   items: FormCheckActionQueueItem[];
   tabCounts: Record<FormCheckQueueTab, number>;
+  hasChanges: boolean | null;
+  isDelta: boolean;
+  since: string | null;
+  removedIds: string[];
 }
 
 const ACTION_QUEUE_ENDPOINTS = [
@@ -301,12 +305,48 @@ function normalizeResponse(payload: unknown): FormCheckActionQueueResponse {
     })
     .filter((entry): entry is FormCheckActionQueueItem => entry != null);
 
+  const hasChanges =
+    pickBoolean(record?.hasChanges, record?.has_changes) ?? null;
+  const isDelta =
+    pickBoolean(record?.isDelta, record?.is_delta, record?.delta) ?? false;
+  const removedIds = Array.isArray(record?.removedIds)
+    ? (record?.removedIds as unknown[])
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim())
+    : Array.isArray(record?.removed_ids)
+      ? (record?.removed_ids as unknown[])
+          .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [];
+  const since =
+    pickString(
+      record?.since,
+      record?.cursor,
+      record?.asOf,
+      record?.as_of,
+      record?.snapshotAt,
+      record?.snapshot_at,
+      record?.latestActivityAt,
+      record?.latest_activity_at,
+    ) ??
+    items.reduce<string | null>((latest, item) => {
+      if (!item.latestActivityAt) return latest;
+      if (!latest) return item.latestActivityAt;
+      return new Date(item.latestActivityAt).getTime() > new Date(latest).getTime()
+        ? item.latestActivityAt
+        : latest;
+    }, null);
+
   return {
     total: pickNumber(record?.total, rawItems.length) ?? rawItems.length,
     limit: pickNumber(record?.limit) ?? rawItems.length,
     offset: pickNumber(record?.offset) ?? 0,
     items,
     tabCounts: normalizeTabCounts(record, items),
+    hasChanges,
+    isDelta,
+    since,
+    removedIds,
   };
 }
 
@@ -331,12 +371,14 @@ export const formCheckActionQueueService = {
     q?: string;
     limit?: number;
     offset?: number;
+    since?: string;
   }): Promise<FormCheckActionQueueResponse> {
     const query = {
       tab: params?.tab,
       q: params?.q,
       limit: params?.limit ?? 100,
       offset: params?.offset ?? 0,
+      since: params?.since,
     };
 
     if (resolvedEndpoint) {
