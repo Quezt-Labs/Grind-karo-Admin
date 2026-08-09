@@ -428,14 +428,14 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   const isAdmin = user?.role === "ADMIN";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { decrement, reset } = useNotificationStore();
+  const { unreadCount, decrement, reset } = useNotificationStore();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["notifications-unread-list"],
     queryFn: () =>
       notificationService.getAll(
         { unreadOnly: true, limit: 20 },
-        { gracefulForbidden: true },
+        { gracefulForbidden: true, forbiddenAsError: true },
       ),
     staleTime: 5_000,
     refetchInterval: () =>
@@ -698,9 +698,16 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:w-96">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          Notifications
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+            Notifications
+          </h3>
+          {isError ? (
+            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+              List unavailable
+            </span>
+          ) : null}
+        </div>
         <div className="flex items-center gap-1">
           {items.length > 0 && (
             <button
@@ -737,6 +744,50 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
             ))}
+          </div>
+        ) : isError ? (
+          <div className="p-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+              <p className="font-semibold">Notification list unavailable</p>
+              <p className="mt-1 text-xs">
+                {error instanceof Error
+                  ? error.message
+                  : "Server rejected the notification list request."}
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-[11px]">
+                  Unread count: {unreadCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void refetch()}
+                  disabled={isFetching}
+                  className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800 disabled:opacity-50 dark:border-amber-700 dark:bg-gray-900 dark:text-amber-200"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : items.length === 0 && unreadCount > 0 ? (
+          <div className="p-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+              <p className="font-semibold">Unread count is available, but list is empty</p>
+              <p className="mt-1 text-xs">
+                This may be a temporary notification sync issue. Retrying may restore items.
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-[11px]">Unread count: {unreadCount}</span>
+                <button
+                  type="button"
+                  onClick={() => void refetch()}
+                  disabled={isFetching}
+                  className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800 disabled:opacity-50 dark:border-amber-700 dark:bg-gray-900 dark:text-amber-200"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">

@@ -16,6 +16,22 @@ export interface NotificationFilters {
 
 interface NotificationServiceOptions {
   gracefulForbidden?: boolean;
+  forbiddenAsError?: boolean;
+}
+
+function buildNotificationListError(status: number): Error & { status: number; code: string } {
+  const message =
+    status === 403
+      ? "You can see unread count, but notification list access is currently restricted."
+      : status === 400 || status === 422
+        ? "Notification list request was rejected by the server."
+        : status === 404
+          ? "Notification list endpoint is unavailable."
+          : "Failed to load notifications.";
+  const error = new Error(message) as Error & { status: number; code: string };
+  error.status = status;
+  error.code = status === 403 ? "FORBIDDEN" : "LIST_REQUEST_FAILED";
+  return error;
 }
 
 export const notificationService = {
@@ -23,13 +39,49 @@ export const notificationService = {
     filters?: NotificationFilters,
     options?: NotificationServiceOptions,
   ): Promise<NotificationListResponse> {
-    const response = await api.get("/admin/notifications", {
-      params: filters,
-      validateStatus: (status) =>
-        (status >= 200 && status < 300) ||
-        (options?.gracefulForbidden === true && status === 403),
-    });
-    if (response.status === 403 && options?.gracefulForbidden) {
+    const run = async (params: Record<string, unknown>) =>
+      api.get("/admin/notifications", {
+        params,
+        validateStatus: (status) =>
+          (status >= 200 && status < 300) ||
+          status === 400 ||
+          status === 403 ||
+          status === 404 ||
+          status === 422,
+      });
+
+    const response = await run((filters ?? {}) as Record<string, unknown>);
+    if (response.status >= 200 && response.status < 300) {
+      return response.data;
+    }
+
+    // Backward-compatibility for rollout variants that expect `unread` instead of `unreadOnly`.
+    if (
+      (response.status === 400 || response.status === 422) &&
+      typeof filters?.unreadOnly === "boolean"
+    ) {
+      const fallbackFilters: Record<string, unknown> = {
+        ...(filters as Record<string, unknown>),
+        unread: filters.unreadOnly,
+      };
+      delete fallbackFilters.unreadOnly;
+      const retry = await run(fallbackFilters);
+      if (retry.status >= 200 && retry.status < 300) {
+        return retry.data;
+      }
+      if (retry.status === 403 && options?.gracefulForbidden && !options?.forbiddenAsError) {
+        return {
+          total: 0,
+          unreadCount: 0,
+          limit: filters?.limit ?? 20,
+          offset: filters?.offset ?? 0,
+          items: [],
+        };
+      }
+      throw buildNotificationListError(retry.status);
+    }
+
+    if (response.status === 403 && options?.gracefulForbidden && !options?.forbiddenAsError) {
       return {
         total: 0,
         unreadCount: 0,
@@ -38,7 +90,8 @@ export const notificationService = {
         items: [],
       };
     }
-    return response.data;
+
+    throw buildNotificationListError(response.status);
   },
 
   async getUnreadCount(options?: NotificationServiceOptions): Promise<number> {
