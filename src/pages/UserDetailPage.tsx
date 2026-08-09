@@ -5,7 +5,7 @@ import {
   Link,
   useSearchParams,
 } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CreditCard,
@@ -47,7 +47,8 @@ import {
 } from "@/components/users/athleteActivitySections";
 import { cn } from "@/utils/cn";
 import { planGrantsFormCheck } from "@/utils/coachingPlanCapabilities";
-import type { Purchase, FormCheckQuota } from "@/types/user";
+import type { CoachingAddonStatus, Purchase, FormCheckQuota } from "@/types/user";
+import type { CoachingPlan } from "@/types/program";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
 import { CoachingIntakePanel } from "@/components/users/CoachingIntakePanel";
@@ -62,6 +63,8 @@ import { coachingSubscriptionService } from "@/services/coachingSubscriptionServ
 import { useIsAdmin, useIsStaff } from "@/hooks/useRole";
 import { useUserDetail, type UserDetailTab } from "@/hooks/useUserDetail";
 import { useUserActivityScope } from "@/hooks/useUserActivityScope";
+import { planService } from "@/services/planService";
+import { AddonEntitlementsPanel } from "@/components/users/AddonEntitlementsPanel";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -183,6 +186,7 @@ export function UserDetailPage() {
     coachingProgramData,
     coachingProgramLoading,
     hasActiveCoaching,
+    hasCoachingHistory,
     hasPersonalCoaching,
     hasPaidPrograms,
     primaryCoachingSub,
@@ -191,6 +195,17 @@ export function UserDetailPage() {
     pendingVideoCount,
     purchaseStats,
   } = useUserDetail(id, subscriptionIdParam);
+
+  const { data: planCatalog = [] } = useQuery({
+    queryKey: ["coaching-plans"],
+    queryFn: () => planService.getAll(),
+    enabled: hasCoachingHistory,
+  });
+  const { data: addonStatuses = [] } = useQuery({
+    queryKey: ["admin-user-coaching-addons", user?.id],
+    queryFn: () => coachingSubscriptionService.listUserAddons(user!.id),
+    enabled: isAdmin && hasCoachingHistory && !!user?.id,
+  });
 
   const { scope, clearScope } = useUserActivityScope(purchases);
 
@@ -236,7 +251,7 @@ export function UserDetailPage() {
     (tab) => tab.key === resolvedActivitySection,
   );
 
-  const showCoachingTab = hasActiveCoaching;
+  const showCoachingTab = hasCoachingHistory;
 
   const coachingTabNeedsAttention =
     coachingSetupStatus === "needs_intake" ||
@@ -308,6 +323,12 @@ export function UserDetailPage() {
     void queryClient.invalidateQueries({
       queryKey: ["admin-user-purchases", user.id],
     });
+
+  const jumpToRecordPayment = () => {
+    const el = document.getElementById("record-payment-panel");
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="space-y-4">
@@ -449,6 +470,7 @@ export function UserDetailPage() {
             primarySubscriptionId={user.primaryCoachingSubscriptionId}
             onUpdated={invalidatePurchases}
             onSelectSubscription={selectCoachingSubscription}
+            onRecordPayment={jumpToRecordPayment}
           />
 
           {hasActiveCoaching && (
@@ -481,6 +503,9 @@ export function UserDetailPage() {
             chatEnabled={chatEnabled}
             formCheckQuota={formCheckQuota}
             purchases={purchases}
+            planCatalog={planCatalog}
+            addonStatuses={addonStatuses}
+            entitlements={purchasesData.entitlements}
           />
 
           <CollapsibleCard
@@ -494,11 +519,13 @@ export function UserDetailPage() {
               showDateEditor={isStaff}
               onUpdated={invalidatePurchases}
             />
-            <CoachingFeeAdjustmentsPanel
-              userId={user.id}
-              purchases={purchases}
-              onUpdated={invalidatePurchases}
-            />
+            <div id="record-payment-panel">
+              <CoachingFeeAdjustmentsPanel
+                userId={user.id}
+                purchases={purchases}
+                onUpdated={invalidatePurchases}
+              />
+            </div>
           </CollapsibleCard>
 
           <CollapsibleCard
@@ -876,6 +903,20 @@ interface CoachingEntitlementsSectionProps {
   chatEnabled: boolean;
   formCheckQuota?: FormCheckQuota;
   purchases: Purchase[];
+  planCatalog: CoachingPlan[];
+  addonStatuses?: CoachingAddonStatus[];
+  entitlements?: {
+    managedByBackend?: boolean;
+    formCheck?: {
+      adminOverrideEditable?: boolean;
+      source?: string | null;
+      reason?: string | null;
+    };
+    chat?: {
+      source?: string | null;
+      reason?: string | null;
+    };
+  };
 }
 
 function activeCoachingPlans(purchases: Purchase[]) {
@@ -926,6 +967,9 @@ function CoachingEntitlementsSection({
   chatEnabled,
   formCheckQuota,
   purchases,
+  planCatalog,
+  addonStatuses = [],
+  entitlements,
 }: CoachingEntitlementsSectionProps) {
   const queryClient = useQueryClient();
   const activePlans = activeCoachingPlans(purchases);
@@ -955,6 +999,12 @@ function CoachingEntitlementsSection({
       : adminFlag === false
         ? "Disabled — admin override"
         : "Requires MEGA/ULTRA coaching or Form Check add-on";
+  const sourceLabel =
+    entitlements?.formCheck?.reason?.trim() ||
+    entitlements?.formCheck?.source?.trim() ||
+    computedFormCheckSource;
+  const backendManaged = entitlements?.managedByBackend === true;
+  const toggleAllowed = entitlements?.formCheck?.adminOverrideEditable !== false;
 
   const mutation = useMutation({
     mutationFn: (next: boolean) =>
@@ -974,6 +1024,7 @@ function CoachingEntitlementsSection({
       toast.error(err.message || "Failed to update set video setting");
     },
   });
+  const toggleDisabled = mutation.isPending || megaUltraActive || !toggleAllowed;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -1019,20 +1070,38 @@ function CoachingEntitlementsSection({
             </span>
           </div>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            {computedFormCheckSource}
+            {sourceLabel}
           </p>
+          {backendManaged ? (
+            <p className="mt-1 text-[11px] text-indigo-600 dark:text-indigo-300">
+              Entitlements are synced from backend billing contracts.
+            </p>
+          ) : null}
           {formCheckQuota && formCheckQuota.weeklyLimit != null && (
             <FormCheckQuotaSummary quota={formCheckQuota} />
           )}
+          <div className="mt-3">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Add-ons
+            </p>
+            <AddonEntitlementsPanel
+              purchases={purchases}
+              planCatalog={planCatalog}
+              addonStatuses={addonStatuses}
+              compact
+            />
+          </div>
         </div>
         <label
           className={cn(
             "inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/40",
-            megaUltraActive ? "opacity-90" : "cursor-pointer",
+            toggleDisabled ? "opacity-90" : "cursor-pointer",
           )}
           title={
             megaUltraActive
               ? "Always enabled with active MEGA/ULTRA coaching"
+              : !toggleAllowed
+                ? "Managed by backend entitlement rules"
               : undefined
           }
         >
@@ -1043,7 +1112,7 @@ function CoachingEntitlementsSection({
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-70"
             checked={megaUltraActive ? true : enabled}
-            disabled={mutation.isPending || megaUltraActive}
+            disabled={toggleDisabled}
             onChange={(e) => mutation.mutate(e.target.checked)}
           />
           {mutation.isPending && (

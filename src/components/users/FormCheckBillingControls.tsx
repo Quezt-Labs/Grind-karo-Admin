@@ -210,7 +210,11 @@ export function FormCheckBillingControls({
               onValueChange={(id) => {
                 setManualPlanId(id);
                 const plan = plans.find((p) => p.id === id);
-                setBilling(initialCoachingBillingState(plan));
+                const base = initialCoachingBillingState(plan);
+                setBilling({
+                  ...base,
+                  lifterFee: plan ? String(plan.price) : "",
+                });
               }}
             >
               <SelectTrigger className="h-9 text-sm">

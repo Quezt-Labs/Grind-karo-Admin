@@ -6,7 +6,8 @@ export type ProgramEditorTab =
   | "movement-selection"
   | "loads"
   | "preview"
-  | "warmup";
+  | "warmup"
+  | "delivery";
 
 const TABS: { id: ProgramEditorTab; label: string; shortLabel: string }[] = [
   { id: "structure", label: "Structure", shortLabel: "Structure" },
@@ -19,6 +20,7 @@ const TABS: { id: ProgramEditorTab; label: string; shortLabel: string }[] = [
   { id: "loads", label: "Load settings", shortLabel: "Loads" },
   { id: "preview", label: "Preview", shortLabel: "Preview" },
   { id: "warmup", label: "Warmup", shortLabel: "Warmup" },
+  { id: "delivery", label: "Delivery content", shortLabel: "Delivery" },
 ];
 
 interface ProgramEditorTabsProps {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, Copy, FilePlus, Pencil } from "lucide-react";
+import { Dumbbell, Copy, FilePlus, Pencil, Flame } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -257,6 +257,16 @@ export function UserAthleteProgramPanel({
           >
             <Pencil className="mr-1 h-3.5 w-3.5" />
             Open Program Editor
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() =>
+              navigate(`/coaching/${userId}/editor?editorTab=delivery`)
+            }
+          >
+            <Flame className="mr-1 h-3.5 w-3.5" />
+            Nutrition & Warm-up
           </Button>
           <Button
             size="sm"

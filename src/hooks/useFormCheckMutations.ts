@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import toast from "react-hot-toast";
 import {
   invalidateFormCheckCounts,
@@ -31,12 +32,57 @@ export function useFormCheckMutations(userId?: string) {
       setNumber: number;
       comment: string;
       setLabel?: string;
-    }) =>
-      workoutVideoCommentService.upsert({
+      replyToCommentId?: string | null;
+      replyThreadType?: "workout" | "sheets";
+    }) => {
+      const comment = payload.comment.trim();
+      if (payload.replyToCommentId) {
+        const sendReply =
+          payload.replyThreadType === "sheets"
+            ? workoutVideoCommentService.replySheets.bind(
+                workoutVideoCommentService,
+              )
+            : workoutVideoCommentService.replyWorkout.bind(
+                workoutVideoCommentService,
+              );
+        return sendReply(payload.replyToCommentId, { reply: comment })
+          .catch(async (error: unknown) => {
+            if (axios.isAxiosError(error)) {
+              const status = error.response?.status;
+              if (status === 403 || status === 404 || status === 405) {
+                try {
+                  return await workoutVideoCommentService.replyLegacy(
+                    payload.replyToCommentId!,
+                    { comment },
+                  );
+                } catch (legacyError) {
+                  if (axios.isAxiosError(legacyError)) {
+                    const legacyStatus = legacyError.response?.status;
+                    if (
+                      legacyStatus === 403 ||
+                      legacyStatus === 404 ||
+                      legacyStatus === 405
+                    ) {
+                      return workoutVideoCommentService.upsert({
+                        exerciseLogId: payload.exerciseLogId,
+                        setNumber: payload.setNumber,
+                        comment,
+                      });
+                    }
+                  }
+                  throw legacyError;
+                }
+              }
+            }
+            throw error;
+          });
+      }
+      return workoutVideoCommentService.upsert({
         exerciseLogId: payload.exerciseLogId,
         setNumber: payload.setNumber,
-        comment: payload.comment.trim(),
-      }),
+        comment,
+      });
+    },
     onSuccess: (data, variables) => {
       toast.success(
         variables.setLabel
@@ -52,8 +98,38 @@ export function useFormCheckMutations(userId?: string) {
           coachCommentUpdatedAt: data?.updatedAt ?? null,
         },
       ]);
+      if (variables.replyToCommentId) {
+        void queryClient.invalidateQueries({
+          queryKey: [
+            "form-check-comment-thread",
+            variables.replyThreadType ?? "workout",
+            variables.replyToCommentId,
+          ],
+        });
+      }
     },
-    onError: () => toast.error("Failed to save comment"),
+    onError: (error: unknown) => {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data as
+          | {
+              message?: string | string[];
+              replyLockReason?: string;
+              reply_lock_reason?: string;
+            }
+          | undefined;
+        const message = Array.isArray(data?.message)
+          ? data.message.filter(Boolean).join(", ")
+          : data?.message;
+        toast.error(
+          data?.replyLockReason ||
+            data?.reply_lock_reason ||
+            message ||
+            "Failed to save comment",
+        );
+        return;
+      }
+      toast.error("Failed to save comment");
+    },
   });
 
   const patchesForTargets = (

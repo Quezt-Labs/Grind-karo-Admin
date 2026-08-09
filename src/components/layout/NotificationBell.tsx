@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -26,6 +26,39 @@ function timeAgo(iso: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function inferCategory(n: AdminNotification): string {
+  if (n.category && n.category.trim().length > 0) return n.category;
+  if (n.type.includes("CHAT")) return "chat";
+  if (n.type.includes("FORM_CHECK")) return "form_check";
+  if (n.type.includes("PAYMENT") || n.type.includes("SUBSCRIPTION"))
+    return "payments";
+  if (n.type.includes("UPLOAD") || n.type.includes("ERROR")) return "system";
+  return "general";
+}
+
+function priorityWeight(value: string | null | undefined): number {
+  switch ((value ?? "normal").toLowerCase()) {
+    case "critical":
+    case "urgent":
+      return 4;
+    case "high":
+      return 3;
+    case "medium":
+    case "normal":
+      return 2;
+    case "low":
+      return 1;
+    default:
+      return 2;
+  }
+}
+
+function formatLabel(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 export function NotificationBell() {
@@ -198,7 +231,22 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
+  const groupedItems = useMemo(() => {
+    const sorted = [...items].sort((a, b) => {
+      const byPriority =
+        priorityWeight(b.priority) - priorityWeight(a.priority);
+      if (byPriority !== 0) return byPriority;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    const map = new Map<string, AdminNotification[]>();
+    sorted.forEach((item) => {
+      const key = inferCategory(item);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(item);
+    });
+    return Array.from(map.entries());
+  }, [items]);
 
   return (
     <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:w-96">
@@ -253,56 +301,80 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <div>
-            {items.map((n) => (
-              <button
-                key={n.id}
-                onClick={() => handleClickNotification(n)}
-                className="flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-gray-50 last:border-b-0 dark:border-gray-700 dark:hover:bg-gray-700/50"
-              >
-                <div
-                  className={cn(
-                    "mt-0.5 shrink-0 rounded-lg p-2",
-                    n.type === "COACHING_SUBSCRIPTION_PAID"
-                      ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                      : n.type === "BOOK_PURCHASE_PAID"
-                        ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
-                        : n.type === "CHAT_MESSAGE"
-                          ? "bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400"
-                          : n.type === "CLIENT_UPLOAD_FAILED" ||
-                              n.type === "CLIENT_ERROR"
-                            ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                            : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
-                  )}
-                >
-                  {n.type === "COACHING_SUBSCRIPTION_PAID" ? (
-                    <CreditCard className="h-4 w-4" />
-                  ) : n.type === "BOOK_PURCHASE_PAID" ? (
-                    <BookOpen className="h-4 w-4" />
-                  ) : n.type === "CHAT_MESSAGE" ? (
-                    <MessageCircle className="h-4 w-4" />
-                  ) : n.type === "CLIENT_UPLOAD_FAILED" ? (
-                    <Upload className="h-4 w-4" />
-                  ) : n.type === "CLIENT_ERROR" ? (
-                    <Bug className="h-4 w-4" />
-                  ) : (
-                    <ShoppingBag className="h-4 w-4" />
-                  )}
+            {groupedItems.map(([category, categoryItems]) => (
+              <div key={category} className="border-b last:border-b-0 dark:border-gray-700">
+                <div className="sticky top-0 z-10 flex items-center justify-between bg-gray-50 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                  <span>{formatLabel(category)}</span>
+                  <span>{categoryItems.length}</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {n.title}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
-                    {n.message}
-                  </p>
-                  <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
-                    {timeAgo(n.createdAt)}
-                  </p>
-                </div>
-                {!n.readAt && (
-                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-500" />
-                )}
-              </button>
+                {categoryItems.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => handleClickNotification(n)}
+                    className="flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-gray-50 last:border-b-0 dark:border-gray-700 dark:hover:bg-gray-700/50"
+                  >
+                    <div
+                      className={cn(
+                        "mt-0.5 shrink-0 rounded-lg p-2",
+                        n.type === "COACHING_SUBSCRIPTION_PAID"
+                          ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                          : n.type === "BOOK_PURCHASE_PAID"
+                            ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                            : n.type === "CHAT_MESSAGE"
+                              ? "bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400"
+                              : n.type === "CLIENT_UPLOAD_FAILED" ||
+                                  n.type === "CLIENT_ERROR"
+                                ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                                : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
+                      )}
+                    >
+                      {n.type === "COACHING_SUBSCRIPTION_PAID" ? (
+                        <CreditCard className="h-4 w-4" />
+                      ) : n.type === "BOOK_PURCHASE_PAID" ? (
+                        <BookOpen className="h-4 w-4" />
+                      ) : n.type === "CHAT_MESSAGE" ? (
+                        <MessageCircle className="h-4 w-4" />
+                      ) : n.type === "CLIENT_UPLOAD_FAILED" ? (
+                        <Upload className="h-4 w-4" />
+                      ) : n.type === "CLIENT_ERROR" ? (
+                        <Bug className="h-4 w-4" />
+                      ) : (
+                        <ShoppingBag className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {n.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                        {n.message}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                          {timeAgo(n.createdAt)}
+                        </p>
+                        {n.priority ? (
+                          <span
+                            className={cn(
+                              "rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              priorityWeight(n.priority) >= 3
+                                ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                                : priorityWeight(n.priority) === 1
+                                  ? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+                            )}
+                          >
+                            {n.priority}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    {!n.readAt && (
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-500" />
+                    )}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         )}

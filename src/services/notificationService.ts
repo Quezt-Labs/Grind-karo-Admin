@@ -8,6 +8,8 @@ import type {
 export interface NotificationFilters {
   unreadOnly?: boolean;
   type?: NotificationType;
+  category?: string;
+  priority?: "low" | "normal" | "high" | "critical";
   limit?: number;
   offset?: number;
 }

@@ -39,6 +39,9 @@ export function useUserDetail(
   const hasActiveCoaching = purchases.some(
     (p) => p.kind === "coaching_subscription" && p.status === "ACTIVE",
   );
+  const hasCoachingHistory = purchases.some(
+    (p) => p.kind === "coaching_subscription",
+  );
 
   const hasPersonalCoaching = useMemo(
     () => hasPersonalCoachingSubscription(purchases),
@@ -170,6 +173,7 @@ export function useUserDetail(
     coachingProgramLoading,
     coachingProgramError,
     hasActiveCoaching,
+    hasCoachingHistory,
     hasPersonalCoaching,
     hasPaidPrograms,
     primaryCoachingSub,

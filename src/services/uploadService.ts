@@ -20,6 +20,13 @@ export interface PresignResponse {
   maxSizeBytes: number;
 }
 
+interface MediaResolveResponse {
+  url?: string | null;
+  mediaPlaybackUrl?: string | null;
+  streamUrl?: string | null;
+  playbackUrl?: string | null;
+}
+
 function parseS3ErrorBody(responseText: string): string | null {
   const code = responseText.match(/<Code>([^<]+)<\/Code>/)?.[1];
   const message = responseText.match(/<Message>([^<]+)<\/Message>/)?.[1];
@@ -183,5 +190,28 @@ export const uploadService = {
 
   async remove(key: string): Promise<void> {
     await api.delete(`/upload/${encodeURIComponent(key)}`);
+  },
+
+  async resolveMedia(url: string): Promise<string> {
+    const { data } = await api.get("/upload/media/resolve", {
+      params: { url },
+    });
+    const payload = (data.data ?? data) as MediaResolveResponse | string;
+    if (typeof payload === "string" && payload.trim().length > 0) {
+      return payload;
+    }
+    if (typeof payload === "string") {
+      throw new Error("Could not resolve media playback URL");
+    }
+    const resolved =
+      payload.mediaPlaybackUrl ??
+      payload.playbackUrl ??
+      payload.streamUrl ??
+      payload.url ??
+      null;
+    if (!resolved || resolved.trim().length === 0) {
+      throw new Error("Could not resolve media playback URL");
+    }
+    return resolved;
   },
 };

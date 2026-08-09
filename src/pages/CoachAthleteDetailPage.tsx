@@ -24,6 +24,8 @@ import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPa
 import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
 import { cn } from "@/utils/cn";
 import { formatAthleteLocation } from "@/lib/indianStates";
+import { planService } from "@/services/planService";
+import { AddonEntitlementsPanel } from "@/components/users/AddonEntitlementsPanel";
 
 type CoachActivityTab = "plan" | "program" | "videos" | "logs" | "chat";
 
@@ -70,6 +72,11 @@ export function CoachAthleteDetailPage() {
   const { data: purchaseData } = useQuery({
     queryKey: ["coach-athlete-purchases", id],
     queryFn: () => athleteAssignmentService.getCoachAthletePurchases(id!),
+    enabled: !!id && isAssigned,
+  });
+  const { data: planCatalog = [] } = useQuery({
+    queryKey: ["coaching-plans"],
+    queryFn: () => planService.getAll(),
     enabled: !!id && isAssigned,
   });
 
@@ -216,11 +223,45 @@ export function CoachAthleteDetailPage() {
       )}
 
       {tab === "plan" && isAssigned && id && (
-        <CoachingFeeAdjustmentsPanel
-          userId={id}
-          purchases={purchaseData?.purchases ?? []}
-          onUpdated={refreshPurchases}
-        />
+        <div className="space-y-4">
+          <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                  purchaseData?.formCheckEnabled
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+                )}
+              >
+                Form check {purchaseData?.formCheckEnabled ? "on" : "off"}
+              </span>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                  purchaseData?.chatEnabled
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+                )}
+              >
+                Chat {purchaseData?.chatEnabled ? "on" : "off"}
+              </span>
+            </div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Add-ons
+            </p>
+            <AddonEntitlementsPanel
+              purchases={purchaseData?.purchases ?? []}
+              planCatalog={planCatalog}
+              compact
+            />
+          </section>
+          <CoachingFeeAdjustmentsPanel
+            userId={id}
+            purchases={purchaseData?.purchases ?? []}
+            onUpdated={refreshPurchases}
+          />
+        </div>
       )}
 
       {tab === "program" && assignment?.personalCoachingEnabled && id && (

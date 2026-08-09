@@ -13,6 +13,7 @@ export interface ChatMessage {
   content: string | null;
   type: MessageType;
   mediaUrl: string | null;
+  mediaPlaybackUrl?: string | null;
   parentMessageId?: string | null;
   parent?: ParentMessageSnippet | null;
   readAt: string | null;

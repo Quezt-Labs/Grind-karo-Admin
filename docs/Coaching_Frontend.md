@@ -2,6 +2,26 @@
 
 Everything the frontend needs to ship the `/online-coaching` flow end to end: plan discovery, add-on selection, Razorpay checkout, subscription management, and reviews.
 
+## Admin dashboard rollout notes (contracts consumed)
+
+The admin/coach UI now consumes these backend contract surfaces when present and falls back gracefully when they are absent during partial rollout:
+
+- `subscription.addonsSnapshot[]` to render per-athlete add-on purchased/active/expired/not-purchased states.
+- `plan.availableAddons[]` to render add-ons available on a plan (including not-yet-purchased entries).
+- form-check thread reply-limit fields on inbox DTOs (`coachReplyLimit`, `coachReplyUsed`, `coachRepliesRemaining`, `coachReplyBlocked`, `coachReplyBlockReason`, plus `replyLimit` nested fallback).
+- form-check reply endpoint `POST /form-check/comments/:commentId/reply` (with fallback to legacy upsert if unavailable).
+- optional entitlement envelope on purchases (`entitlements.managedByBackend`, `entitlements.formCheck.adminOverrideEditable`) to gate admin toggles when backend drives access.
+- chat/audio playback compatibility fields and endpoints (`message.mediaPlaybackUrl`, `GET /upload/media/resolve`).
+
+Latest admin integration now uses these as primary surfaces:
+- `GET /admin/workout-set-video-comments/:id/thread`
+- `POST /admin/workout-set-video-comments/:id/replies`
+- `GET /admin/coaching/subscriptions/users/:userId/addons`
+- `GET|POST|PATCH|DELETE /admin/trackers/:userId/guidance...`
+- `POST /admin/coaching/subscriptions/:id/remove-incorrect-payment`
+
+If reply-limit fields are missing, UI keeps reply actions enabled and hides limit badges.
+
 - **Base URL:** `{API_HOST}` (e.g. `http://localhost:3000` in dev)
 - **Swagger UI:** `{API_HOST}/api/docs`
 - **OpenAPI JSON:** `{API_HOST}/api/docs-json`

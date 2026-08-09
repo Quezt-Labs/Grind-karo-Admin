@@ -1013,7 +1013,11 @@ function MessageBubble({
 
         {msg.type === "AUDIO" && msg.mediaUrl && (
           <>
-            <ChatAudioPlayer src={msg.mediaUrl} isFromUser={isFromUser} />
+            <ChatAudioPlayer
+              src={msg.mediaPlaybackUrl ?? msg.mediaUrl}
+              originalUrl={msg.mediaUrl}
+              isFromUser={isFromUser}
+            />
             {msg.content && (
               <p className="mt-1 wrap-break-word text-xs opacity-80">
                 {msg.content}

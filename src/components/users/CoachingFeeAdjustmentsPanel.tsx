@@ -1,6 +1,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HandCoins, Loader2, PauseCircle, PlusCircle } from "lucide-react";
+import { HandCoins, Loader2, PauseCircle, PlusCircle, Trash2 } from "lucide-react";
+import axios from "axios";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -27,6 +28,8 @@ import {
 } from "@/utils/coachingBilling";
 import type { Purchase } from "@/types/user";
 import { COACHING_DAYS_PER_BILLING_PERIOD } from "@/utils/coachingBillingPeriod";
+import { useIsAdmin } from "@/hooks/useRole";
+import { ConfirmModal } from "@/components/shared/ConfirmModal";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -56,6 +59,7 @@ export function CoachingFeeAdjustmentsPanel({
   purchases,
   onUpdated,
 }: Props) {
+  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [manualPlanId, setManualPlanId] = useState("");
@@ -63,6 +67,9 @@ export function CoachingFeeAdjustmentsPanel({
   const [lifterFeeDraft, setLifterFeeDraft] = useState("");
   const [overridePlanId, setOverridePlanId] = useState("");
   const [overrideFeeDraft, setOverrideFeeDraft] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<CoachingBillingAdjustment | null>(
+    null,
+  );
 
   const paidCoachingSubs = useMemo(
     () =>
@@ -222,13 +229,42 @@ export function CoachingFeeAdjustmentsPanel({
       toast.error(err.message || "Failed to clear renewal fee"),
   });
 
+  const deleteAdjustmentMutation = useMutation({
+    mutationFn: async (target: CoachingBillingAdjustment) => {
+      if (target.subscriptionId) {
+        try {
+          return await coachingSubscriptionService.removeIncorrectPayment(
+            target.subscriptionId,
+            "Incorrect manual payment entry removed by admin",
+          );
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+            const status = error.response?.status;
+            if (status !== 404 && status !== 405) throw error;
+          } else {
+            throw error;
+          }
+        }
+      }
+      return coachingSubscriptionService.deleteAdjustment(target.id);
+    },
+    onSuccess: () => {
+      toast.success("Payment entry removed");
+      setDeleteTarget(null);
+      invalidate();
+    },
+    onError: (err: Error) =>
+      toast.error(err.message || "Failed to remove payment entry"),
+  });
+
   const busy =
     extendMutation.isPending ||
     waiveMutation.isPending ||
     manualMutation.isPending ||
     feeMutation.isPending ||
     setOverrideMutation.isPending ||
-    clearOverrideMutation.isPending;
+    clearOverrideMutation.isPending ||
+    deleteAdjustmentMutation.isPending;
 
   const overrideFeeInvalid = isLifterFeeInputInvalid(overrideFeeDraft);
   const overridePlanName =
@@ -259,7 +295,11 @@ export function CoachingFeeAdjustmentsPanel({
           setManualPlanId={(id) => {
             setManualPlanId(id);
             const plan = plans.find((p) => p.id === id);
-            setBilling(initialCoachingBillingState(plan));
+            const base = initialCoachingBillingState(plan);
+            setBilling({
+              ...base,
+              lifterFee: plan ? String(plan.price) : "",
+            });
           }}
           billing={billing}
           setBilling={setBilling}
@@ -498,7 +538,11 @@ export function CoachingFeeAdjustmentsPanel({
           setManualPlanId={(id) => {
             setManualPlanId(id);
             const plan = plans.find((p) => p.id === id);
-            setBilling(initialCoachingBillingState(plan));
+            const base = initialCoachingBillingState(plan);
+            setBilling({
+              ...base,
+              lifterFee: plan ? String(plan.price) : "",
+            });
           }}
           billing={billing}
           setBilling={setBilling}
@@ -531,9 +575,22 @@ export function CoachingFeeAdjustmentsPanel({
                   <span className="font-medium text-gray-900 dark:text-white">
                     {TYPE_LABEL[row.type]}
                   </span>
-                  <span className="text-xs text-gray-500">
-                    {formatDate(row.createdAt)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">
+                      {formatDate(row.createdAt)}
+                    </span>
+                    {isAdmin && row.type === "MANUAL_PAYMENT" ? (
+                      <button
+                        type="button"
+                        disabled={deleteAdjustmentMutation.isPending}
+                        onClick={() => setDeleteTarget(row)}
+                        className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                        title="Remove incorrect payment"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
                 <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
                   {row.reason}
@@ -549,6 +606,18 @@ export function CoachingFeeAdjustmentsPanel({
           </ul>
         )}
       </div>
+      {deleteTarget ? (
+        <ConfirmModal
+          open
+          title="Remove manual payment?"
+          message="This deletes the payment adjustment record and refreshes renewal/payment calculations."
+          confirmLabel="Remove payment"
+          variant="danger"
+          onConfirm={() => deleteAdjustmentMutation.mutate(deleteTarget)}
+          onCancel={() => setDeleteTarget(null)}
+          isLoading={deleteAdjustmentMutation.isPending}
+        />
+      ) : null}
     </div>
   );
 }

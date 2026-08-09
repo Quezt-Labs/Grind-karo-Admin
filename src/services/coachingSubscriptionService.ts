@@ -1,4 +1,5 @@
 import api from "./api";
+import type { CoachingAddonStatus } from "@/types/user";
 
 export type CoachingBillingAdjustmentType =
   | "EXTEND"
@@ -113,6 +114,87 @@ export const coachingSubscriptionService = {
       {
         params,
       },
+    );
+    return data.data ?? data;
+  },
+
+  async deleteAdjustment(adjustmentId: string): Promise<{ success: true }> {
+    const { data } = await api.delete(
+      `/admin/coaching/subscriptions/adjustments/${adjustmentId}`,
+    );
+    return data.data ?? data;
+  },
+
+  async listUserAddons(userId: string): Promise<CoachingAddonStatus[]> {
+    const { data } = await api.get(
+      `/admin/coaching/subscriptions/users/${userId}/addons`,
+    );
+    const payload = data.data ?? data;
+    const rows = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.items)
+        ? payload.items
+        : Array.isArray(payload?.addons)
+          ? payload.addons
+          : [];
+    return rows.map((row: Record<string, unknown>) => ({
+      ...(() => {
+        const rawState = (
+          (row.state as string | undefined) ??
+          (row.status as string | undefined) ??
+          "inactive"
+        ).toLowerCase();
+        const state: CoachingAddonStatus["state"] =
+          rawState === "active"
+            ? "active"
+            : rawState === "purchased"
+              ? "purchased"
+              : rawState === "expired"
+                ? "expired"
+                : "inactive";
+        return { state };
+      })(),
+      addonId:
+        (row.addonId as string | null | undefined) ??
+        (row.addon_id as string | null | undefined) ??
+        null,
+      slug:
+        (row.slug as string | null | undefined) ??
+        (row.addonSlug as string | null | undefined) ??
+        (row.addon_slug as string | null | undefined) ??
+        null,
+      name:
+        (row.name as string | undefined) ??
+        (row.addonName as string | undefined) ??
+        (row.addon_name as string | undefined) ??
+        "Addon",
+      price:
+        (row.price as number | null | undefined) ??
+        (row.pricePaid as number | null | undefined) ??
+        (row.price_paid as number | null | undefined) ??
+        null,
+      planName:
+        (row.planName as string | null | undefined) ??
+        (row.plan_name as string | null | undefined) ??
+        null,
+      sourcePlanName:
+        (row.sourcePlanName as string | null | undefined) ??
+        (row.source_plan_name as string | null | undefined) ??
+        null,
+      expiresAt:
+        (row.expiresAt as string | null | undefined) ??
+        (row.expires_at as string | null | undefined) ??
+        null,
+    }));
+  },
+
+  async removeIncorrectPayment(
+    subscriptionId: string,
+    reason: string,
+  ): Promise<{ success: true }> {
+    const { data } = await api.post(
+      `/admin/coaching/subscriptions/${subscriptionId}/remove-incorrect-payment`,
+      { reason },
     );
     return data.data ?? data;
   },

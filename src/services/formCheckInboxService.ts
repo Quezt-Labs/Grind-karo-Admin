@@ -21,6 +21,12 @@ export interface FormCheckInboxItem {
   coachCommentUpdatedAt?: string | null;
   athleteReply?: string | null;
   athleteRepliedAt?: string | null;
+  threadId?: string | null;
+  coachReplyLimit?: number | null;
+  coachReplyUsed?: number | null;
+  coachRepliesRemaining?: number | null;
+  coachReplyBlocked?: boolean;
+  coachReplyBlockReason?: string | null;
   reviewed: boolean;
   exerciseNotes?: string | null;
   setNotes?: string | null;
@@ -98,6 +104,57 @@ function normalizeInboxItem(
     (item.coachComment as string | null | undefined) ??
     (item.coach_comment as string | null | undefined) ??
     null;
+  const replyLimitRaw =
+    (item.replyLimit as number | Record<string, unknown> | null | undefined) ??
+    (item.reply_limit as number | Record<string, unknown> | null | undefined) ??
+    null;
+  const replyLimitObject =
+    typeof replyLimitRaw === "object" && replyLimitRaw !== null
+      ? replyLimitRaw
+      : undefined;
+  const replyLimitValue =
+    typeof replyLimitRaw === "number" ? replyLimitRaw : null;
+  const coachReplyLimit =
+    (item.coachReplyLimit as number | null | undefined) ??
+    (item.coach_reply_limit as number | null | undefined) ??
+    (item.reply_limit_value as number | null | undefined) ??
+    (item.replyLimitValue as number | null | undefined) ??
+    (item.reply_limit as number | null | undefined) ??
+    (item.replyLimit as number | null | undefined) ??
+    replyLimitValue ??
+    (replyLimitObject?.limit as number | null | undefined) ??
+    null;
+  const coachReplyUsed =
+    (item.coachReplyUsed as number | null | undefined) ??
+    (item.coach_reply_used as number | null | undefined) ??
+    (item.repliesUsed as number | null | undefined) ??
+    (item.replies_used as number | null | undefined) ??
+    (replyLimitObject?.used as number | null | undefined) ??
+    null;
+  const coachRepliesRemaining =
+    (item.coachRepliesRemaining as number | null | undefined) ??
+    (item.coach_replies_remaining as number | null | undefined) ??
+    (item.repliesRemaining as number | null | undefined) ??
+    (item.replies_remaining as number | null | undefined) ??
+    (replyLimitObject?.remaining as number | null | undefined) ??
+    null;
+  const canAthleteReply =
+    (item.canAthleteReply as boolean | null | undefined) ??
+    (item.can_athlete_reply as boolean | null | undefined) ??
+    null;
+  const coachReplyBlocked =
+    (item.coachReplyBlocked as boolean | null | undefined) ??
+    (item.coach_reply_blocked as boolean | null | undefined) ??
+    (canAthleteReply === null ? undefined : !canAthleteReply) ??
+    (replyLimitObject?.blocked as boolean | null | undefined) ??
+    false;
+  const coachReplyBlockReason =
+    (item.coachReplyBlockReason as string | null | undefined) ??
+    (item.coach_reply_block_reason as string | null | undefined) ??
+    (item.replyLockReason as string | null | undefined) ??
+    (item.reply_lock_reason as string | null | undefined) ??
+    (replyLimitObject?.reason as string | null | undefined) ??
+    null;
   return {
     ...item,
     source: "program",
@@ -118,6 +175,17 @@ function normalizeInboxItem(
       (item.athleteRepliedAt as string | null | undefined) ??
       (item.athlete_replied_at as string | null | undefined) ??
       null,
+    threadId:
+      (item.threadId as string | null | undefined) ??
+      (item.thread_id as string | null | undefined) ??
+      (item.formCheckThreadId as string | null | undefined) ??
+      (item.form_check_thread_id as string | null | undefined) ??
+      null,
+    coachReplyLimit,
+    coachReplyUsed,
+    coachRepliesRemaining,
+    coachReplyBlocked: Boolean(coachReplyBlocked),
+    coachReplyBlockReason,
     reviewed: Boolean(coachComment?.trim()),
   };
 }

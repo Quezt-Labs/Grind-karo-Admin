@@ -26,6 +26,7 @@ import { useCoachAthleteContext } from "@/hooks/useCoachAthleteContext";
 import { useIsAssistantCoach } from "@/hooks/useRole";
 import { ProgramComparePanel } from "./editor/ProgramComparePanel";
 import { ProgramWarmupPanel } from "./editor/ProgramWarmupPanel";
+import { ProgramDeliveryContentPanel } from "./editor/ProgramDeliveryContentPanel";
 import { UserAthleteProgramPanel } from "@/components/users/UserAthleteProgramPanel";
 import { UserRetailProgramPanel } from "@/components/users/UserRetailProgramPanel";
 import { hasPersonalCoachingSubscription } from "@/utils/coachingCapabilities";
@@ -34,6 +35,21 @@ import { defaultPreviewInputs } from "./editor/preview-context";
 import type { PreviewInputs } from "@/utils/programPreviewCompute";
 
 type DeleteTarget = { type: string; id: string; name: string };
+
+function parseProgramEditorTab(value: string | null): ProgramEditorTab | null {
+  switch (value) {
+    case "structure":
+    case "compare":
+    case "movement-selection":
+    case "loads":
+    case "preview":
+    case "warmup":
+    case "delivery":
+      return value;
+    default:
+      return null;
+  }
+}
 
 export function ProgramEditorPage() {
   const {
@@ -49,7 +65,9 @@ export function ProgramEditorPage() {
   const [searchParams] = useSearchParams();
   const qc = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<ProgramEditorTab>("structure");
+  const [activeTab, setActiveTab] = useState<ProgramEditorTab>(
+    () => parseProgramEditorTab(searchParams.get("editorTab")) ?? "structure",
+  );
 
   // ---- modals -----------------------------------------------------------
   const [blockModal, setBlockModal] = useState<{
@@ -454,6 +472,15 @@ export function ProgramEditorPage() {
         )}
 
         {activeTab === "warmup" && <ProgramWarmupPanel />}
+
+        {activeTab === "delivery" && (
+          <ProgramDeliveryContentPanel
+            programId={programId}
+            programName={tree.name}
+            coachingUserId={coachingUserId}
+            athleteLabel={athleteLabel}
+          />
+        )}
 
         {/* Modals */}
         {blockModal.open && (

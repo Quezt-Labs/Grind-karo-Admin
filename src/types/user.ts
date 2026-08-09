@@ -122,6 +122,8 @@ export interface CoachingPurchase {
   expiresAt: string;
   /** Null = pending/incomplete checkout (not a live paid plan). */
   razorpayPaymentId?: string | null;
+  /** Backend addon entitlement snapshot for this subscription period. */
+  addonsSnapshot?: CoachingAddonSnapshot[];
   createdAt: string;
 }
 
@@ -153,6 +155,28 @@ export interface BookPurchase {
 
 export type Purchase = CoachingPurchase | ProgramPurchase | BookPurchase;
 
+export interface CoachingAddonSnapshot {
+  addonId?: string | null;
+  slug?: string | null;
+  name: string;
+  pricePaid?: number | null;
+  status?: "ACTIVE" | "INACTIVE" | "EXPIRED" | "NOT_PURCHASED";
+  active?: boolean;
+  purchasedAt?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface CoachingAddonStatus {
+  addonId?: string | null;
+  slug?: string | null;
+  name: string;
+  state: "active" | "purchased" | "expired" | "inactive";
+  price?: number | null;
+  planName?: string | null;
+  sourcePlanName?: string | null;
+  expiresAt?: string | null;
+}
+
 export interface FormCheckQuota {
   weeklyLimit: number | null;
   usedThisWeek: number;
@@ -172,6 +196,22 @@ export interface UserPurchasesResponse {
   formCheckQuota: FormCheckQuota;
   formCheckEnabled: boolean;
   chatEnabled: boolean;
+  /**
+   * Optional backend entitlement envelope. Newer API versions can include this
+   * to indicate source-of-truth ownership and feature gates.
+   */
+  entitlements?: {
+    managedByBackend?: boolean;
+    formCheck?: {
+      adminOverrideEditable?: boolean;
+      source?: string | null;
+      reason?: string | null;
+    };
+    chat?: {
+      source?: string | null;
+      reason?: string | null;
+    };
+  };
 }
 
 // ---- User Progress ------------------------------------------------------
@@ -357,6 +397,8 @@ export interface AdminNotification {
   title: string;
   message: string;
   payload: Record<string, unknown>;
+  category?: string | null;
+  priority?: "low" | "normal" | "high" | "critical" | null;
   readAt: string | null;
   createdAt: string;
 }

@@ -18,7 +18,6 @@ import {
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
 import { planService } from "@/services/planService";
 import {
-  activeCoachingSubscriptions,
   orderedActiveCoachingSubscriptions,
 } from "@/utils/coachingCapabilities";
 import { apiErrorMessage } from "@/utils/apiErrorMessage";
@@ -33,6 +32,7 @@ type Props = {
   primarySubscriptionId?: string | null;
   onUpdated?: () => void;
   onSelectSubscription?: (subscriptionId: string) => void;
+  onRecordPayment?: () => void;
 };
 
 type ActiveCoachingSub = Extract<Purchase, { kind: "coaching_subscription" }>;
@@ -109,12 +109,23 @@ function switchDialogTitle(direction: "upgrade" | "downgrade", toName: string) {
     : `Downgrade to ${toName}?`;
 }
 
+function manageableCoachingSubscriptions(purchases: Purchase[]) {
+  return purchases
+    .filter(
+      (p): p is Extract<Purchase, { kind: "coaching_subscription" }> =>
+        p.kind === "coaching_subscription" &&
+        (p.status === "ACTIVE" || p.status === "EXPIRED"),
+    )
+    .filter((p) => p.razorpayPaymentId !== null);
+}
+
 export function UserActiveCoachingPlansPanel({
   userId,
   purchases,
   primarySubscriptionId,
   onUpdated,
   onSelectSubscription,
+  onRecordPayment,
 }: Props) {
   const queryClient = useQueryClient();
   const [cancelTarget, setCancelTarget] = useState<{
@@ -142,11 +153,13 @@ export function UserActiveCoachingPlansPanel({
     purchases,
     primarySubscriptionId,
   );
+  const manageablePlans = manageableCoachingSubscriptions(purchases);
+  const planById = useMemo(() => new Map(plans.map((p) => [p.id, p])), [plans]);
   const pinnedId =
     primarySubscriptionId &&
-    activePlans.some((p) => p.id === primarySubscriptionId)
+    manageablePlans.some((p) => p.id === primarySubscriptionId)
       ? primarySubscriptionId
-      : activePlans[0]?.id;
+      : activePlans[0]?.id ?? manageablePlans[0]?.id;
 
   const primaryMutation = useMutation({
     mutationFn: (subscriptionId: string) =>
@@ -235,11 +248,11 @@ export function UserActiveCoachingPlansPanel({
     setSwitchReason("");
   }
 
-  if (activeCoachingSubscriptions(purchases).length === 0) {
+  if (manageablePlans.length === 0) {
     return null;
   }
 
-  const multiple = activePlans.length > 1;
+  const multiple = manageablePlans.length > 1;
 
   return (
     <section className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800/60 dark:bg-indigo-900/10">
@@ -249,25 +262,27 @@ export function UserActiveCoachingPlansPanel({
         </div>
         <div>
           <h3 className="font-semibold text-gray-900 dark:text-white">
-            Active coaching plans
-            {multiple ? ` (${activePlans.length})` : ""}
+            Coaching subscriptions
+            {multiple ? ` (${manageablePlans.length})` : ""}
           </h3>
           <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
             {multiple
               ? "Choose which plan drives the athlete app and program editor. Remove plans the athlete should no longer access."
-              : "Manage this athlete's coaching access. Switch Mini → Mega, Mega → Ultra, or Ultra → Mega while keeping remaining days."}
+              : "Manage this athlete's coaching access and payment continuity."}
           </p>
         </div>
       </div>
 
       <div className="space-y-2">
-        {activePlans.map((sub) => {
+        {manageablePlans.map((sub) => {
           const isPrimary = sub.id === pinnedId;
           const grace = overdueGraceInfo(sub);
           const partner = switchPartnerSlug(sub.planSlug);
           const switchLabel = partner
             ? switchButtonLabel(sub.planSlug, partner)
             : null;
+          const configuredPlanFee = planById.get(sub.planId)?.price ?? null;
+          const canMutateSubscription = sub.status === "ACTIVE";
 
           return (
             <div
@@ -306,6 +321,26 @@ export function UserActiveCoachingPlansPanel({
                     {formatDate(sub.startDate)} – {formatDate(sub.expiresAt)} ·{" "}
                     {sub.planSlug}
                   </p>
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    Renewal status:{" "}
+                    {sub.status === "EXPIRED"
+                      ? "expired"
+                      : grace?.pastGrace
+                        ? "past grace"
+                        : grace
+                          ? `grace (${grace.daysLeft}d left)`
+                          : "active"}{" "}
+                    · Payment:{" "}
+                    {sub.razorpayPaymentId === null
+                      ? "pending"
+                      : `paid ${formatINR(sub.totalAmount)}`}
+                    {configuredPlanFee != null ? (
+                      <>
+                        {" "}
+                        · Configured fee {formatINR(configuredPlanFee)}
+                      </>
+                    ) : null}
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -324,7 +359,7 @@ export function UserActiveCoachingPlansPanel({
                       Show in app
                     </label>
                   )}
-                  {switchLabel && (
+                  {switchLabel && canMutateSubscription && (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -334,17 +369,28 @@ export function UserActiveCoachingPlansPanel({
                       {switchLabel}
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="text-red-600 hover:text-red-700 dark:text-red-400"
-                    onClick={() =>
-                      setCancelTarget({ id: sub.id, planName: sub.planName })
-                    }
-                  >
-                    <UserMinus className="mr-1 h-3.5 w-3.5" />
-                    Remove
-                  </Button>
+                  {canMutateSubscription ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="text-red-600 hover:text-red-700 dark:text-red-400"
+                      onClick={() =>
+                        setCancelTarget({ id: sub.id, planName: sub.planName })
+                      }
+                    >
+                      <UserMinus className="mr-1 h-3.5 w-3.5" />
+                      Remove
+                    </Button>
+                  ) : null}
+                  {onRecordPayment ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onRecordPayment()}
+                    >
+                      Record payment
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </div>
