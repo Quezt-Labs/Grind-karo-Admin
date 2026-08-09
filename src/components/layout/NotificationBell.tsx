@@ -71,7 +71,9 @@ export function NotificationBell() {
   useQuery({
     queryKey: ["notification-unread-count"],
     queryFn: async () => {
-      const count = await notificationService.getUnreadCount();
+      const count = await notificationService.getUnreadCount({
+        gracefulForbidden: true,
+      });
       setUnreadCount(count);
       return count;
     },
@@ -121,7 +123,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["notifications-unread-list"],
-    queryFn: () => notificationService.getAll({ unreadOnly: true, limit: 20 }),
+    queryFn: () =>
+      notificationService.getAll(
+        { unreadOnly: true, limit: 20 },
+        { gracefulForbidden: true },
+      ),
   });
 
   const markReadMutation = useMutation({

@@ -1,11 +1,14 @@
 import { Menu, Sun, Moon, PanelLeftClose, PanelLeft } from "lucide-react";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useDarkMode } from "@/hooks/useDarkMode";
+import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "./NotificationBell";
 import { ContactInboxBell } from "./ContactInboxBell";
 import { ChatBell } from "./ChatBell";
 
 export function Navbar() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const { setMobileOpen, isCollapsed, toggleCollapsed } = useSidebarStore();
   const { isDark, toggle: toggleDark } = useDarkMode();
 
@@ -37,7 +40,7 @@ export function Navbar() {
 
       <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
         <ChatBell />
-        <ContactInboxBell />
+        {isAdmin ? <ContactInboxBell /> : null}
         <NotificationBell />
         <button
           onClick={toggleDark}

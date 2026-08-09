@@ -14,19 +14,43 @@ export interface NotificationFilters {
   offset?: number;
 }
 
+interface NotificationServiceOptions {
+  gracefulForbidden?: boolean;
+}
+
 export const notificationService = {
   async getAll(
     filters?: NotificationFilters,
+    options?: NotificationServiceOptions,
   ): Promise<NotificationListResponse> {
-    const { data } = await api.get("/admin/notifications", {
+    const response = await api.get("/admin/notifications", {
       params: filters,
+      validateStatus: (status) =>
+        (status >= 200 && status < 300) ||
+        (options?.gracefulForbidden === true && status === 403),
     });
-    return data;
+    if (response.status === 403 && options?.gracefulForbidden) {
+      return {
+        total: 0,
+        unreadCount: 0,
+        limit: filters?.limit ?? 20,
+        offset: filters?.offset ?? 0,
+        items: [],
+      };
+    }
+    return response.data;
   },
 
-  async getUnreadCount(): Promise<number> {
-    const { data } = await api.get("/admin/notifications/unread-count");
-    return data.unreadCount;
+  async getUnreadCount(options?: NotificationServiceOptions): Promise<number> {
+    const response = await api.get("/admin/notifications/unread-count", {
+      validateStatus: (status) =>
+        (status >= 200 && status < 300) ||
+        (options?.gracefulForbidden === true && status === 403),
+    });
+    if (response.status === 403 && options?.gracefulForbidden) {
+      return 0;
+    }
+    return response.data.unreadCount;
   },
 
   async markRead(id: string): Promise<AdminNotification> {
