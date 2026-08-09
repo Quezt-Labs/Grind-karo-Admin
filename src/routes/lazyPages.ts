@@ -93,6 +93,10 @@ export const UploadFailuresPage = lazyPage(
   () => import("@/pages/UploadFailuresPage"),
   "UploadFailuresPage",
 );
+export const UploadIncidentMonitorPage = lazyPage(
+  () => import("@/pages/UploadIncidentMonitorPage"),
+  "UploadIncidentMonitorPage",
+);
 export const CouponsPage = lazyPage(
   () => import("@/pages/CouponsPage"),
   "CouponsPage",
@@ -112,6 +116,10 @@ export const PollDetailPage = lazyPage(
 export const FormCheckInboxPage = lazyPage(
   () => import("@/pages/FormCheckInboxPage"),
   "FormCheckInboxPage",
+);
+export const FormCheckActionQueuePage = lazyPage(
+  () => import("@/pages/FormCheckActionQueuePage"),
+  "FormCheckActionQueuePage",
 );
 export const WorkspacePage = lazyPage(
   () => import("@/pages/WorkspacePage"),

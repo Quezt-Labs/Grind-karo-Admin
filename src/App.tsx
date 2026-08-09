@@ -21,6 +21,7 @@ import {
   CoachAthleteDetailPage,
   CoachAthletesPage,
   CoachAthletesLocationPage,
+  FormCheckActionQueuePage,
   FormCheckInboxPage,
   WorkspacePage,
   CoachingRenewalsPage,
@@ -28,6 +29,7 @@ import {
   ChatPage,
   ContactSubmissionsPage,
   ClientErrorsPage,
+  UploadIncidentMonitorPage,
   UploadFailuresPage,
   CouponDetailPage,
   CouponsPage,
@@ -120,6 +122,14 @@ export default function App() {
                 />
 
                 <Route element={<StaffRoute />}>
+                  <Route
+                    path="/form-check-action-queue"
+                    element={<FormCheckActionQueuePage />}
+                  />
+                  <Route
+                    path="/upload-incidents"
+                    element={<UploadIncidentMonitorPage />}
+                  />
                   <Route path="/programs" element={<ProgramsPage />} />
                   <Route
                     path="/program-templates"

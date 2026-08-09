@@ -73,7 +73,17 @@ const NAV_SECTIONS: NavSection[] = [
       { path: "/polls", label: "Polls", icon: Vote },
       { path: "/users", label: "Users", icon: Users },
       { path: "/form-checks", label: "Form checks", icon: Video },
+      {
+        path: "/form-check-action-queue",
+        label: "Form-check queue",
+        icon: ClipboardCheck,
+      },
       { path: "/chat", label: "Chat", icon: MessageCircle },
+      {
+        path: "/upload-incidents",
+        label: "Upload incidents",
+        icon: Upload,
+      },
       { path: "/client-errors", label: "Client errors", icon: Bug },
       { path: "/upload-failures", label: "Upload failures", icon: Upload },
     ],
@@ -140,6 +150,16 @@ const COACH_NAV_SECTIONS: NavSection[] = [
       { path: "/coach/ops-board", label: "Daily ops", icon: ClipboardCheck },
       { path: "/coach/locations", label: "Locations", icon: MapPin },
       { path: "/form-checks", label: "Form checks", icon: Video },
+      {
+        path: "/form-check-action-queue",
+        label: "Action queue",
+        icon: ClipboardCheck,
+      },
+      {
+        path: "/upload-incidents",
+        label: "Upload incidents",
+        icon: Upload,
+      },
       {
         path: "/coaching-renewals",
         label: "Renewals & overdue",
