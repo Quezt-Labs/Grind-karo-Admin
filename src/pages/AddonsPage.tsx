@@ -9,7 +9,10 @@ import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
-import { addonService } from "@/services/addonService";
+import {
+  addonService,
+  readAddonUsageCountsFromPayload,
+} from "@/services/addonService";
 import { AddonFormModal } from "@/components/coaching/AddonFormModal";
 import type { Column } from "@/types/dashboard";
 import type { CoachingAddon } from "@/types/program";
@@ -48,6 +51,7 @@ export function AddonsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<CoachingAddon | null>(null);
   const [editTarget, setEditTarget] = useState<CoachingAddon | null>(null);
+  const [selectedAddonId, setSelectedAddonId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const queryClient = useQueryClient();
 
@@ -81,6 +85,49 @@ export function AddonsPage() {
     addons?.forEach((a) => map.set(a.id, a));
     return map;
   }, [addons]);
+
+  const selectedAddon = selectedAddonId ? addonMap.get(selectedAddonId) : null;
+  const selectedInlineUsage = useMemo(
+    () =>
+      selectedAddon
+        ? readAddonUsageCountsFromPayload(selectedAddon, selectedAddon.id)
+        : null,
+    [selectedAddon],
+  );
+
+  const {
+    data: allUsageCounts = [],
+    isLoading: allUsageLoading,
+    isFetching: allUsageFetching,
+    isError: allUsageError,
+  } = useQuery({
+    queryKey: ["coaching-addons-usage"],
+    queryFn: addonService.getAllUsageCounts,
+    retry: false,
+  });
+
+  const usageByAddonId = useMemo(() => {
+    const map = new Map<string, (typeof allUsageCounts)[number]>();
+    allUsageCounts.forEach((row) => map.set(row.addonId, row));
+    return map;
+  }, [allUsageCounts]);
+  const selectedUsageFromList = selectedAddonId
+    ? (usageByAddonId.get(selectedAddonId) ?? null)
+    : null;
+  const shouldUsePerAddonFallback =
+    !!selectedAddonId && !allUsageLoading && !selectedUsageFromList;
+
+  const {
+    data: selectedUsageFallback,
+    isLoading: usageFallbackLoading,
+    isFetching: usageFallbackFetching,
+    isError: usageFallbackError,
+  } = useQuery({
+    queryKey: ["coaching-addon-usage-fallback", selectedAddonId],
+    queryFn: () => addonService.getUsageCounts(selectedAddonId!),
+    enabled: shouldUsePerAddonFallback,
+    retry: false,
+  });
 
   const tableData: AddonRow[] = useMemo(() => {
     if (!addons) return [];
@@ -130,6 +177,47 @@ export function AddonsPage() {
     },
   };
 
+  const columns: Column<AddonRow>[] = useMemo(
+    () => [
+      {
+        ...addonColumns[0],
+        render: (_value, row) => (
+          <button
+            type="button"
+            onClick={() => setSelectedAddonId(row.id)}
+            className="inline-flex items-center gap-2 rounded px-1 py-0.5 text-left text-sm font-semibold text-primary-700 hover:bg-primary-50 hover:text-primary-800 dark:text-primary-300 dark:hover:bg-primary-900/20 dark:hover:text-primary-200"
+            title="View usage counts"
+          >
+            {row.name}
+          </button>
+        ),
+      },
+      addonColumns[1],
+      addonColumns[2],
+      addonColumns[3],
+      addonColumns[4],
+    ],
+    [],
+  );
+
+  const usage =
+    selectedUsageFromList ?? selectedUsageFallback ?? selectedInlineUsage;
+  const usageLoading = allUsageLoading || usageFallbackLoading;
+  const usageFetching = allUsageFetching || usageFallbackFetching;
+  const usageError = !usage && allUsageError && usageFallbackError;
+  const usageChips = [
+    { label: "Active users", value: usage?.activeUsers ?? null, tone: "green" },
+    { label: "Total users", value: usage?.totalUsers ?? null, tone: "blue" },
+    {
+      label: "Purchased users",
+      value: usage?.purchasedUsers ?? null,
+      tone: "indigo",
+    },
+    { label: "Expired", value: usage?.expiredUsers ?? null, tone: "amber" },
+    { label: "Inactive", value: usage?.inactiveUsers ?? null, tone: "gray" },
+  ] as const;
+  const visibleUsageChips = usageChips.filter((chip) => chip.value != null);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -172,10 +260,46 @@ export function AddonsPage() {
       ) : (
         <DataTable
           data={tableData}
-          columns={[...addonColumns, actionsColumn]}
+          columns={[...columns, actionsColumn]}
           isLoading={isLoading}
         />
       )}
+
+      {selectedAddon ? (
+        <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+              {selectedAddon.name} usage
+            </h2>
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              {usageFetching ? "Refreshing…" : "Users on add-on"}
+            </span>
+          </div>
+
+          {usageLoading ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Loading usage counts…
+            </p>
+          ) : usageError ? (
+            <ErrorAlert message="Failed to load usage counts right now." />
+          ) : usage ? (
+            <div className="flex flex-wrap gap-2">
+              {visibleUsageChips.map((chip) => (
+                <CountChip
+                  key={chip.label}
+                  label={chip.label}
+                  value={chip.value}
+                  tone={chip.tone}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Usage counts are not available yet for this add-on.
+            </p>
+          )}
+        </section>
+      ) : null}
 
       <ConfirmModal
         open={!!deleteTarget}
@@ -201,6 +325,37 @@ export function AddonsPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function CountChip({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number | null;
+  tone: "green" | "blue" | "indigo" | "amber" | "gray";
+}) {
+  const toneClass = {
+    green:
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-900/40",
+    blue:
+      "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-900/40",
+    indigo:
+      "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-900/40",
+    amber:
+      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-900/40",
+    gray:
+      "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-700/40 dark:text-gray-200 dark:border-gray-600",
+  }[tone];
+  return (
+    <div
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${toneClass}`}
+    >
+      <span>{label}</span>
+      <span className="font-semibold">{value ?? "—"}</span>
     </div>
   );
 }
