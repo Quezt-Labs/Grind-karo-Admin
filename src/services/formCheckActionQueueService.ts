@@ -44,9 +44,12 @@ export interface FormCheckActionQueueResponse {
   offset: number;
   items: FormCheckActionQueueItem[];
   tabCounts: Record<FormCheckQueueTab, number>;
+  tabCountsSource: "payload" | "derived";
   hasChanges: boolean | null;
   isDelta: boolean;
   since: string | null;
+  nextCursor: string | null;
+  hasMore: boolean | null;
   removedIds: string[];
 }
 
@@ -263,19 +266,25 @@ function normalizeItem(
 function normalizeTabCounts(
   source: Record<string, unknown> | null,
   items: FormCheckActionQueueItem[],
-): Record<FormCheckQueueTab, number> {
+): {
+  counts: Record<FormCheckQueueTab, number>;
+  source: "payload" | "derived";
+} {
   const fromPayload = asRecord(source?.tabCounts) ?? asRecord(source?.tab_counts);
   if (fromPayload) {
     return {
-      needs_reply: pickNumber(fromPayload.needs_reply, fromPayload.needsReply) ?? 0,
-      unread: pickNumber(fromPayload.unread) ?? 0,
-      overdue: pickNumber(fromPayload.overdue) ?? 0,
-      resolved:
-        pickNumber(
-          fromPayload.resolved,
-          fromPayload.replied,
-          fromPayload.resolvedOrReplied,
-        ) ?? 0,
+      counts: {
+        needs_reply: pickNumber(fromPayload.needs_reply, fromPayload.needsReply) ?? 0,
+        unread: pickNumber(fromPayload.unread) ?? 0,
+        overdue: pickNumber(fromPayload.overdue) ?? 0,
+        resolved:
+          pickNumber(
+            fromPayload.resolved,
+            fromPayload.replied,
+            fromPayload.resolvedOrReplied,
+          ) ?? 0,
+      },
+      source: "payload",
     };
   }
   const counts: Record<FormCheckQueueTab, number> = {
@@ -292,7 +301,7 @@ function normalizeTabCounts(
       counts.resolved += 1;
     }
   }
-  return counts;
+  return { counts, source: "derived" };
 }
 
 function normalizeResponse(payload: unknown): FormCheckActionQueueResponse {
@@ -314,6 +323,12 @@ function normalizeResponse(payload: unknown): FormCheckActionQueueResponse {
     pickBoolean(record?.hasChanges, record?.has_changes) ?? null;
   const isDelta =
     pickBoolean(record?.isDelta, record?.is_delta, record?.delta) ?? false;
+  const hasMore = pickBoolean(record?.hasMore, record?.has_more, record?.more);
+  const nextCursor = pickString(
+    record?.nextCursor,
+    record?.next_cursor,
+    record?.cursor,
+  );
   const removedIds = Array.isArray(record?.removedIds)
     ? (record?.removedIds as unknown[])
         .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
@@ -341,16 +356,20 @@ function normalizeResponse(payload: unknown): FormCheckActionQueueResponse {
         ? item.latestActivityAt
         : latest;
     }, null);
+  const tabCounts = normalizeTabCounts(record, items);
 
   return {
     total: pickNumber(record?.total, rawItems.length) ?? rawItems.length,
     limit: pickNumber(record?.limit) ?? rawItems.length,
     offset: pickNumber(record?.offset) ?? 0,
     items,
-    tabCounts: normalizeTabCounts(record, items),
+    tabCounts: tabCounts.counts,
+    tabCountsSource: tabCounts.source,
     hasChanges,
     isDelta,
     since,
+    nextCursor,
+    hasMore,
     removedIds,
   };
 }
@@ -415,6 +434,37 @@ async function tryFetchWithParamFallback(
   return primary;
 }
 
+function stripCursor(params: Record<string, unknown>): Record<string, unknown> {
+  const { cursor: _cursor, ...rest } = params;
+  return rest;
+}
+
+async function tryFetchQueue(
+  endpoint: string,
+  primaryParams: Record<string, unknown>,
+  legacyParams: Record<string, unknown>,
+): Promise<
+  | { ok: true; payload: unknown }
+  | { ok: false; status: number | null }
+> {
+  const first = await tryFetchWithParamFallback(endpoint, primaryParams, legacyParams);
+  if (first.ok) return first;
+
+  // Cursor rollout compatibility: retry without cursor when backend rejects unknown param.
+  if (
+    (first.status === 400 || first.status === 422) &&
+    typeof primaryParams.cursor === "string" &&
+    primaryParams.cursor.trim().length > 0
+  ) {
+    return tryFetchWithParamFallback(
+      endpoint,
+      stripCursor(primaryParams),
+      stripCursor(legacyParams),
+    );
+  }
+  return first;
+}
+
 export const formCheckActionQueueService = {
   async list(params?: {
     tab?: FormCheckQueueTab;
@@ -422,12 +472,14 @@ export const formCheckActionQueueService = {
     limit?: number;
     offset?: number;
     since?: string;
+    cursor?: string;
   }): Promise<FormCheckActionQueueResponse> {
     const commonQuery = {
       q: params?.q,
       limit: params?.limit ?? 100,
       offset: params?.offset ?? 0,
       since: params?.since,
+      cursor: params?.cursor,
     };
     const primaryQuery = {
       ...commonQuery,
@@ -441,7 +493,7 @@ export const formCheckActionQueueService = {
     let seenBusy = false;
 
     if (resolvedEndpoint) {
-      const hit = await tryFetchWithParamFallback(
+      const hit = await tryFetchQueue(
         resolvedEndpoint,
         primaryQuery,
         legacyQuery,
@@ -453,7 +505,7 @@ export const formCheckActionQueueService = {
     }
 
     for (const endpoint of ACTION_QUEUE_ENDPOINTS) {
-      const result = await tryFetchWithParamFallback(
+      const result = await tryFetchQueue(
         endpoint,
         primaryQuery,
         legacyQuery,

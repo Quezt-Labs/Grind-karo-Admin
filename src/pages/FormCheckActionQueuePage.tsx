@@ -140,6 +140,10 @@ function sortQueue(items: FormCheckActionQueueItem[], tab: FormCheckQueueTab) {
   return copy;
 }
 
+function tabCountTotal(counts: Record<FormCheckQueueTab, number>): number {
+  return counts.needs_reply + counts.unread + counts.overdue + counts.resolved;
+}
+
 function mergeDelta(
   previous: FormCheckActionQueueResponse,
   delta: FormCheckActionQueueResponse,
@@ -149,6 +153,8 @@ function mergeDelta(
   for (const id of removed) map.delete(id);
   for (const item of delta.items) map.set(item.id, item);
   const items = Array.from(map.values());
+  const shouldApplyDeltaCounts =
+    delta.tabCountsSource === "payload" || tabCountTotal(delta.tabCounts) > 0;
   return {
     ...previous,
     ...delta,
@@ -156,6 +162,10 @@ function mergeDelta(
     total: delta.total || items.length,
     limit: delta.limit || previous.limit,
     offset: delta.offset,
+    tabCounts: shouldApplyDeltaCounts ? delta.tabCounts : previous.tabCounts,
+    tabCountsSource: shouldApplyDeltaCounts
+      ? delta.tabCountsSource
+      : previous.tabCountsSource,
   };
 }
 
@@ -199,6 +209,7 @@ export function FormCheckActionQueuePage() {
   const [quickReplyId, setQuickReplyId] = useState<string | null>(null);
   const [draftById, setDraftById] = useState<Record<string, string>>({});
   const sinceCursorRef = useRef<string | null>(null);
+  const queueCursorRef = useRef<string | null>(null);
   const timeoutFailuresRef = useRef(0);
   const [pollMs, setPollMs] = useState(basePollInterval("needs_reply"));
   const [busyRetrying, setBusyRetrying] = useState(false);
@@ -214,19 +225,81 @@ export function FormCheckActionQueuePage() {
     }
   }
 
+  function advanceQueueCursor(response: FormCheckActionQueueResponse) {
+    if (response.hasMore === false) {
+      queueCursorRef.current = null;
+      return;
+    }
+    if (response.nextCursor && response.nextCursor.trim().length > 0) {
+      queueCursorRef.current = response.nextCursor;
+      return;
+    }
+    if (response.hasMore == null) {
+      queueCursorRef.current = null;
+    }
+  }
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["form-check-action-queue", tab, search],
     queryFn: async () => {
       try {
         const queryKey = ["form-check-action-queue", tab, search] as const;
         const previous = queryClient.getQueryData<FormCheckActionQueueResponse>(queryKey);
-        const polled = await formCheckActionQueueService.list({
-          tab,
-          q: search || undefined,
-          limit: 100,
-          since: sinceCursorRef.current ?? undefined,
-        });
+        const hasPrevious = !!previous;
+        const activeCursor = queueCursorRef.current;
+        let polled: FormCheckActionQueueResponse;
+
+        if (hasPrevious && activeCursor) {
+          polled = await formCheckActionQueueService.list({
+            tab,
+            q: search || undefined,
+            limit: 100,
+            since: sinceCursorRef.current ?? undefined,
+            cursor: activeCursor,
+          });
+        } else if (hasPrevious && sinceCursorRef.current) {
+          const gate = await formCheckActionQueueService.list({
+            tab,
+            q: search || undefined,
+            limit: 1,
+            since: sinceCursorRef.current,
+          });
+          advanceSince(gate.since);
+          advanceQueueCursor(gate);
+
+          if (gate.hasChanges === false) {
+            return {
+              ...previous,
+              since: gate.since ?? previous.since,
+              hasChanges: false,
+              hasMore: gate.hasMore ?? previous.hasMore,
+              nextCursor: gate.nextCursor ?? previous.nextCursor,
+              tabCounts: previous.tabCounts,
+              tabCountsSource: previous.tabCountsSource,
+            };
+          }
+
+          if (gate.nextCursor && gate.hasMore !== false) {
+            polled = gate;
+          } else {
+            polled = await formCheckActionQueueService.list({
+              tab,
+              q: search || undefined,
+              limit: 100,
+              since: sinceCursorRef.current ?? undefined,
+            });
+          }
+        } else {
+          polled = await formCheckActionQueueService.list({
+            tab,
+            q: search || undefined,
+            limit: 100,
+            since: sinceCursorRef.current ?? undefined,
+          });
+        }
+
         advanceSince(polled.since);
+        advanceQueueCursor(polled);
 
         let response: FormCheckActionQueueResponse;
         if (polled.hasChanges === false && previous) {
@@ -234,6 +307,8 @@ export function FormCheckActionQueuePage() {
             ...previous,
             since: polled.since ?? previous.since,
             hasChanges: false,
+            hasMore: polled.hasMore ?? previous.hasMore,
+            nextCursor: polled.nextCursor ?? previous.nextCursor,
           };
         } else if (polled.hasChanges === true && polled.items.length === 0 && previous) {
           const full = await formCheckActionQueueService.list({
@@ -242,8 +317,15 @@ export function FormCheckActionQueuePage() {
             limit: 100,
           });
           advanceSince(full.since);
+          advanceQueueCursor(full);
           response = full;
-        } else if (polled.isDelta && previous) {
+        } else if (
+          previous &&
+          (polled.isDelta ||
+            activeCursor != null ||
+            polled.nextCursor != null ||
+            polled.hasMore === true)
+        ) {
           response = mergeDelta(previous, polled);
         } else {
           response = polled;
@@ -326,6 +408,7 @@ export function FormCheckActionQueuePage() {
               type="button"
               onClick={() => {
                 sinceCursorRef.current = null;
+                queueCursorRef.current = null;
                 timeoutFailuresRef.current = 0;
                 setBusyRetrying(false);
                 setPollMs(basePollInterval(entry.key));
@@ -348,6 +431,7 @@ export function FormCheckActionQueuePage() {
         <DebouncedSearch
           onSearch={(value) => {
             sinceCursorRef.current = null;
+            queueCursorRef.current = null;
             timeoutFailuresRef.current = 0;
             setBusyRetrying(false);
             setPollMs(basePollInterval(tab));
