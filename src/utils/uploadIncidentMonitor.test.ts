@@ -52,6 +52,7 @@ describe("upload incident polling helpers", () => {
     expect(uploadIncidentRefetchInterval(20_000, "visible")).toBe(20_000);
     expect(uploadIncidentRefetchInterval(20_000, "hidden")).toBe(false);
     expect(uploadIncidentRefetchInterval(20_000, null)).toBe(false);
+    expect(uploadIncidentRefetchInterval(20_000, "visible", true)).toBe(false);
   });
 
   it("detects busy error contract from generic objects", () => {

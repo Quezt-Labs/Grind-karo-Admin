@@ -26,6 +26,7 @@ import {
   nextUploadIncidentPollInterval,
   uploadIncidentRefetchInterval,
 } from "@/utils/uploadIncidentMonitor";
+import { buildFormCheckThreadRoute } from "@/utils/formCheckRoutes";
 
 const BASE_POLL_MS = 20_000;
 
@@ -153,16 +154,13 @@ function sortIncidents(items: UploadIncidentItem[]) {
 }
 
 function formCheckContextLink(item: UploadIncidentItem): string {
-  if (!item.athleteId) return "/form-checks";
-  const params = new URLSearchParams({
+  return buildFormCheckThreadRoute({
     userId: item.athleteId,
-    review: "all",
+    videoId: item.videoId,
+    commentId: item.commentId,
+    messageId: item.messageId,
+    threadType: item.threadType,
   });
-  if (item.videoId) params.set("videoId", item.videoId);
-  if (item.commentId) params.set("commentId", item.commentId);
-  if (item.messageId) params.set("messageId", item.messageId);
-  if (item.threadType) params.set("threadType", item.threadType);
-  return `/form-checks?${params.toString()}`;
 }
 
 function queueImpactLabel(item: UploadIncidentItem): string {
@@ -266,6 +264,7 @@ export function UploadIncidentMonitorPage() {
   const busyFailuresRef = useRef(0);
   const sinceCursorRef = useRef<string | null>(null);
   const incidentCursorRef = useRef<string | null>(null);
+  const incidentPollingPaused = Object.values(selectedIds).some(Boolean);
 
   function advanceSince(candidate: string | null | undefined) {
     if (!candidate) return;
@@ -400,6 +399,7 @@ export function UploadIncidentMonitorPage() {
       uploadIncidentRefetchInterval(
         pollMs,
         typeof document !== "undefined" ? document.visibilityState : null,
+        incidentPollingPaused,
       ),
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -595,8 +595,15 @@ export function UploadIncidentMonitorPage() {
           </button>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Polling every {Math.ceil(pollMs / 1000)}s when tab is visible.
+          {incidentPollingPaused
+            ? "Auto-refresh paused while selecting incidents."
+            : `Polling every ${Math.ceil(pollMs / 1000)}s when tab is visible.`}
         </p>
+      </div>
+
+      <div className="text-xs text-gray-500 dark:text-gray-400">
+        Showing {items.length}
+        {data?.total != null ? ` of ${data.total}` : ""} incidents.
       </div>
 
       {selectedCount > 0 ? (
@@ -728,7 +735,7 @@ export function UploadIncidentMonitorPage() {
                     onClick={() => navigate(formCheckContextLink(item))}
                     className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
                   >
-                    Open form-check
+                    Open thread
                     <ExternalLink className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -892,7 +899,7 @@ export function UploadIncidentMonitorPage() {
                           onClick={() => navigate(formCheckContextLink(item))}
                           className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
                         >
-                          Open form-check
+                          Open thread
                           <ExternalLink className="h-3.5 w-3.5" />
                         </button>
                       </div>

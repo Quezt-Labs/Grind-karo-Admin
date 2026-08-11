@@ -101,6 +101,18 @@ export default function App() {
                   element={<CoachAthleteDetailPage />}
                 />
                 <Route path="/form-checks" element={<FormCheckInboxPage />} />
+                <Route
+                  path="/form-check/queue"
+                  element={<Navigate to="/form-check-action-queue" replace />}
+                />
+                <Route
+                  path="/form-check/sla"
+                  element={<Navigate to="/form-check-sla" replace />}
+                />
+                <Route
+                  path="/form-check/incidents"
+                  element={<Navigate to="/upload-incidents" replace />}
+                />
                 <Route path="/workspace" element={<WorkspacePage />} />
                 <Route
                   path="/coaching-renewals"

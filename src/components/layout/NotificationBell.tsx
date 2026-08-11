@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/ShadDialog";
+import { buildFormCheckThreadRoute } from "@/utils/formCheckRoutes";
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -698,17 +699,16 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     meta: FormCheckNotificationMeta,
     action?: string,
   ): string {
-    if (!meta.userId) return "/form-checks";
-    const params = new URLSearchParams({
-      userId: meta.userId,
-      review: "all",
-    });
-    if (meta.videoId) params.set("videoId", meta.videoId);
-    if (meta.commentId) params.set("commentId", meta.commentId);
-    if (meta.messageId) params.set("messageId", meta.messageId);
-    if (meta.threadType) params.set("threadType", meta.threadType);
-    if (action) params.set("action", action);
-    return `/form-checks?${params.toString()}`;
+    return buildFormCheckThreadRoute(
+      {
+        userId: meta.userId,
+        videoId: meta.videoId,
+        commentId: meta.commentId,
+        messageId: meta.messageId,
+        threadType: meta.threadType,
+      },
+      action === "reply" ? "reply" : undefined,
+    );
   }
 
   function closeModal() {
@@ -765,7 +765,7 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       return;
     }
     if (n.type === "CLIENT_UPLOAD_FAILED") {
-      navigate("/upload-failures");
+      navigate("/upload-incidents");
       onClose();
       return;
     }

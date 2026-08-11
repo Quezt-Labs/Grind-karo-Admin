@@ -76,10 +76,10 @@ const NAV_SECTIONS: NavSection[] = [
       { path: "/form-checks", label: "Form checks", icon: Video },
       {
         path: "/form-check-action-queue",
-        label: "Form-check queue",
+        label: "Action queue",
         icon: ClipboardCheck,
       },
-      { path: "/form-check-sla", label: "Form-check SLA", icon: Gauge },
+      { path: "/form-check-sla", label: "SLA dashboard", icon: Gauge },
       { path: "/chat", label: "Chat", icon: MessageCircle },
       {
         path: "/upload-incidents",
@@ -157,7 +157,7 @@ const COACH_NAV_SECTIONS: NavSection[] = [
         label: "Action queue",
         icon: ClipboardCheck,
       },
-      { path: "/form-check-sla", label: "SLA", icon: Gauge },
+      { path: "/form-check-sla", label: "SLA dashboard", icon: Gauge },
       {
         path: "/upload-incidents",
         label: "Upload incidents",

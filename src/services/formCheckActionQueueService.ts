@@ -35,6 +35,9 @@ export interface FormCheckActionQueueItem {
   messageId: string | null;
   overdueAt: string | null;
   unreadCount: number;
+  repliesRemaining: number | null;
+  replyBlocked: boolean;
+  replyLockReason: string | null;
   uploadIncidentBlocking: boolean | null;
   uploadIncidentCount: number | null;
   uploadIncidentState: string | null;
@@ -147,6 +150,40 @@ function normalizeItem(
   index: number,
 ): FormCheckActionQueueItem {
   const athlete = asRecord(raw.athlete);
+  const replyLimitRaw =
+    (raw.replyLimit as number | Record<string, unknown> | null | undefined) ??
+    (raw.reply_limit as number | Record<string, unknown> | null | undefined);
+  const replyLimitObject =
+    typeof replyLimitRaw === "object" && replyLimitRaw !== null
+      ? (replyLimitRaw as Record<string, unknown>)
+      : null;
+  const coachReplyLimit = pickNumber(
+    raw.coachReplyLimit,
+    raw.coach_reply_limit,
+    raw.replyLimitValue,
+    raw.reply_limit_value,
+    typeof replyLimitRaw === "number" ? replyLimitRaw : null,
+    replyLimitObject?.limit,
+  );
+  const coachReplyUsed = pickNumber(
+    raw.coachReplyUsed,
+    raw.coach_reply_used,
+    raw.repliesUsed,
+    raw.replies_used,
+    replyLimitObject?.used,
+  );
+  const rawRepliesRemaining = pickNumber(
+    raw.coachRepliesRemaining,
+    raw.coach_replies_remaining,
+    raw.repliesRemaining,
+    raw.replies_remaining,
+    replyLimitObject?.remaining,
+  );
+  const repliesRemaining =
+    rawRepliesRemaining ??
+    (coachReplyLimit != null && coachReplyUsed != null
+      ? Math.max(0, coachReplyLimit - coachReplyUsed)
+      : null);
   const uploadIncident =
     asRecord(raw.uploadIncident) ?? asRecord(raw.upload_incident);
   const deepLink =
@@ -263,6 +300,23 @@ function normalizeItem(
     ),
     overdueAt,
     unreadCount,
+    repliesRemaining,
+    replyBlocked:
+      pickBoolean(
+        raw.coachReplyBlocked,
+        raw.coach_reply_blocked,
+        raw.replyBlocked,
+        raw.reply_blocked,
+        replyLimitObject?.blocked,
+      ) ?? false,
+    replyLockReason: pickString(
+      raw.coachReplyBlockReason,
+      raw.coach_reply_block_reason,
+      raw.replyLockReason,
+      raw.reply_lock_reason,
+      raw.reason,
+      replyLimitObject?.reason,
+    ),
     uploadIncidentBlocking:
       pickBoolean(
         raw.uploadIncidentBlocking,

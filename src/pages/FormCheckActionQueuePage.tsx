@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { AlertCircle, MessageSquareReply, Send } from "lucide-react";
+import { AlertCircle, MessageSquareReply, RefreshCw, Send } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,6 +10,8 @@ import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Shimmer } from "@/components/ui/Shimmer";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { useAuth } from "@/hooks/useAuth";
+import { buildFormCheckThreadRoute } from "@/utils/formCheckRoutes";
+import { formCheckQueueRefetchInterval } from "@/utils/formCheckQueue";
 import {
   formCheckActionQueueService,
   type FormCheckActionQueueItem,
@@ -125,17 +127,26 @@ function uploadLinkageState(item: FormCheckActionQueueItem): "blocked" | "clear"
 }
 
 function deepLink(item: FormCheckActionQueueItem, action?: "reply"): string {
-  if (!item.athleteId) return "/form-checks";
-  const params = new URLSearchParams({
-    userId: item.athleteId,
-    review: "all",
-  });
-  if (item.videoId) params.set("videoId", item.videoId);
-  if (item.commentId) params.set("commentId", item.commentId);
-  if (item.messageId) params.set("messageId", item.messageId);
-  if (item.threadType) params.set("threadType", item.threadType);
-  if (action) params.set("action", action);
-  return `/form-checks?${params.toString()}`;
+  return buildFormCheckThreadRoute(
+    {
+      userId: item.athleteId,
+      videoId: item.videoId,
+      commentId: item.commentId,
+      messageId: item.messageId,
+      threadType: item.threadType,
+    },
+    action,
+  );
+}
+
+function itemReplyBlocked(item: FormCheckActionQueueItem): boolean {
+  return item.replyBlocked || (item.repliesRemaining != null && item.repliesRemaining <= 0);
+}
+
+function replyLockText(item: FormCheckActionQueueItem): string | null {
+  if (item.replyLockReason) return item.replyLockReason;
+  if (itemReplyBlocked(item)) return "Replies are currently blocked for this thread.";
+  return null;
 }
 
 function sortQueue(items: FormCheckActionQueueItem[], tab: FormCheckQueueTab) {
@@ -143,8 +154,9 @@ function sortQueue(items: FormCheckActionQueueItem[], tab: FormCheckQueueTab) {
   copy.sort((a, b) => {
     const aAt = new Date(a.latestActivityAt).getTime();
     const bAt = new Date(b.latestActivityAt).getTime();
-    if (tab === "resolved") return bAt - aAt;
-    return aAt - bAt;
+    const byTime = tab === "resolved" ? bAt - aAt : aAt - bAt;
+    if (byTime !== 0) return byTime;
+    return a.id.localeCompare(b.id);
   });
   return copy;
 }
@@ -222,6 +234,7 @@ export function FormCheckActionQueuePage() {
   const timeoutFailuresRef = useRef(0);
   const [pollMs, setPollMs] = useState(basePollInterval("needs_reply"));
   const [busyRetrying, setBusyRetrying] = useState(false);
+  const queuePollingPaused = quickReplyId != null;
 
   function advanceSince(candidate: string | null | undefined) {
     if (!candidate) return;
@@ -248,7 +261,7 @@ export function FormCheckActionQueuePage() {
     }
   }
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["form-check-action-queue", tab, search],
     queryFn: async () => {
       try {
@@ -359,12 +372,13 @@ export function FormCheckActionQueuePage() {
     },
     staleTime: 5_000,
     retry: false,
-    refetchInterval: () => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
-        return false;
-      }
-      return pollMs;
-    },
+    refetchInterval: () =>
+      formCheckQueueRefetchInterval({
+        pollMs,
+        visibilityState:
+          typeof document !== "undefined" ? document.visibilityState : null,
+        paused: queuePollingPaused,
+      }),
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
@@ -398,6 +412,12 @@ export function FormCheckActionQueuePage() {
   const items = useMemo(() => sortQueue(data?.items ?? [], tab), [data?.items, tab]);
   const busyState = isError && (busyRetrying || isBusyError(error));
 
+  function resetPollingState(nextTab: FormCheckQueueTab = tab) {
+    timeoutFailuresRef.current = 0;
+    setBusyRetrying(false);
+    setPollMs(basePollInterval(nextTab));
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -418,9 +438,7 @@ export function FormCheckActionQueuePage() {
               onClick={() => {
                 sinceCursorRef.current = null;
                 queueCursorRef.current = null;
-                timeoutFailuresRef.current = 0;
-                setBusyRetrying(false);
-                setPollMs(basePollInterval(entry.key));
+                resetPollingState(entry.key);
                 setTab(entry.key);
               }}
               className={cn(
@@ -437,18 +455,42 @@ export function FormCheckActionQueuePage() {
             </button>
           ))}
         </div>
-        <DebouncedSearch
-          onSearch={(value) => {
-            sinceCursorRef.current = null;
-            queueCursorRef.current = null;
-            timeoutFailuresRef.current = 0;
-            setBusyRetrying(false);
-            setPollMs(basePollInterval(tab));
-            setSearch(value);
-          }}
-          placeholder="Search athlete, exercise, message..."
-          className="w-full lg:w-80"
-        />
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
+          <DebouncedSearch
+            onSearch={(value) => {
+              sinceCursorRef.current = null;
+              queueCursorRef.current = null;
+              resetPollingState();
+              setSearch(value);
+            }}
+            placeholder="Search athlete, exercise, message..."
+            className="w-full lg:w-80"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              resetPollingState();
+              void refetch();
+            }}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <span>
+          Showing {items.length}
+          {data?.total != null ? ` of ${data.total}` : ""} threads.
+        </span>
+        <span>
+          {queuePollingPaused
+            ? "Auto-refresh paused while quick reply is open."
+            : `Polling every ${Math.ceil(pollMs / 1000)}s when tab is visible.`}
+        </span>
       </div>
 
       {busyState ? (
@@ -492,6 +534,8 @@ export function FormCheckActionQueuePage() {
           {items.map((item) => {
             const athleteLabel = item.athleteName?.trim() || item.athleteEmail || "Unknown athlete";
             const quickReplyText = draftById[item.id] ?? "";
+            const isReplyBlocked = itemReplyBlocked(item);
+            const lockReason = replyLockText(item);
             return (
               <article
                 key={item.id}
@@ -552,6 +596,20 @@ export function FormCheckActionQueuePage() {
                         {item.unreadCount} unread
                       </span>
                     ) : null}
+                    {item.repliesRemaining != null ? (
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 font-semibold",
+                          isReplyBlocked
+                            ? "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
+                        )}
+                      >
+                        {isReplyBlocked
+                          ? "Replies blocked"
+                          : `${item.repliesRemaining} repl${item.repliesRemaining === 1 ? "y" : "ies"} left`}
+                      </span>
+                    ) : null}
                     {item.stateReason ? <span>{item.stateReason}</span> : null}
                     {uploadLinkageState(item) === "blocked" ? (
                       <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
@@ -586,16 +644,22 @@ export function FormCheckActionQueuePage() {
                   {item.commentId ? (
                     <button
                       type="button"
+                      disabled={isReplyBlocked}
                       onClick={() =>
                         setQuickReplyId((current) => (current === item.id ? null : item.id))
                       }
-                      className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
+                      className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
                     >
                       <MessageSquareReply className="h-3.5 w-3.5" />
-                      Reply
+                      Quick reply
                     </button>
                   ) : null}
                 </div>
+                {lockReason ? (
+                  <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300">
+                    {lockReason}
+                  </p>
+                ) : null}
 
                 {quickReplyId === item.id && item.commentId ? (
                   <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 dark:border-gray-600 dark:bg-gray-900/50">
@@ -611,7 +675,13 @@ export function FormCheckActionQueuePage() {
                       placeholder="Reply to athlete..."
                       className="w-full resize-y rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
                     />
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        {isReplyBlocked
+                          ? lockReason ?? "Replies are currently blocked for this thread."
+                          : "Reply sends immediately and keeps this queue current."}
+                      </p>
+                      <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setQuickReplyId(null)}
@@ -621,7 +691,7 @@ export function FormCheckActionQueuePage() {
                       </button>
                       <button
                         type="button"
-                        disabled={quickReplyMutation.isPending || !quickReplyText.trim()}
+                        disabled={quickReplyMutation.isPending || !quickReplyText.trim() || isReplyBlocked}
                         onClick={() =>
                           quickReplyMutation.mutate({
                             itemId: item.id,
@@ -635,6 +705,7 @@ export function FormCheckActionQueuePage() {
                         <Send className="h-3.5 w-3.5" />
                         Send
                       </button>
+                      </div>
                     </div>
                   </div>
                 ) : null}

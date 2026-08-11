@@ -33,7 +33,9 @@ export function nextUploadIncidentPollInterval(
 export function uploadIncidentRefetchInterval(
   pollMs: number,
   visibilityState: DocumentVisibilityState | null,
+  paused = false,
 ): number | false {
+  if (paused) return false;
   if (visibilityState !== "visible") return false;
   return pollMs;
 }

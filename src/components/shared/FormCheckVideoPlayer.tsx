@@ -330,7 +330,7 @@ function PlayerControls({
 
       {error && (
         <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-red-950/50 px-2 py-1.5">
-          <p className="text-xs text-red-200">Video load nahi hua</p>
+          <p className="text-xs text-red-200">Couldn&apos;t load video.</p>
           <button
             type="button"
             onClick={retryLoad}
@@ -420,7 +420,10 @@ function VideoSurface({
 
       {!showPlayOverlay && buffering && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/25">
-          <Loader2 className="h-7 w-7 animate-spin text-white/80" />
+          <div className="flex flex-col items-center gap-1.5">
+            <Loader2 className="h-7 w-7 animate-spin text-white/80" />
+            <span className="text-[11px] font-medium text-white/90">Loading video…</span>
+          </div>
         </div>
       )}
     </div>
