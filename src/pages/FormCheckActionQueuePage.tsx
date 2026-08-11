@@ -115,6 +115,15 @@ function priorityLabel(priority: FormCheckQueuePriority): string {
   return "Open";
 }
 
+function uploadLinkageState(item: FormCheckActionQueueItem): "blocked" | "clear" | "pending" {
+  if (item.uploadIncidentBlocking === true) return "blocked";
+  if ((item.uploadIncidentCount ?? 0) > 0) return "blocked";
+  if (item.uploadIncidentBlocking === false || item.uploadIncidentCount === 0) {
+    return "clear";
+  }
+  return "pending";
+}
+
 function deepLink(item: FormCheckActionQueueItem, action?: "reply"): string {
   if (!item.athleteId) return "/form-checks";
   const params = new URLSearchParams({
@@ -544,6 +553,18 @@ export function FormCheckActionQueuePage() {
                       </span>
                     ) : null}
                     {item.stateReason ? <span>{item.stateReason}</span> : null}
+                    {uploadLinkageState(item) === "blocked" ? (
+                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
+                        Upload incident linked
+                        {item.uploadIncidentCount != null && item.uploadIncidentCount > 0
+                          ? ` (${item.uploadIncidentCount})`
+                          : ""}
+                      </span>
+                    ) : uploadLinkageState(item) === "pending" ? (
+                      <span className="rounded-full bg-gray-100 px-1.5 py-0.5 font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        Upload signal pending
+                      </span>
+                    ) : null}
                   </div>
                 </button>
 

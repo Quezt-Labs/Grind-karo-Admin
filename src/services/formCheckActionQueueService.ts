@@ -35,6 +35,10 @@ export interface FormCheckActionQueueItem {
   messageId: string | null;
   overdueAt: string | null;
   unreadCount: number;
+  uploadIncidentBlocking: boolean | null;
+  uploadIncidentCount: number | null;
+  uploadIncidentState: string | null;
+  uploadIncidentHint: string | null;
   groupedCount: number;
 }
 
@@ -143,6 +147,8 @@ function normalizeItem(
   index: number,
 ): FormCheckActionQueueItem {
   const athlete = asRecord(raw.athlete);
+  const uploadIncident =
+    asRecord(raw.uploadIncident) ?? asRecord(raw.upload_incident);
   const deepLink =
     asRecord(raw.deepLink) ?? asRecord(raw.deep_link) ?? asRecord(raw.link);
   const activityAt =
@@ -257,6 +263,37 @@ function normalizeItem(
     ),
     overdueAt,
     unreadCount,
+    uploadIncidentBlocking:
+      pickBoolean(
+        raw.uploadIncidentBlocking,
+        raw.upload_incident_blocking,
+        raw.blockedByUploadIncident,
+        raw.blocked_by_upload_incident,
+        uploadIncident?.blocking,
+        uploadIncident?.blocked,
+      ) ?? null,
+    uploadIncidentCount:
+      pickNumber(
+        raw.uploadIncidentCount,
+        raw.upload_incident_count,
+        raw.blockingIncidentCount,
+        raw.blocking_incident_count,
+        uploadIncident?.count,
+      ) ?? null,
+    uploadIncidentState: pickString(
+      raw.uploadIncidentState,
+      raw.upload_incident_state,
+      uploadIncident?.state,
+      uploadIncident?.status,
+    ),
+    uploadIncidentHint: pickString(
+      raw.uploadIncidentHint,
+      raw.upload_incident_hint,
+      raw.uploadIncidentReason,
+      raw.upload_incident_reason,
+      uploadIncident?.reason,
+      uploadIncident?.hint,
+    ),
     groupedCount:
       pickNumber(raw.groupedCount, raw.grouped_count, raw.groupCount, raw.group_count) ??
       1,
