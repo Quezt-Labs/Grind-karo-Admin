@@ -219,6 +219,33 @@ describe("NotificationBell form-check modal flow", () => {
     expect(firstNavigation).toContain("commentId=comment-1");
   });
 
+  it("prefers athlete context for deep-link userId over generic payload userId", async () => {
+    const user = userEvent.setup();
+    const notification = makeFormCheckNotification({
+      payload: {
+        userId: "coach-user-1",
+        athleteId: "athlete-user-1",
+        deepLink: {
+          userId: "athlete-user-2",
+        },
+        athleteName: "Rahul",
+        videoId: "video-1",
+        commentId: "comment-1",
+        threadType: "workout",
+        preview: "Preview text from notification payload",
+        fullMessage:
+          "Full athlete message with full context that should be readable in the modal.",
+      },
+    });
+    mocks.getAll.mockResolvedValueOnce(makeUnreadResponse(notification));
+    renderBell();
+    await openPanel(user);
+
+    await user.click(screen.getByRole("button", { name: "Open thread" }));
+    const firstNavigation = (mocks.navigate as Mock).mock.calls[0]?.[0] as string;
+    expect(firstNavigation).toContain("userId=athlete-user-1");
+  });
+
   it("shows fallback state in modal when thread context cannot be fetched", async () => {
     const user = userEvent.setup();
     mocks.getWorkoutThread.mockRejectedValueOnce(new Error("timeout"));

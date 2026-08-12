@@ -43,9 +43,32 @@ export interface FormCheckThreadVideoContext {
   videoUrl: string | null;
 }
 
+export type FormCheckThreadContextStatus =
+  | "resolved"
+  | "forbidden"
+  | "invalid_context"
+  | "unavailable";
+
+export interface FormCheckThreadContextResolution {
+  status: FormCheckThreadContextStatus;
+  threadType: FormCheckThreadType;
+  userId: string | null;
+  videoId: string | null;
+  videoUrl: string | null;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
+}
+
+function pickString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed.length > 0) return trimmed;
+  }
+  return null;
 }
 
 function pickUrlString(...values: unknown[]): string | null {
@@ -107,6 +130,147 @@ function extractVideoUrl(payload: Record<string, unknown>): string | null {
     target?.videoUrl,
     target?.video_url,
   );
+}
+
+function extractThreadContext(payload: Record<string, unknown>): {
+  userId: string | null;
+  videoId: string | null;
+  videoUrl: string | null;
+} {
+  const athlete = asRecord(payload.athlete);
+  const user = asRecord(payload.user);
+  const target = asRecord(payload.target);
+  const comment = asRecord(payload.comment);
+  const deepLink =
+    asRecord(payload.deepLink) ??
+    asRecord(payload.deep_link) ??
+    asRecord(payload.link) ??
+    asRecord(payload.deeplink);
+
+  return {
+    userId: pickString(
+      payload.athleteId,
+      payload.athlete_id,
+      athlete?.id,
+      target?.athleteId,
+      target?.athlete_id,
+      deepLink?.athleteId,
+      deepLink?.athlete_id,
+      deepLink?.userId,
+      deepLink?.user_id,
+      payload.targetUserId,
+      payload.target_user_id,
+      payload.userId,
+      payload.user_id,
+      user?.id,
+      comment?.athleteId,
+      comment?.athlete_id,
+      comment?.userId,
+      comment?.user_id,
+    ),
+    videoId: pickString(
+      payload.videoId,
+      payload.video_id,
+      payload.workoutSetVideoId,
+      payload.workout_set_video_id,
+      payload.sheetsSetVideoId,
+      payload.sheets_set_video_id,
+      deepLink?.videoId,
+      deepLink?.video_id,
+      target?.videoId,
+      target?.video_id,
+      comment?.videoId,
+      comment?.video_id,
+    ),
+    videoUrl: extractVideoUrl(payload),
+  };
+}
+
+function contextProbeEndpoints(
+  threadType: FormCheckThreadType,
+  commentId: string,
+): string[] {
+  if (threadType === "sheets") {
+    return [
+      `/admin/sheets-set-video-comments/${commentId}`,
+      `/admin/sheets-set-video-comments/${commentId}/context`,
+      `/admin/sheets-set-video-comments/${commentId}/thread`,
+      `/admin/form-check/comments/${commentId}`,
+    ];
+  }
+  return [
+    `/admin/workout-set-video-comments/${commentId}`,
+    `/admin/workout-set-video-comments/${commentId}/context`,
+    `/admin/workout-set-video-comments/${commentId}/thread`,
+    `/admin/form-check/comments/${commentId}`,
+  ];
+}
+
+type ThreadProbeFlags = {
+  forbidden: boolean;
+  invalidContext: boolean;
+  unavailable: boolean;
+};
+
+function mergeProbeFlags(left: ThreadProbeFlags, right: ThreadProbeFlags): ThreadProbeFlags {
+  return {
+    forbidden: left.forbidden || right.forbidden,
+    invalidContext: left.invalidContext || right.invalidContext,
+    unavailable: left.unavailable || right.unavailable,
+  };
+}
+
+function statusFromProbeFlags(flags: ThreadProbeFlags): FormCheckThreadContextStatus {
+  if (flags.forbidden) return "forbidden";
+  if (flags.invalidContext) return "invalid_context";
+  if (flags.unavailable) return "unavailable";
+  return "unavailable";
+}
+
+async function probeThreadContext(
+  threadType: FormCheckThreadType,
+  commentId: string,
+): Promise<{
+  context: { userId: string | null; videoId: string | null; videoUrl: string | null } | null;
+  flags: ThreadProbeFlags;
+}> {
+  const flags: ThreadProbeFlags = {
+    forbidden: false,
+    invalidContext: false,
+    unavailable: false,
+  };
+
+  for (const endpoint of contextProbeEndpoints(threadType, commentId)) {
+    const response = await api.get(endpoint, {
+      validateStatus: (status) =>
+        (status >= 200 && status < 300) ||
+        status === 400 ||
+        status === 403 ||
+        status === 404 ||
+        status === 405 ||
+        status === 422,
+    });
+    if (response.status >= 200 && response.status < 300) {
+      const payload = asRecord(response.data?.data ?? response.data);
+      if (!payload) continue;
+      const context = extractThreadContext(payload);
+      if (context.userId || context.videoId || context.videoUrl) {
+        return { context, flags };
+      }
+      continue;
+    }
+    if (response.status === 403) flags.forbidden = true;
+    else if (response.status === 405) flags.unavailable = true;
+    else if (
+      response.status === 400 ||
+      response.status === 404 ||
+      response.status === 422
+    ) {
+      flags.invalidContext = true;
+    }
+  }
+
+  return { context: null, flags };
 }
 
 function normalizeThread(payload: Record<string, unknown>): FormCheckCommentThread {
@@ -203,37 +367,49 @@ export const workoutVideoCommentService = {
     threadType: FormCheckThreadType,
     commentId: string,
   ): Promise<FormCheckThreadVideoContext> {
-    const endpoints =
-      threadType === "sheets"
-        ? [
-            `/admin/sheets-set-video-comments/${commentId}`,
-            `/admin/sheets-set-video-comments/${commentId}/context`,
-            `/admin/form-check/comments/${commentId}`,
-          ]
-        : [
-            `/admin/workout-set-video-comments/${commentId}`,
-            `/admin/workout-set-video-comments/${commentId}/context`,
-            `/admin/form-check/comments/${commentId}`,
-          ];
+    const resolution = await this.resolveThreadContext(threadType, commentId);
+    if (resolution.videoUrl) {
+      return { videoUrl: resolution.videoUrl };
+    }
+    return { videoUrl: null };
+  },
 
-    for (const endpoint of endpoints) {
-      const response = await api.get(endpoint, {
-        validateStatus: (status) =>
-          (status >= 200 && status < 300) ||
-          status === 400 ||
-          status === 403 ||
-          status === 404 ||
-          status === 405 ||
-          status === 422,
-      });
-      if (response.status < 200 || response.status >= 300) continue;
-      const payload = asRecord(response.data?.data ?? response.data);
-      if (!payload) continue;
-      const videoUrl = extractVideoUrl(payload);
-      if (videoUrl) return { videoUrl };
+  async resolveThreadContext(
+    threadType: FormCheckThreadType,
+    commentId: string,
+  ): Promise<FormCheckThreadContextResolution> {
+    const primary = await probeThreadContext(threadType, commentId);
+    if (primary.context) {
+      return {
+        status: "resolved",
+        threadType,
+        userId: primary.context.userId,
+        videoId: primary.context.videoId,
+        videoUrl: primary.context.videoUrl,
+      };
     }
 
-    return { videoUrl: null };
+    const alternateType: FormCheckThreadType =
+      threadType === "sheets" ? "workout" : "sheets";
+    const alternate = await probeThreadContext(alternateType, commentId);
+    if (alternate.context) {
+      return {
+        status: "resolved",
+        threadType: alternateType,
+        userId: alternate.context.userId,
+        videoId: alternate.context.videoId,
+        videoUrl: alternate.context.videoUrl,
+      };
+    }
+
+    const flags = mergeProbeFlags(primary.flags, alternate.flags);
+    return {
+      status: statusFromProbeFlags(flags),
+      threadType,
+      userId: null,
+      videoId: null,
+      videoUrl: null,
+    };
   },
 
   async replySheets(
@@ -270,12 +446,30 @@ export const workoutVideoCommentService = {
     try {
       return await sendReply(commentId, payload);
     } catch (error) {
-      // Fall back to the legacy endpoint during rollout/mixed deployments.
       if (
         axios.isAxiosError(error) &&
-        [403, 404, 405].includes(error.response?.status ?? 0)
+        [400, 403, 404, 405, 422].includes(error.response?.status ?? 0)
       ) {
-        return this.replyLegacy(commentId, { comment: payload.reply });
+        const resolved = await this.resolveThreadContext(threadType, commentId);
+        if (resolved.status === "resolved" && resolved.threadType !== threadType) {
+          try {
+            return resolved.threadType === "sheets"
+              ? await this.replySheets(commentId, payload)
+              : await this.replyWorkout(commentId, payload);
+          } catch (retryError) {
+            if (
+              axios.isAxiosError(retryError) &&
+              [403, 404, 405].includes(retryError.response?.status ?? 0)
+            ) {
+              return this.replyLegacy(commentId, { comment: payload.reply });
+            }
+            throw retryError;
+          }
+        }
+        // Fall back to the legacy endpoint during rollout/mixed deployments.
+        if ([403, 404, 405].includes(error.response?.status ?? 0)) {
+          return this.replyLegacy(commentId, { comment: payload.reply });
+        }
       }
       throw error;
     }

@@ -237,11 +237,13 @@ function normalizeItem(
     athleteId: pickString(
       raw.athleteId,
       raw.athlete_id,
-      raw.userId,
-      raw.user_id,
-      athlete?.id,
+      deepLink?.athleteId,
+      deepLink?.athlete_id,
       deepLink?.userId,
       deepLink?.user_id,
+      athlete?.id,
+      raw.userId,
+      raw.user_id,
     ),
     athleteName: pickString(
       raw.athleteName,

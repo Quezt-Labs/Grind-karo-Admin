@@ -34,6 +34,7 @@ import type { FormCheckInboxAthlete } from "@/services/formCheckInboxService";
 import { formCheckInboxService } from "@/services/formCheckInboxService";
 import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import { userService } from "@/services/userService";
+import { workoutVideoCommentService } from "@/services/workoutVideoCommentService";
 import {
   formatProgramDayLabel,
   formatProgramWeekLabel,
@@ -75,6 +76,7 @@ export function FormCheckInboxPage() {
     setView,
     setPlanTier,
     setSelectedUserId,
+    repairThreadContext,
     setReviewFilter,
     setLayout,
     setHandlerFilter,
@@ -341,6 +343,63 @@ export function FormCheckInboxPage() {
     toast("No more athletes in this queue", { icon: "✓" });
   }, [nextAthleteInQueue, handleSelectAthlete, clearAthleteSelection]);
 
+  const hasThreadDeepLink = !!focusCommentId || !!focusVideoId;
+  const shouldResolveThreadContext =
+    !!selectedUserId &&
+    !selectedAthlete &&
+    !athletesLoading &&
+    !!focusCommentId &&
+    !isMissingView;
+
+  const { data: threadResolution, isLoading: resolvingThreadContext } = useQuery({
+    queryKey: ["form-check-thread-context", focusThreadType ?? "workout", focusCommentId],
+    queryFn: () =>
+      workoutVideoCommentService.resolveThreadContext(
+        focusThreadType ?? "workout",
+        focusCommentId!,
+      ),
+    enabled: shouldResolveThreadContext,
+    retry: false,
+    staleTime: 15_000,
+  });
+
+  useEffect(() => {
+    if (!shouldResolveThreadContext) return;
+    if (!threadResolution || threadResolution.status !== "resolved") return;
+    if (!threadResolution.userId) return;
+    if (threadResolution.userId === selectedUserId) return;
+    repairThreadContext({
+      userId: threadResolution.userId,
+      videoId: focusVideoId ?? threadResolution.videoId,
+      threadType: threadResolution.threadType,
+    });
+  }, [
+    shouldResolveThreadContext,
+    threadResolution,
+    selectedUserId,
+    repairThreadContext,
+    focusVideoId,
+  ]);
+
+  const threadAccessMessage = useMemo(() => {
+    if (!hasThreadDeepLink) {
+      return "You don’t have access to this athlete’s form-check thread. Ask an admin to update your assignment if this athlete should be in your queue.";
+    }
+    if (resolvingThreadContext) {
+      return "Resolving form-check thread context…";
+    }
+    if (threadResolution?.status === "invalid_context") {
+      return "This form-check thread link is invalid or stale. Re-open the thread from the latest notification or action queue item.";
+    }
+    if (threadResolution?.status === "forbidden") {
+      return "You don’t have access to this form-check thread in your current scope. Ask an admin to update assignment if this athlete should be in your queue.";
+    }
+    if (threadResolution?.status === "unavailable") {
+      return "Could not resolve this thread context right now. Please retry from notification/action queue.";
+    }
+    return "This thread context could not be matched to an athlete in your current list. Re-open from the latest notification or action queue.";
+  }, [hasThreadDeepLink, resolvingThreadContext, threadResolution]);
+
   return (
     <div>
       <PageHeader title="Form Check Inbox" description={subtitle} />
@@ -404,7 +463,7 @@ export function FormCheckInboxPage() {
         />
       ) : selectedUserId && !athletesLoading && !selectedAthlete ? (
         <div className="space-y-3">
-          <ErrorAlert message="You don’t have access to this athlete’s form-check thread. Ask an admin to update your assignment if this athlete should be in your queue." />
+          <ErrorAlert message={threadAccessMessage} />
           <button
             type="button"
             onClick={clearAthleteSelection}

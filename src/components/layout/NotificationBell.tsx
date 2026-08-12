@@ -275,17 +275,23 @@ function normalizeActionState(
 
 function formCheckMeta(n: AdminNotification): FormCheckNotificationMeta {
   const payload = asRecord(n.payload) ?? {};
+  const athlete = asRecord(payload.athlete);
   const deepLink =
     asRecord(payload.deepLink) ??
     asRecord(payload.deeplink) ??
     asRecord(payload.link);
   const userId = pickString(
-    payload.userId,
-    payload.user_id,
     payload.athleteId,
     payload.athlete_id,
+    athlete?.id,
+    deepLink?.athleteId,
+    deepLink?.athlete_id,
     deepLink?.userId,
     deepLink?.user_id,
+    payload.targetUserId,
+    payload.target_user_id,
+    payload.userId,
+    payload.user_id,
   );
   const videoId = pickString(
     payload.videoId,

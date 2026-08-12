@@ -166,6 +166,21 @@ export function useFormCheckInboxRoute() {
     [patchParams],
   );
 
+  const repairThreadContext = useCallback(
+    (patch: {
+      userId?: string | null;
+      videoId?: string | null;
+      threadType?: ThreadFocusType | null;
+    }) => {
+      patchParams({
+        userId: patch.userId,
+        videoId: patch.videoId,
+        threadType: patch.threadType,
+      });
+    },
+    [patchParams],
+  );
+
   const setFocusVideoId = useCallback(
     (videoId: string | null) => {
       patchParams({ videoId, commentId: null, messageId: null, action: null });
@@ -259,6 +274,7 @@ export function useFormCheckInboxRoute() {
       setView,
       setPlanTier,
       setSelectedUserId,
+      repairThreadContext,
       setFocusVideoId,
       clearThreadFocus,
       setReviewFilter,
@@ -285,6 +301,7 @@ export function useFormCheckInboxRoute() {
       setView,
       setPlanTier,
       setSelectedUserId,
+      repairThreadContext,
       setFocusVideoId,
       clearThreadFocus,
       setReviewFilter,
