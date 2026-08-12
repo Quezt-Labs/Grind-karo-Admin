@@ -118,6 +118,16 @@ export function useFormCheckInboxRoute() {
     [setSearchParams],
   );
 
+  useEffect(() => {
+    if (!focusThreadType) return;
+    if (focusCommentId || focusVideoId) return;
+    patchParams({
+      threadType: null,
+      action: null,
+      messageId: null,
+    });
+  }, [focusThreadType, focusCommentId, focusVideoId, patchParams]);
+
   const setView = useCallback(
     (next: InboxView) => {
       patchParams({

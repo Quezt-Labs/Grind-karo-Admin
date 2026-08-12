@@ -40,6 +40,7 @@ import {
   formatProgramWeekLabel,
 } from "@/utils/formCheckWeekUtils";
 import { sortFeedbackVideos } from "@/utils/formCheckReview";
+import { deriveFormCheckThreadAccessState } from "@/utils/formCheckThreadAccessState";
 import { cn } from "@/utils/cn";
 
 function athleteLabel(
@@ -82,6 +83,7 @@ export function FormCheckInboxPage() {
     setHandlerFilter,
     setWeekNumber,
     setDayNumber,
+    clearThreadFocus,
     clearAthleteSelection,
   } = route;
 
@@ -344,6 +346,7 @@ export function FormCheckInboxPage() {
   }, [nextAthleteInQueue, handleSelectAthlete, clearAthleteSelection]);
 
   const hasThreadDeepLink = !!focusCommentId || !!focusVideoId;
+  const hasThreadTypeOnly = !!focusThreadType && !focusCommentId && !focusVideoId;
   const shouldResolveThreadContext =
     !!selectedUserId &&
     !selectedAthlete &&
@@ -381,24 +384,23 @@ export function FormCheckInboxPage() {
     focusVideoId,
   ]);
 
-  const threadAccessMessage = useMemo(() => {
-    if (!hasThreadDeepLink) {
-      return "You don’t have access to this athlete’s form-check thread. Ask an admin to update your assignment if this athlete should be in your queue.";
-    }
-    if (resolvingThreadContext) {
-      return "Resolving form-check thread context…";
-    }
-    if (threadResolution?.status === "invalid_context") {
-      return "This form-check thread link is invalid or stale. Re-open the thread from the latest notification or action queue item.";
-    }
-    if (threadResolution?.status === "forbidden") {
-      return "You don’t have access to this form-check thread in your current scope. Ask an admin to update assignment if this athlete should be in your queue.";
-    }
-    if (threadResolution?.status === "unavailable") {
-      return "Could not resolve this thread context right now. Please retry from notification/action queue.";
-    }
-    return "This thread context could not be matched to an athlete in your current list. Re-open from the latest notification or action queue.";
-  }, [hasThreadDeepLink, resolvingThreadContext, threadResolution]);
+  const threadAccessState = useMemo(
+    () =>
+      deriveFormCheckThreadAccessState({
+        hasCommentId: !!focusCommentId,
+        hasVideoId: !!focusVideoId,
+        hasThreadType: !!focusThreadType,
+        resolving: resolvingThreadContext,
+        resolutionStatus: threadResolution?.status ?? null,
+      }),
+    [
+      focusCommentId,
+      focusVideoId,
+      focusThreadType,
+      resolvingThreadContext,
+      threadResolution?.status,
+    ],
+  );
 
   return (
     <div>
@@ -463,14 +465,37 @@ export function FormCheckInboxPage() {
         />
       ) : selectedUserId && !athletesLoading && !selectedAthlete ? (
         <div className="space-y-3">
-          <ErrorAlert message={threadAccessMessage} />
-          <button
-            type="button"
-            onClick={clearAthleteSelection}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-          >
-            Back to athlete list
-          </button>
+          {threadAccessState.tone === "deny" ? (
+            <ErrorAlert message={threadAccessState.message} />
+          ) : (
+            <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+              {threadAccessState.message}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={clearAthleteSelection}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+            >
+              Back to athlete list
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setReviewFilter("all");
+                setWeekNumber(null);
+                setDayNumber(null);
+                if (hasThreadDeepLink || hasThreadTypeOnly) {
+                  clearThreadFocus();
+                }
+                clearAthleteSelection();
+              }}
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:bg-gray-900 dark:text-indigo-300"
+            >
+              Clear filters & context
+            </button>
+          </div>
         </div>
       ) : selectedUserId ? (
         <div className="space-y-4">
