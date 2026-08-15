@@ -284,8 +284,6 @@ export function CoachAthleteDetailPage() {
           userId={id}
           formCheckQuota={purchaseData?.formCheckQuota}
           purchases={purchaseData?.purchases ?? []}
-          showBilling
-          onBillingUpdated={refreshPurchases}
           preferPending
         />
       )}

@@ -24,6 +24,7 @@ import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
 import { programService } from "@/services/programService";
 import { programTemplateService } from "@/services/programTemplateService";
 import type { Program } from "@/types/programs";
+import { useIsAdmin } from "@/hooks/useRole";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -36,6 +37,7 @@ function formatINR(rupees: number): string {
 type StatusFilter = "all" | "active" | "inactive";
 
 export function ProgramsPage() {
+  const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -114,12 +116,18 @@ export function ProgramsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           title="Programs"
-          description="Manage training programs and content"
+          description={
+            isAdmin
+              ? "Manage training programs and content"
+              : "Browse programs you can clone onto assigned athletes"
+          }
         />
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4" />
-          Create Program
-        </Button>
+        {isAdmin ? (
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" />
+            Create Program
+          </Button>
+        ) : null}
       </div>
 
       {/* Filters */}
@@ -203,6 +211,7 @@ export function ProgramsPage() {
             <ProgramCard
               key={program.id}
               program={program}
+              canManage={isAdmin}
               onEdit={() => setEditTarget(program)}
               onDelete={() => setDeleteTarget(program)}
               onOpen={() => navigate(`/programs/${program.id}`)}
@@ -230,7 +239,7 @@ export function ProgramsPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {(showCreateModal || editTarget) && (
+      {(showCreateModal || editTarget) && isAdmin && (
         <ProgramFormModal
           program={editTarget}
           onClose={() => {
@@ -252,6 +261,7 @@ export function ProgramsPage() {
 
 interface ProgramCardProps {
   program: Program;
+  canManage: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onOpen: () => void;
@@ -262,6 +272,7 @@ interface ProgramCardProps {
 
 function ProgramCard({
   program,
+  canManage,
   onEdit,
   onDelete,
   onOpen,
@@ -398,30 +409,34 @@ function ProgramCard({
           onClick={onBuild}
         >
           <LayoutList className="h-3.5 w-3.5" />
-          Build
+          {canManage ? "Build" : "Open"}
         </Button>
-        <button
-          onClick={onPromoteToTemplate}
-          disabled={isPromoting}
-          className="rounded-lg p-2 text-gray-400 hover:bg-primary-50 hover:text-primary-600 disabled:opacity-50 dark:hover:bg-primary-900/20"
-          title="Save as coaching template"
-        >
-          <LayoutList className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={onEdit}
-          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-          title="Edit metadata"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={onDelete}
-          className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
-          title="Delete program"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        {canManage ? (
+          <>
+            <button
+              onClick={onPromoteToTemplate}
+              disabled={isPromoting}
+              className="rounded-lg p-2 text-gray-400 hover:bg-primary-50 hover:text-primary-600 disabled:opacity-50 dark:hover:bg-primary-900/20"
+              title="Save as coaching template"
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={onEdit}
+              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              title="Edit metadata"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+              title="Delete program"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   );

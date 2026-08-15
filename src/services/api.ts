@@ -5,6 +5,7 @@ import {
   formatApiErrorMessage,
   reportClientError,
   shouldReportApiError,
+  shouldToastApiError,
 } from "@/lib/clientErrorReporting";
 
 const api = axios.create({
@@ -108,11 +109,13 @@ api.interceptors.response.use(
       }
     }
 
-    // Non-401 errors: show toast
-    if (axios.isAxiosError(error) && error.response?.status !== 401) {
-      const data = error.response?.data as Record<string, unknown> | undefined;
+    if (shouldToastApiError(error)) {
+      const data = axios.isAxiosError(error)
+        ? (error.response?.data as Record<string, unknown> | undefined)
+        : undefined;
       const message =
-        (data?.message as string) || error.message || "Something went wrong";
+        (typeof data?.message === "string" && data.message) ||
+        (error instanceof Error ? error.message : "Something went wrong");
       toast.error(message);
     }
 

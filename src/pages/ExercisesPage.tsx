@@ -21,6 +21,7 @@ import {
 } from "@/utils/exerciseLibrary";
 import type { Column } from "@/types/dashboard";
 import type { Exercise, ExerciseCategory } from "@/types/programs";
+import { useIsAdmin } from "@/hooks/useRole";
 
 type ExerciseRow = {
   id: string;
@@ -64,6 +65,7 @@ const exerciseColumns: Column<ExerciseRow>[] = [
 type StatusFilter = "all" | "active" | "inactive";
 
 export function ExercisesPage() {
+  const isAdmin = useIsAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [activeTab, setActiveTab] = useState<ExerciseCategory>("SQUAT");
@@ -158,26 +160,32 @@ export function ExercisesPage() {
       if (!exercise) return null;
       return (
         <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setEditTarget(exercise)}
-            className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            title="Edit"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setDeleteTarget(exercise)}
-            className="p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {isAdmin ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditTarget(exercise)}
+                className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="Edit"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeleteTarget(exercise)}
+                className="p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <span className="text-xs text-gray-400">View only</span>
+          )}
         </div>
       );
     },
@@ -190,10 +198,12 @@ export function ExercisesPage() {
           title="Exercise Library"
           description="Reusable movement library for program authoring"
         />
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4" />
-          Add Exercise
-        </Button>
+        {isAdmin ? (
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" />
+            Add Exercise
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -262,10 +272,12 @@ export function ExercisesPage() {
           <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
             Add exercises to your library so they can be used in programs.
           </p>
-          <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4" />
-            Add Your First Exercise
-          </Button>
+          {isAdmin ? (
+            <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4" />
+              Add Your First Exercise
+            </Button>
+          ) : null}
         </div>
       ) : !isLoading && totalVisible === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
@@ -284,15 +296,19 @@ export function ExercisesPage() {
           <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
             Add one to this category or check another tab.
           </p>
-          <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4" />
-            Add Exercise
-          </Button>
+          {isAdmin ? (
+            <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4" />
+              Add Exercise
+            </Button>
+          ) : null}
         </div>
       ) : (
         <DataTable
           data={toTableRows(activeTabRows)}
-          columns={[...exerciseColumns, actionsColumn]}
+          columns={
+            isAdmin ? [...exerciseColumns, actionsColumn] : exerciseColumns
+          }
           isLoading={isLoading}
         />
       )}
@@ -307,7 +323,7 @@ export function ExercisesPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {(showCreateModal || editTarget) && (
+      {(showCreateModal || editTarget) && isAdmin && (
         <ExerciseFormModal
           exercise={editTarget}
           onClose={() => {

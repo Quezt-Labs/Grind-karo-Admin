@@ -12,8 +12,10 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { TemplateFormModal } from "@/components/templates/TemplateFormModal";
 import { programTemplateService } from "@/services/programTemplateService";
 import type { ProgramTemplate } from "@/services/programTemplateService";
+import { useIsAdmin } from "@/hooks/useRole";
 
 export function ProgramTemplatesPage() {
+  const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
@@ -65,12 +67,18 @@ export function ProgramTemplatesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Program templates"
-        description="Reusable coaching program blueprints. Clone these onto athletes from the user page."
+        description={
+          isAdmin
+            ? "Reusable coaching program blueprints. Clone these onto athletes from the user page."
+            : "Clone these templates onto your assigned athletes."
+        }
       >
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New template
-        </Button>
+        {isAdmin ? (
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New template
+          </Button>
+        ) : null}
       </PageHeader>
 
       <DebouncedSearch
@@ -89,11 +97,15 @@ export function ProgramTemplatesPage() {
           <LayoutList className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           <p className="font-medium">No templates yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create a blank template or copy from an existing retail program.
+            {isAdmin
+              ? "Create a blank template or copy from an existing retail program."
+              : "No coaching templates are available yet."}
           </p>
-          <Button className="mt-4" onClick={() => setShowCreate(true)}>
-            Create first template
-          </Button>
+          {isAdmin ? (
+            <Button className="mt-4" onClick={() => setShowCreate(true)}>
+              Create first template
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -131,24 +143,28 @@ export function ProgramTemplatesPage() {
                         }
                       >
                         <Pencil className="mr-1 h-3.5 w-3.5" />
-                        Edit
+                        {isAdmin ? "Edit" : "Open"}
                       </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        title="Restore as retail program"
-                        onClick={() => setRestoreTarget(template)}
-                      >
-                        <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                        Retail
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setDeleteTarget(template)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+                      {isAdmin ? (
+                        <>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            title="Restore as retail program"
+                            onClick={() => setRestoreTarget(template)}
+                          >
+                            <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                            Retail
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setDeleteTarget(template)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -158,7 +174,7 @@ export function ProgramTemplatesPage() {
         </div>
       )}
 
-      {showCreate && (
+      {showCreate && isAdmin && (
         <TemplateFormModal
           onClose={() => setShowCreate(false)}
           onSuccess={(templateId) => {

@@ -22,6 +22,8 @@ import {
   useFormCheckVideos,
 } from "@/hooks/useFormCheckInbox";
 import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
+import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useRole";
 import { athleteAssignmentService } from "@/services/athleteAssignmentService";
 import type { FormCheckQuota, Purchase } from "@/types/user";
 import { FormCheckBillingControls } from "@/components/users/FormCheckBillingControls";
@@ -155,16 +157,25 @@ export function UserProgramFormCheckPanel({
   });
 
   const { bulkApply } = useFormCheckMutations(userId);
+  const isAdmin = useIsAdmin();
+  const { user } = useAuth();
 
   const { data: assignment } = useQuery({
     queryKey: formCheckKeys.assignment(userId),
     queryFn: () => athleteAssignmentService.getByAthleteId(userId),
+    enabled: isAdmin,
   });
 
-  const handlerInfo = useMemo(
-    () => resolveFormCheckHandlerFromAssignment(assignment ?? null),
-    [assignment],
-  );
+  const handlerInfo = useMemo(() => {
+    if (!isAdmin) {
+      return {
+        formCheckHandler: "assistant_coach" as const,
+        formCheckCoachId: user?.id ?? null,
+        formCheckCoachName: user?.name?.trim() || user?.email || null,
+      };
+    }
+    return resolveFormCheckHandlerFromAssignment(assignment ?? null);
+  }, [assignment, isAdmin, user?.email, user?.id, user?.name]);
 
   const handleBulkApply = async (comment: string) =>
     bulkApply(pendingTargets, comment);
@@ -179,7 +190,7 @@ export function UserProgramFormCheckPanel({
 
   return (
     <div>
-      {showBilling && (
+      {showBilling && isAdmin && (
         <FormCheckBillingControls
           userId={userId}
           purchases={purchases}

@@ -10,7 +10,7 @@ export type ReportClientErrorInput = {
   metadata?: Record<string, unknown>;
 };
 
-const REPORT_PATH = "/admin/client-errors/report";
+const REPORT_PATH = "/client-events/error";
 const DEDUPE_MS = 5 * 60 * 1000;
 
 function pageUrl(): string {
@@ -48,9 +48,9 @@ export function shouldReportApiError(
 
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
-    if (status === 401 || status === 404) return false;
+    if (status === 401 || status === 403 || status === 404) return false;
     if (status != null && status >= 500) return true;
-    if (status != null && [400, 403, 409, 422, 429].includes(status)) {
+    if (status != null && [400, 409, 422, 429].includes(status)) {
       return true;
     }
     if (!error.response) return true;
@@ -58,6 +58,14 @@ export function shouldReportApiError(
   }
 
   return false;
+}
+
+export function shouldToastApiError(error: unknown): boolean {
+  if (axios.isCancel(error)) return false;
+  if (!axios.isAxiosError(error)) return true;
+  const status = error.response?.status;
+  if (status === 401 || status === 403 || status === 404) return false;
+  return true;
 }
 
 export function formatApiErrorMessage(error: unknown): string {

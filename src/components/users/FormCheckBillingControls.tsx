@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { useIsAdmin } from "@/hooks/useRole";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { HandCoins, Loader2, PauseCircle, PlusCircle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -21,6 +22,7 @@ export function FormCheckBillingControls({
   onUpdated,
 }: Props) {
   const queryClient = useQueryClient();
+  const isAdmin = useIsAdmin();
   const [reason, setReason] = useState("");
 
   const paidCoachingSubs = useMemo(
@@ -99,7 +101,11 @@ export function FormCheckBillingControls({
       <p className="mb-3 text-[11px] text-indigo-900/80 dark:text-indigo-200/80">
         Quick extend/waive for form-check access. Record offline payment on the{" "}
         <Link
-          to={`/users/${userId}?tab=coaching#record-payment-panel`}
+          to={
+            isAdmin
+              ? `/users/${userId}?tab=coaching#record-payment-panel`
+              : `/coach/athletes/${userId}?tab=plan`
+          }
           className="font-semibold text-indigo-700 underline dark:text-indigo-300"
         >
           Coaching → Billing & payments
