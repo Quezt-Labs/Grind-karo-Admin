@@ -1,4 +1,5 @@
 import api from "./api";
+import type { CoachingSubscription } from "@/types/program";
 import type { CoachingAddonStatus } from "@/types/user";
 
 export type CoachingBillingAdjustmentType =
@@ -67,6 +68,18 @@ export interface CoachingRenewalsResponse {
 }
 
 export const coachingSubscriptionService = {
+  async listSubscriptions(filters?: {
+    status?: string;
+    userId?: string;
+    planId?: string;
+    paid?: boolean;
+  }) {
+    const { data } = await api.get("/admin/coaching/subscriptions", {
+      params: filters,
+    });
+    return (data.data ?? data) as CoachingSubscription[];
+  },
+
   async listRenewals(params?: {
     expiringWithinDays?: number;
     recentlyExpiredDays?: number;
@@ -273,6 +286,14 @@ export const coachingSubscriptionService = {
     const { data } = await api.patch(
       `/admin/coaching/subscriptions/users/${userId}/primary`,
       { subscriptionId },
+    );
+    return data.data ?? data;
+  },
+
+  async refundSubscription(subscriptionId: string, reason?: string) {
+    const { data } = await api.post(
+      `/admin/coaching/subscriptions/${subscriptionId}/refund`,
+      { reason },
     );
     return data.data ?? data;
   },

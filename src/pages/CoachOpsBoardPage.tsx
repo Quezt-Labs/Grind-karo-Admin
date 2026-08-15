@@ -509,7 +509,10 @@ export function CoachOpsBoardPage() {
                   Form checks
                 </TableHead>
                 <TableHead className="h-auto px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Payment
+                  <span>Payment</span>
+                  <span className="mt-0.5 block text-[10px] font-normal normal-case text-gray-400">
+                    Ops checklist — not billing
+                  </span>
                 </TableHead>
                 <TableHead className="h-auto px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Next call / Notes

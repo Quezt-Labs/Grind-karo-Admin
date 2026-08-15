@@ -3,12 +3,7 @@ import { ChevronRight, Search, User, X } from "lucide-react";
 import { FormCheckHandlerBadge } from "@/components/form-check/FormCheckHandlerBadge";
 import { Spinner } from "@/components/ui/Spinner";
 import type { FormCheckInboxAthlete } from "@/services/formCheckInboxService";
-import type {
-  HandlerFilter,
-  PlanTier,
-  ReviewFilter,
-} from "@/hooks/useFormCheckInboxRoute";
-import { useDebounce } from "@/hooks/useDebounce";
+import type { PlanTier, ReviewFilter } from "@/hooks/useFormCheckInboxRoute";
 import { formatRelativeTime } from "@/utils/formatRelativeTime";
 import { cn } from "@/utils/cn";
 
@@ -70,45 +65,6 @@ function ReviewFilterBar({
       >
         All videos
       </button>
-    </div>
-  );
-}
-
-function HandlerFilterBar({
-  filter,
-  onChange,
-  counts,
-}: {
-  filter: HandlerFilter;
-  onChange: (next: HandlerFilter) => void;
-  counts: { all: number; assistant_coach: number; admin: number };
-}) {
-  const options: { value: HandlerFilter; label: string }[] = [
-    { value: "all", label: `All (${counts.all})` },
-    {
-      value: "assistant_coach",
-      label: `Assistant coach (${counts.assistant_coach})`,
-    },
-    { value: "admin", label: `Admin (${counts.admin})` },
-  ];
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-            filter === opt.value
-              ? "bg-violet-600 text-white"
-              : "border border-gray-200 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200",
-          )}
-        >
-          {opt.label}
-        </button>
-      ))}
     </div>
   );
 }
@@ -274,82 +230,47 @@ export function FormCheckInboxAthleteList({
   planTier,
   tierAthletes,
   reviewFilter,
-  handlerFilter,
-  handlerCounts,
-  tierPending,
   isLoading,
+  search,
+  onSearchChange,
   onSelectAthlete,
-  onReviewFilterChange,
-  onHandlerFilterChange,
 }: {
   planTier: PlanTier;
   tierAthletes: FormCheckInboxAthlete[];
   reviewFilter: ReviewFilter;
-  handlerFilter: HandlerFilter;
-  handlerCounts: { all: number; assistant_coach: number; admin: number };
-  tierPending: number;
   isLoading: boolean;
+  search: string;
+  onSearchChange: (value: string) => void;
   onSelectAthlete: (userId: string) => void;
-  onReviewFilterChange: (filter: ReviewFilter) => void;
-  onHandlerFilterChange: (filter: HandlerFilter) => void;
 }) {
-  const [search, setSearch] = useState("");
   const [sort, setSort] = useState<AthleteSort>(() =>
     reviewFilter === "pending" ? "oldest_waiting" : "newest",
   );
-  const debouncedSearch = useDebounce(search.trim().toLowerCase(), 300);
 
-  const filteredAthletes = useMemo(() => {
-    if (!debouncedSearch) return tierAthletes;
-    return tierAthletes.filter((a) => {
-      const name = (a.userName ?? "").toLowerCase();
-      const email = a.userEmail.toLowerCase();
-      return name.includes(debouncedSearch) || email.includes(debouncedSearch);
-    });
-  }, [tierAthletes, debouncedSearch]);
+  const sortedAthletes = useMemo(
+    () => sortAthletes(tierAthletes, sort),
+    [tierAthletes, sort],
+  );
 
-  const filteredByHandler = useMemo(() => {
-    const byHandler =
-      handlerFilter === "all"
-        ? filteredAthletes
-        : filteredAthletes.filter((a) => a.formCheckHandler === handlerFilter);
-    return sortAthletes(byHandler, sort);
-  }, [filteredAthletes, handlerFilter, sort]);
-
-  const showHandlerFilteredEmpty =
-    handlerFilter !== "all" && filteredByHandler.length === 0 && !isLoading;
   const showSearchEmpty =
-    debouncedSearch.length > 0 && filteredByHandler.length === 0 && !isLoading;
+    search.trim().length > 0 && sortedAthletes.length === 0 && !isLoading;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <HandlerFilterBar
-          filter={handlerFilter}
-          onChange={onHandlerFilterChange}
-          counts={handlerCounts}
-        />
-        <ReviewFilterBar
-          filter={reviewFilter}
-          onChange={onReviewFilterChange}
-          pendingCount={tierPending}
-        />
-      </div>
-
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1 max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search athletes by name or email…"
             className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-8 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
           />
           {search ? (
             <button
               type="button"
-              onClick={() => setSearch("")}
+              onClick={() => onSearchChange("")}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600"
               aria-label="Clear search"
             >
@@ -393,38 +314,24 @@ export function FormCheckInboxAthleteList({
           </p>
           <button
             type="button"
-            onClick={() => setSearch("")}
+            onClick={() => onSearchChange("")}
             className="mt-3 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
           >
             Clear search
           </button>
         </div>
-      ) : showHandlerFilteredEmpty ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
-          <User className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />
-          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-            No {planTier.toUpperCase()} athletes in this handler queue.
-          </p>
-          <button
-            type="button"
-            onClick={() => onHandlerFilterChange("all")}
-            className="mt-3 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
-          >
-            Show all handlers
-          </button>
-        </div>
-      ) : filteredByHandler.length === 0 ? (
+      ) : sortedAthletes.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
           <User className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />
           <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
             {reviewFilter === "pending"
-              ? `No ${planTier.toUpperCase()} athletes with videos waiting for review.`
-              : `No ${planTier.toUpperCase()} athletes with form-check videos yet.`}
+              ? `No ${planTier === "mega" ? "Mega" : "Ultra"} athletes with videos waiting for review.`
+              : `No ${planTier === "mega" ? "Mega" : "Ultra"} athletes with form-check videos yet.`}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {filteredByHandler.map((athlete) => (
+          {sortedAthletes.map((athlete) => (
             <AthleteRow
               key={athlete.userId}
               athlete={athlete}

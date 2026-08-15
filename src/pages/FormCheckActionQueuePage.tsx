@@ -10,6 +10,8 @@ import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Shimmer } from "@/components/ui/Shimmer";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { useAuth } from "@/hooks/useAuth";
+import { useFormCheckPendingCount } from "@/hooks/useFormCheckPendingCount";
+import { FormCheckWorkSplitBanner } from "@/components/form-check/FormCheckWorkSplitBanner";
 import { buildFormCheckThreadRoute } from "@/utils/formCheckRoutes";
 import { formCheckQueueRefetchInterval } from "@/utils/formCheckQueue";
 import {
@@ -41,7 +43,12 @@ function nextPollInterval(baseMs: number, failures: number): number {
 function isBusyError(error: unknown): boolean {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status ?? null;
-    return error.code === "ECONNABORTED" || status === 408 || status === 429 || (status != null && status >= 500);
+    return (
+      error.code === "ECONNABORTED" ||
+      status === 408 ||
+      status === 429 ||
+      (status != null && status >= 500)
+    );
   }
   if (typeof error === "object" && error != null) {
     const maybeBusy = (error as { busy?: unknown }).busy;
@@ -113,11 +120,14 @@ function priorityTone(priority: FormCheckQueuePriority): string {
 }
 
 function priorityLabel(priority: FormCheckQueuePriority): string {
-  if (priority === "P0" || priority === "P1" || priority === "P2") return priority;
+  if (priority === "P0" || priority === "P1" || priority === "P2")
+    return priority;
   return "Open";
 }
 
-function uploadLinkageState(item: FormCheckActionQueueItem): "blocked" | "clear" | "pending" {
+function uploadLinkageState(
+  item: FormCheckActionQueueItem,
+): "blocked" | "clear" | "pending" {
   if (item.uploadIncidentBlocking === true) return "blocked";
   if ((item.uploadIncidentCount ?? 0) > 0) return "blocked";
   if (item.uploadIncidentBlocking === false || item.uploadIncidentCount === 0) {
@@ -140,12 +150,16 @@ function deepLink(item: FormCheckActionQueueItem, action?: "reply"): string {
 }
 
 function itemReplyBlocked(item: FormCheckActionQueueItem): boolean {
-  return item.replyBlocked || (item.repliesRemaining != null && item.repliesRemaining <= 0);
+  return (
+    item.replyBlocked ||
+    (item.repliesRemaining != null && item.repliesRemaining <= 0)
+  );
 }
 
 function replyLockText(item: FormCheckActionQueueItem): string | null {
   if (item.replyLockReason) return item.replyLockReason;
-  if (itemReplyBlocked(item)) return "Replies are currently blocked for this thread.";
+  if (itemReplyBlocked(item))
+    return "Replies are currently blocked for this thread.";
   return null;
 }
 
@@ -192,9 +206,10 @@ function mergeDelta(
 
 function replyErrorMessage(error: unknown): string {
   if (!axios.isAxiosError(error)) return "Failed to send reply";
-  const payload = (error.response?.data ?? null) as
-    | Record<string, unknown>
-    | null;
+  const payload = (error.response?.data ?? null) as Record<
+    string,
+    unknown
+  > | null;
   const lockReason =
     (payload?.replyLockReason as string | undefined) ??
     (payload?.reply_lock_reason as string | undefined) ??
@@ -213,7 +228,10 @@ function replyErrorMessage(error: unknown): string {
   if (typeof message === "string" && message.trim().length > 0) return message;
   if (Array.isArray(message)) {
     const joined = message
-      .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+      .filter(
+        (part): part is string =>
+          typeof part === "string" && part.trim().length > 0,
+      )
       .join(", ");
     if (joined.length > 0) return joined;
   }
@@ -242,7 +260,9 @@ export function FormCheckActionQueuePage() {
       sinceCursorRef.current = candidate;
       return;
     }
-    if (new Date(candidate).getTime() > new Date(sinceCursorRef.current).getTime()) {
+    if (
+      new Date(candidate).getTime() > new Date(sinceCursorRef.current).getTime()
+    ) {
       sinceCursorRef.current = candidate;
     }
   }
@@ -266,7 +286,8 @@ export function FormCheckActionQueuePage() {
     queryFn: async () => {
       try {
         const queryKey = ["form-check-action-queue", tab, search] as const;
-        const previous = queryClient.getQueryData<FormCheckActionQueueResponse>(queryKey);
+        const previous =
+          queryClient.getQueryData<FormCheckActionQueueResponse>(queryKey);
         const hasPrevious = !!previous;
         const activeCursor = queueCursorRef.current;
         let polled: FormCheckActionQueueResponse;
@@ -332,7 +353,11 @@ export function FormCheckActionQueuePage() {
             hasMore: polled.hasMore ?? previous.hasMore,
             nextCursor: polled.nextCursor ?? previous.nextCursor,
           };
-        } else if (polled.hasChanges === true && polled.items.length === 0 && previous) {
+        } else if (
+          polled.hasChanges === true &&
+          polled.items.length === 0 &&
+          previous
+        ) {
           const full = await formCheckActionQueueService.list({
             tab,
             q: search || undefined,
@@ -361,7 +386,9 @@ export function FormCheckActionQueuePage() {
         if (isBusyError(queryError)) {
           timeoutFailuresRef.current += 1;
           setBusyRetrying(true);
-          setPollMs(nextPollInterval(basePollInterval(tab), timeoutFailuresRef.current));
+          setPollMs(
+            nextPollInterval(basePollInterval(tab), timeoutFailuresRef.current),
+          );
         } else {
           timeoutFailuresRef.current = 0;
           setBusyRetrying(false);
@@ -390,17 +417,29 @@ export function FormCheckActionQueuePage() {
       threadType: "workout" | "sheets";
       reply: string;
     }) =>
-      workoutVideoCommentService.replyThread(payload.threadType, payload.commentId, {
-        reply: payload.reply,
-      }),
+      workoutVideoCommentService.replyThread(
+        payload.threadType,
+        payload.commentId,
+        {
+          reply: payload.reply,
+        },
+      ),
     onSuccess: (_result, payload) => {
       toast.success("Reply sent");
-      setQuickReplyId((current) => (current === payload.itemId ? null : current));
+      setQuickReplyId((current) =>
+        current === payload.itemId ? null : current,
+      );
       setDraftById((prev) => ({ ...prev, [payload.itemId]: "" }));
-      void queryClient.invalidateQueries({ queryKey: ["form-check-action-queue"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["form-check-action-queue"],
+      });
       if (payload.commentId) {
         void queryClient.invalidateQueries({
-          queryKey: ["form-check-comment-thread", payload.threadType, payload.commentId],
+          queryKey: [
+            "form-check-comment-thread",
+            payload.threadType,
+            payload.commentId,
+          ],
         });
       }
     },
@@ -409,7 +448,10 @@ export function FormCheckActionQueuePage() {
     },
   });
 
-  const items = useMemo(() => sortQueue(data?.items ?? [], tab), [data?.items, tab]);
+  const items = useMemo(
+    () => sortQueue(data?.items ?? [], tab),
+    [data?.items, tab],
+  );
   const busyState = isError && (busyRetrying || isBusyError(error));
 
   function resetPollingState(nextTab: FormCheckQueueTab = tab) {
@@ -418,15 +460,22 @@ export function FormCheckActionQueuePage() {
     setPollMs(basePollInterval(nextTab));
   }
 
+  const { data: pendingVideoCount = 0 } = useFormCheckPendingCount();
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Form Check Action Queue"
+        title="Reply queue"
         description={
           isAssistant
-            ? "Assigned-athlete action queue with oldest actionable threads first."
-            : "Coach/admin action queue with oldest actionable threads first."
+            ? "Athlete replies and threads that need a coach follow-up on your assigned athletes."
+            : "Athlete replies and conversation threads that need a coach follow-up."
         }
+      />
+
+      <FormCheckWorkSplitBanner
+        variant="reply_queue"
+        pendingVideoCount={pendingVideoCount}
       />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -475,7 +524,9 @@ export function FormCheckActionQueuePage() {
             disabled={isFetching}
             className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
           >
-            <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+            <RefreshCw
+              className={cn("h-3.5 w-3.5", isFetching && "animate-spin")}
+            />
             Refresh
           </button>
         </div>
@@ -532,7 +583,10 @@ export function FormCheckActionQueuePage() {
       ) : (
         <div className="space-y-3">
           {items.map((item) => {
-            const athleteLabel = item.athleteName?.trim() || item.athleteEmail || "Unknown athlete";
+            const athleteLabel =
+              item.athleteName?.trim() ||
+              item.athleteEmail ||
+              "Unknown athlete";
             const quickReplyText = draftById[item.id] ?? "";
             const isReplyBlocked = itemReplyBlocked(item);
             const lockReason = replyLockText(item);
@@ -614,7 +668,8 @@ export function FormCheckActionQueuePage() {
                     {uploadLinkageState(item) === "blocked" ? (
                       <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
                         Upload incident linked
-                        {item.uploadIncidentCount != null && item.uploadIncidentCount > 0
+                        {item.uploadIncidentCount != null &&
+                        item.uploadIncidentCount > 0
                           ? ` (${item.uploadIncidentCount})`
                           : ""}
                       </span>
@@ -646,7 +701,9 @@ export function FormCheckActionQueuePage() {
                       type="button"
                       disabled={isReplyBlocked}
                       onClick={() =>
-                        setQuickReplyId((current) => (current === item.id ? null : item.id))
+                        setQuickReplyId((current) =>
+                          current === item.id ? null : item.id,
+                        )
                       }
                       className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
                     >
@@ -678,33 +735,38 @@ export function FormCheckActionQueuePage() {
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[11px] text-gray-500 dark:text-gray-400">
                         {isReplyBlocked
-                          ? lockReason ?? "Replies are currently blocked for this thread."
+                          ? (lockReason ??
+                            "Replies are currently blocked for this thread.")
                           : "Reply sends immediately and keeps this queue current."}
                       </p>
                       <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setQuickReplyId(null)}
-                        className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        disabled={quickReplyMutation.isPending || !quickReplyText.trim() || isReplyBlocked}
-                        onClick={() =>
-                          quickReplyMutation.mutate({
-                            itemId: item.id,
-                            commentId: item.commentId!,
-                            threadType: item.threadType,
-                            reply: quickReplyText.trim(),
-                          })
-                        }
-                        className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
-                      >
-                        <Send className="h-3.5 w-3.5" />
-                        Send
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => setQuickReplyId(null)}
+                          className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={
+                            quickReplyMutation.isPending ||
+                            !quickReplyText.trim() ||
+                            isReplyBlocked
+                          }
+                          onClick={() =>
+                            quickReplyMutation.mutate({
+                              itemId: item.id,
+                              commentId: item.commentId!,
+                              threadType: item.threadType,
+                              reply: quickReplyText.trim(),
+                            })
+                          }
+                          className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          Send
+                        </button>
                       </div>
                     </div>
                   </div>

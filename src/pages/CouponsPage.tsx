@@ -57,6 +57,7 @@ export function CouponsPage() {
       queryClient.invalidateQueries({ queryKey: ["coupons"] });
       setDeleteTarget(null);
     },
+    onError: () => toast.error("Failed to deactivate coupon"),
   });
 
   const handleSearch = useCallback((value: string) => {

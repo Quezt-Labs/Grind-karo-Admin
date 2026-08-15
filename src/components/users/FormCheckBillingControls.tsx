@@ -1,25 +1,11 @@
+import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { HandCoins, Loader2, PauseCircle, PlusCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/ShadSelect";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
-import { planService } from "@/services/planService";
-import { formatINR } from "@/pages/users/usersConstants";
-import { CoachingBillingFields } from "@/components/users/CoachingBillingFields";
-import {
-  coachingBillingPayload,
-  initialCoachingBillingState,
-  type FeeCoversMonths,
-} from "@/utils/coachingBilling";
 import { COACHING_DAYS_PER_BILLING_PERIOD } from "@/utils/coachingBillingPeriod";
 import type { Purchase } from "@/types/user";
 
@@ -27,20 +13,15 @@ type Props = {
   userId: string;
   purchases: Purchase[];
   onUpdated?: () => void;
-  /** Hide manual payment when athlete has no coaching plan context yet. */
-  showManualPayment?: boolean;
 };
 
 export function FormCheckBillingControls({
   userId,
   purchases,
   onUpdated,
-  showManualPayment = true,
 }: Props) {
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
-  const [manualPlanId, setManualPlanId] = useState("");
-  const [billing, setBilling] = useState(() => initialCoachingBillingState());
 
   const paidCoachingSubs = useMemo(
     () =>
@@ -56,16 +37,6 @@ export function FormCheckBillingControls({
     const active = paidCoachingSubs.find((p) => p.status === "ACTIVE");
     return active ?? paidCoachingSubs[0] ?? null;
   }, [paidCoachingSubs]);
-
-  const { data: plans = [] } = useQuery({
-    queryKey: ["admin-coaching-plans"],
-    queryFn: () => planService.getAll(),
-  });
-
-  const manualPlan = useMemo(
-    () => plans.find((p) => p.id === manualPlanId),
-    [plans, manualPlanId],
-  );
 
   const invalidate = () => {
     void queryClient.invalidateQueries({
@@ -113,27 +84,7 @@ export function FormCheckBillingControls({
       toast.error(err.message || "Failed to waive billing period"),
   });
 
-  const manualMutation = useMutation({
-    mutationFn: () =>
-      coachingSubscriptionService.recordManualPayment({
-        userId,
-        ...coachingBillingPayload(manualPlanId, billing),
-        reason: reason.trim(),
-      }),
-    onSuccess: () => {
-      toast.success("Manual payment recorded");
-      setReason("");
-      setBilling((b) => ({ ...b, lifterFee: "" }));
-      invalidate();
-    },
-    onError: (err: Error) =>
-      toast.error(err.message || "Failed to record manual payment"),
-  });
-
-  const busy =
-    extendMutation.isPending ||
-    waiveMutation.isPending ||
-    manualMutation.isPending;
+  const busy = extendMutation.isPending || waiveMutation.isPending;
 
   const reasonOk = reason.trim().length >= 3;
 
@@ -146,8 +97,14 @@ export function FormCheckBillingControls({
         </p>
       </div>
       <p className="mb-3 text-[11px] text-indigo-900/80 dark:text-indigo-200/80">
-        Coaching blocks are 4 weeks (28 days) — form-check quota resets each
-        block.
+        Quick extend/waive for form-check access. Record offline payment on the{" "}
+        <Link
+          to={`/users/${userId}?tab=coaching#record-payment-panel`}
+          className="font-semibold text-indigo-700 underline dark:text-indigo-300"
+        >
+          Coaching → Billing & payments
+        </Link>{" "}
+        tab.
       </p>
 
       <Textarea
@@ -200,75 +157,6 @@ export function FormCheckBillingControls({
             Waive 4-week block
           </Button>
         </div>
-      )}
-
-      {showManualPayment && (
-        <>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Select
-              value={manualPlanId}
-              onValueChange={(id) => {
-                setManualPlanId(id);
-                const plan = plans.find((p) => p.id === id);
-                const base = initialCoachingBillingState(plan);
-                setBilling({
-                  ...base,
-                  lifterFee: plan ? String(plan.price) : "",
-                });
-              }}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Plan for offline payment" />
-              </SelectTrigger>
-              <SelectContent>
-                {plans
-                  .filter((p) => p.isActive)
-                  .map((plan) => (
-                    <SelectItem key={plan.id} value={plan.id}>
-                      {plan.name} ({formatINR(plan.price)})
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <CoachingBillingFields
-            plan={manualPlan}
-            feeCoversMonths={billing.feeCoversMonths}
-            startDate={billing.startDate}
-            endDate={billing.endDate}
-            endDateTouched={billing.endDateTouched}
-            lifterFee={billing.lifterFee}
-            onFeeCoversMonthsChange={(feeCoversMonths: FeeCoversMonths) =>
-              setBilling((b) => ({ ...b, feeCoversMonths }))
-            }
-            onStartDateChange={(startDate) =>
-              setBilling((b) => ({ ...b, startDate }))
-            }
-            onEndDateChange={(endDate) =>
-              setBilling((b) => ({ ...b, endDate }))
-            }
-            onEndDateTouchedChange={(endDateTouched) =>
-              setBilling((b) => ({ ...b, endDateTouched }))
-            }
-            onLifterFeeChange={(lifterFee) =>
-              setBilling((b) => ({ ...b, lifterFee }))
-            }
-          />
-          <Button
-            type="button"
-            size="sm"
-            className="mt-2"
-            disabled={busy || !manualPlanId || !reasonOk}
-            onClick={() => manualMutation.mutate()}
-          >
-            {manualMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <HandCoins className="h-4 w-4" />
-            )}
-            Record offline payment
-          </Button>
-        </>
       )}
     </div>
   );

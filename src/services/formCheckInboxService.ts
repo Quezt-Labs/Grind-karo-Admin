@@ -231,6 +231,8 @@ export const formCheckInboxService = {
 
   async listAthletes(params?: {
     uncommentedOnly?: boolean;
+    handler?: "assistant_coach" | "admin";
+    q?: string;
   }): Promise<FormCheckInboxAthletesByPlan> {
     const { data } = await api.get("/admin/form-check-videos/athletes", {
       params: { ...params, source: PROGRAM_SOURCE },

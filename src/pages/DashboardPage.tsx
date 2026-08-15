@@ -38,6 +38,7 @@ const kindLabels: Record<RecentSale["kind"], string> = {
   coaching_subscription: "Coaching",
   program_purchase: "Program",
   book_purchase: "Book",
+  program_addon_purchase: "Add-on",
 };
 
 type RecentSaleRow = RecentSale & {
@@ -136,6 +137,13 @@ export function DashboardPage() {
         value: formatINR(breakdown.books.revenue),
         icon: "LayoutDashboard",
         subtitle: `${breakdown.books.count} purchases`,
+      },
+      {
+        id: "addons",
+        title: "Add-on Revenue",
+        value: formatINR(breakdown.addons?.revenue ?? 0),
+        icon: "Puzzle",
+        subtitle: `${breakdown.addons?.count ?? 0} add-on purchases`,
       },
     ];
   }, [overview]);

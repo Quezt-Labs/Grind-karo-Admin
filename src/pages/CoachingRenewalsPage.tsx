@@ -88,7 +88,7 @@ export function CoachingRenewalsPage() {
             onOpen={(row) =>
               navigate(
                 isAdmin
-                  ? `/users/${row.userId}?tab=coaching`
+                  ? `/users/${row.userId}?tab=coaching#record-payment-panel`
                   : `/coach/athletes/${row.userId}?tab=plan`,
               )
             }
@@ -104,7 +104,7 @@ export function CoachingRenewalsPage() {
             onOpen={(row) =>
               navigate(
                 isAdmin
-                  ? `/users/${row.userId}?tab=coaching`
+                  ? `/users/${row.userId}?tab=coaching#record-payment-panel`
                   : `/coach/athletes/${row.userId}?tab=plan`,
               )
             }
@@ -120,7 +120,7 @@ export function CoachingRenewalsPage() {
             onOpen={(row) =>
               navigate(
                 isAdmin
-                  ? `/users/${row.userId}?tab=coaching`
+                  ? `/users/${row.userId}?tab=coaching#record-payment-panel`
                   : `/coach/athletes/${row.userId}?tab=plan`,
               )
             }

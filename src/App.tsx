@@ -24,13 +24,15 @@ import {
   FormCheckActionQueuePage,
   FormCheckSlaPage,
   FormCheckInboxPage,
+  BookPurchasesPage,
+  CoachDashboardPage,
+  PaymentsOpsPage,
   WorkspacePage,
   CoachingRenewalsPage,
   CoachOpsBoardPage,
   ChatPage,
   ContactSubmissionsPage,
   ClientErrorsPage,
-  UploadIncidentMonitorPage,
   UploadFailuresPage,
   CouponDetailPage,
   CouponsPage,
@@ -65,7 +67,7 @@ import {
 function HomeRedirect() {
   const { user } = useAuth();
   if (user?.role === "ASSISTANT_COACH") {
-    return <Navigate to="/coach/athletes" replace />;
+    return <Navigate to="/coach/dashboard" replace />;
   }
   return <Navigate to="/dashboard" replace />;
 }
@@ -89,6 +91,10 @@ export default function App() {
               <Route element={<Layout />}>
                 <Route path="/coach/athletes" element={<CoachAthletesPage />} />
                 <Route
+                  path="/coach/dashboard"
+                  element={<CoachDashboardPage />}
+                />
+                <Route
                   path="/coach/ops-board"
                   element={<CoachOpsBoardPage />}
                 />
@@ -108,10 +114,6 @@ export default function App() {
                 <Route
                   path="/form-check/sla"
                   element={<Navigate to="/form-check-sla" replace />}
-                />
-                <Route
-                  path="/form-check/incidents"
-                  element={<Navigate to="/upload-incidents" replace />}
                 />
                 <Route path="/workspace" element={<WorkspacePage />} />
                 <Route
@@ -139,10 +141,9 @@ export default function App() {
                     path="/form-check-action-queue"
                     element={<FormCheckActionQueuePage />}
                   />
-                  <Route path="/form-check-sla" element={<FormCheckSlaPage />} />
                   <Route
-                    path="/upload-incidents"
-                    element={<UploadIncidentMonitorPage />}
+                    path="/form-check-sla"
+                    element={<FormCheckSlaPage />}
                   />
                   <Route path="/programs" element={<ProgramsPage />} />
                   <Route
@@ -185,6 +186,11 @@ export default function App() {
                     path="/program-purchases"
                     element={<ProgramPurchasesPage />}
                   />
+                  <Route
+                    path="/book-purchases"
+                    element={<BookPurchasesPage />}
+                  />
+                  <Route path="/payments-ops" element={<PaymentsOpsPage />} />
                   <Route
                     path="/program-reviews"
                     element={<ProgramReviewsPage />}

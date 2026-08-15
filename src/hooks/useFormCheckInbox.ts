@@ -59,12 +59,22 @@ function apiDayParam(dayNumber: number | null): number | undefined {
   return dayNumber != null && dayNumber > 0 ? dayNumber : undefined;
 }
 
-export function useFormCheckAthletes(reviewFilter: ReviewFilter) {
+export function useFormCheckAthletes(
+  reviewFilter: ReviewFilter,
+  handlerFilter?: "all" | "assistant_coach" | "admin",
+  searchQuery?: string,
+) {
+  const handler =
+    handlerFilter && handlerFilter !== "all" ? handlerFilter : undefined;
+  const q = searchQuery?.trim() || undefined;
+
   return useQuery({
-    queryKey: formCheckKeys.athletes(reviewFilter),
+    queryKey: formCheckKeys.athletes(reviewFilter, handler ?? "all", q ?? ""),
     queryFn: async () => {
       const data = await formCheckInboxService.listAthletes({
         uncommentedOnly: reviewFilter === "pending",
+        handler,
+        q,
       });
       return {
         mega: filterAthletesByReview(data.mega, reviewFilter),
@@ -72,6 +82,118 @@ export function useFormCheckAthletes(reviewFilter: ReviewFilter) {
       };
     },
   });
+}
+
+/** Single fetch for athlete detail — weeks, days, and videos derived client-side. */
+export function useFormCheckAthleteDetail(opts: {
+  userId: string | null | undefined;
+  reviewFilter: ReviewFilter;
+  weekNumber?: number | null;
+  dayNumber?: number | null;
+  limit?: number;
+  enabled?: boolean;
+}) {
+  const {
+    userId,
+    reviewFilter,
+    weekNumber = null,
+    dayNumber = null,
+    limit = FORM_CHECK_VIDEO_LIMIT,
+    enabled = true,
+  } = opts;
+
+  const query = useQuery({
+    queryKey: formCheckKeys.athleteDetail(reviewFilter, userId ?? "", limit),
+    queryFn: () =>
+      formCheckInboxService.list({
+        userId: userId!,
+        ...formCheckInboxListParams(reviewFilter),
+        limit,
+      }),
+    enabled: enabled && !!userId,
+  });
+
+  const allVideos = useMemo(
+    () =>
+      dedupeFormCheckInboxItems(
+        filterVideosByReview(query.data?.items ?? [], reviewFilter),
+      ),
+    [query.data?.items, reviewFilter],
+  );
+
+  const weekModel = useMemo(
+    () => collectProgramWeekOptions(allVideos),
+    [allVideos],
+  );
+
+  const dayModel = useMemo(() => {
+    let scoped = allVideos;
+    if (isFormCheckUnscopedFilter(weekNumber)) {
+      scoped = scoped.filter((v) => v.weekNumber == null);
+    } else if (weekNumber != null && weekNumber > 0) {
+      scoped = scoped.filter((v) => v.weekNumber === weekNumber);
+    }
+    return collectProgramDayOptions(scoped, weekNumber);
+  }, [allVideos, weekNumber]);
+
+  const videos = useMemo(
+    () => applyWeekDayClientFilter(allVideos, weekNumber, dayNumber),
+    [allVideos, weekNumber, dayNumber],
+  );
+
+  const exerciseGroups = useMemo(
+    () => groupFormCheckInboxItems(videos),
+    [videos],
+  );
+
+  const pendingTargets = useMemo(
+    () => pendingTargetsForVideos(videos),
+    [videos],
+  );
+
+  const reviewedSetCount = useMemo(
+    () => videos.filter((v) => isFormCheckReviewed(v)).length,
+    [videos],
+  );
+
+  const pendingSetCount = useMemo(
+    () => videos.filter((v) => isFormCheckPending(v)).length,
+    [videos],
+  );
+
+  const pendingExerciseCount = useMemo(
+    () => exerciseGroups.filter((g) => g.pendingCount > 0).length,
+    [exerciseGroups],
+  );
+
+  const fetchedCount = query.data?.items.length ?? 0;
+  const serverTotal = query.data?.total ?? 0;
+  const usingUnscopedFilter =
+    isFormCheckUnscopedFilter(weekNumber) ||
+    isFormCheckUnscopedFilter(dayNumber);
+  const hasMore = usingUnscopedFilter
+    ? false
+    : serverTotal > 0
+      ? serverTotal > fetchedCount
+      : fetchedCount >= limit;
+
+  const totalSetCount = videos.length;
+
+  return {
+    ...query,
+    weekModel,
+    dayModel,
+    videos,
+    exerciseGroups,
+    pendingTargets,
+    reviewedSetCount,
+    pendingSetCount,
+    pendingExerciseCount,
+    totalSetCount,
+    serverTotal,
+    fetchedCount,
+    hasMore,
+  };
 }
 
 /** Weeks available for an athlete (unfiltered list, for week chips). */

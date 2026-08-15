@@ -1,6 +1,12 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HandCoins, Loader2, PauseCircle, PlusCircle, Trash2 } from "lucide-react";
+import {
+  HandCoins,
+  Loader2,
+  PauseCircle,
+  PlusCircle,
+  Trash2,
+} from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
@@ -13,8 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/ShadSelect";
-import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
-import type { CoachingBillingAdjustment } from "@/services/coachingSubscriptionService";
+import { MANUAL_PAYMENT_DISCLAIMER } from "@/utils/coachOpsCopy";
+import {
+  coachingSubscriptionService,
+  type CoachingBillingAdjustment,
+} from "@/services/coachingSubscriptionService";
 import { planService } from "@/services/planService";
 import { formatINR } from "@/pages/users/usersConstants";
 import { CoachingBillingFields } from "@/components/users/CoachingBillingFields";
@@ -65,9 +74,8 @@ export function CoachingFeeAdjustmentsPanel({
   const [lifterFeeDraft, setLifterFeeDraft] = useState("");
   const [overridePlanId, setOverridePlanId] = useState("");
   const [overrideFeeDraft, setOverrideFeeDraft] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<CoachingBillingAdjustment | null>(
-    null,
-  );
+  const [deleteTarget, setDeleteTarget] =
+    useState<CoachingBillingAdjustment | null>(null);
 
   const paidCoachingSubs = useMemo(
     () =>
@@ -647,6 +655,9 @@ function ManualPaymentForm({
     <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/30">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
         Record offline payment (UPI / cash)
+      </p>
+      <p className="mb-2 text-[11px] text-amber-700 dark:text-amber-400">
+        {MANUAL_PAYMENT_DISCLAIMER}
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         <Select value={manualPlanId} onValueChange={setManualPlanId}>

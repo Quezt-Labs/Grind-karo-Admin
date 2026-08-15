@@ -41,6 +41,7 @@ export function CouponDetailPage() {
       toast.success("Coupon deactivated");
       navigate("/coupons", { replace: true });
     },
+    onError: () => toast.error("Failed to deactivate coupon"),
   });
 
   if (isLoading) {

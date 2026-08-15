@@ -1,5 +1,10 @@
 // ---- Enums --------------------------------------------------------------
-export type CoachingSubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
+export type CoachingSubscriptionStatus =
+  | "PENDING"
+  | "ACTIVE"
+  | "EXPIRED"
+  | "CANCELLED"
+  | "REFUNDED";
 
 // ---- Add-ons (public inline) --------------------------------------------
 export interface PublicAddon {
@@ -149,6 +154,11 @@ export interface CoachingSubscription {
   addonsSnapshot: AddonSnapshot[];
   createdAt: string;
   updatedAt: string;
+  user?: {
+    id: string;
+    name?: string | null;
+    email?: string;
+  } | null;
 }
 
 // ---- Reviews ------------------------------------------------------------

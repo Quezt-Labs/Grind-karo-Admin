@@ -20,8 +20,10 @@ export const programPurchaseService = {
     return data.data ?? data;
   },
 
-  async refund(id: string): Promise<ProgramPurchase> {
-    const { data } = await api.post(`/admin/program-purchases/${id}/refund`);
+  async refund(id: string, reason?: string): Promise<ProgramPurchase> {
+    const { data } = await api.post(`/admin/program-purchases/${id}/refund`, {
+      reason,
+    });
     return data.data ?? data;
   },
 

@@ -11,8 +11,20 @@ export const formCheckKeys = {
   all: ["form-check"] as const,
   pendingCount: () => ["form-check-pending-count"] as const,
   missing: () => ["form-check-missing"] as const,
-  athletes: (review: ReviewFilter) =>
-    ["form-check-inbox-athletes", review] as const,
+  athletes: (review: ReviewFilter, handler?: string, search?: string) =>
+    [
+      "form-check-inbox-athletes",
+      review,
+      handler ?? "all",
+      search ?? "",
+    ] as const,
+  athleteDetail: (review: ReviewFilter, userId: string, limit?: number) =>
+    [
+      "form-check-inbox-athlete-detail",
+      review,
+      userId,
+      limit ?? FORM_CHECK_VIDEO_LIMIT,
+    ] as const,
   videos: (
     review: ReviewFilter,
     userId: string,

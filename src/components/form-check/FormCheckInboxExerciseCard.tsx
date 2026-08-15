@@ -5,12 +5,14 @@ import {
   useState,
   forwardRef,
   type MutableRefObject,
+  type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -80,6 +82,60 @@ function PrescribedMetric({
       <p className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums text-white">
         {value ?? "—"}
       </p>
+    </div>
+  );
+}
+
+function DisclosureSection({
+  title,
+  badge,
+  defaultOpen = false,
+  forceOpen = false,
+  children,
+  className,
+}: {
+  title: string;
+  badge?: string;
+  defaultOpen?: boolean;
+  forceOpen?: boolean;
+  children: ReactNode;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen || forceOpen);
+  const isOpen = forceOpen || open;
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border border-gray-200 dark:border-gray-600",
+        className,
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800/60"
+      >
+        <span className="flex items-center gap-2">
+          {title}
+          {badge ? (
+            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              {badge}
+            </span>
+          ) : null}
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 text-gray-400 transition-transform",
+            isOpen && "rotate-180",
+          )}
+        />
+      </button>
+      {isOpen ? (
+        <div className="border-t border-gray-200 px-3 py-2 dark:border-gray-600">
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -173,12 +229,7 @@ function formatReviewDate(iso: string | null | undefined): string | null {
   });
 }
 
-type ThreadRole =
-  | "athlete"
-  | "coach"
-  | "assistant_coach"
-  | "admin"
-  | "system";
+type ThreadRole = "athlete" | "coach" | "assistant_coach" | "admin" | "system";
 
 function normalizeThreadRole(value: string | null | undefined): ThreadRole {
   const role = (value ?? "").trim().toLowerCase();
@@ -346,7 +397,11 @@ function SetCommentPanelWithBulk({
   const [replyingToAthlete, setReplyingToAthlete] = useState(false);
   const athleteReplyText = video.athleteReply?.trim() ?? "";
   const { data: threadState } = useQuery({
-    queryKey: ["form-check-comment-thread", effectiveThreadType, video.coachCommentId],
+    queryKey: [
+      "form-check-comment-thread",
+      effectiveThreadType,
+      video.coachCommentId,
+    ],
     queryFn: () =>
       effectiveThreadType === "sheets"
         ? workoutVideoCommentService.getSheetsThread(video.coachCommentId!)
@@ -359,18 +414,16 @@ function SetCommentPanelWithBulk({
     [threadState?.messages],
   );
   const latestThreadMessage =
-    threadMessages.length > 0 ? threadMessages[threadMessages.length - 1] : null;
+    threadMessages.length > 0
+      ? threadMessages[threadMessages.length - 1]
+      : null;
   const latestMessageRole = normalizeThreadRole(latestThreadMessage?.role);
   const needsReplyFromThread =
     latestThreadMessage != null && latestMessageRole === "athlete";
   const effectiveReplyLimit =
-    threadState?.replyLimit ??
-    video.coachReplyLimit ??
-    null;
+    threadState?.replyLimit ?? video.coachReplyLimit ?? null;
   const effectiveRepliesUsed =
-    threadState?.repliesUsed ??
-    video.coachReplyUsed ??
-    null;
+    threadState?.repliesUsed ?? video.coachReplyUsed ?? null;
   const effectiveRepliesRemaining =
     threadState?.repliesRemaining ??
     video.coachRepliesRemaining ??
@@ -393,6 +446,18 @@ function SetCommentPanelWithBulk({
   const replyBlocked =
     effectiveReplyBlocked === true ||
     (repliesRemaining != null && repliesRemaining <= 0);
+  const hasAthleteContext =
+    Boolean(video.setNotes?.trim() || video.athleteNotes?.trim()) ||
+    video.actualSets != null ||
+    video.actualReps != null ||
+    video.actualLoad != null ||
+    video.actualRpe != null;
+  const threadExpandedByDefault =
+    needsReplyFromThread || isFocusedThread || focusAction === "reply";
+  const [threadCollapsed, setThreadCollapsed] = useState(
+    () => !threadExpandedByDefault,
+  );
+  const showThreadPanel = threadExpandedByDefault || !threadCollapsed;
 
   const updateComment = (next: string) => {
     setComment(next);
@@ -492,24 +557,23 @@ function SetCommentPanelWithBulk({
         />
       ) : null}
 
-      {(video.setNotes?.trim() || video.athleteNotes?.trim()) && (
-        <div className="mb-3">
-          <FormCheckAthleteNotesBlocks
-            setNotes={video.setNotes}
-            setNumber={video.setNumber}
-            athleteNotes={video.athleteNotes}
-          />
-        </div>
-      )}
-
-      {(video.actualSets != null ||
-        video.actualReps != null ||
-        video.actualLoad != null ||
-        video.actualRpe != null) && (
-        <div className="mb-3">
-          <AthleteLoggedValues video={video} />
-        </div>
-      )}
+      {hasAthleteContext ? (
+        <DisclosureSection title="Athlete notes & logged sets" className="mb-3">
+          {(video.setNotes?.trim() || video.athleteNotes?.trim()) && (
+            <div className="mb-3">
+              <FormCheckAthleteNotesBlocks
+                setNotes={video.setNotes}
+                setNumber={video.setNumber}
+                athleteNotes={video.athleteNotes}
+              />
+            </div>
+          )}
+          {(video.actualSets != null ||
+            video.actualReps != null ||
+            video.actualLoad != null ||
+            video.actualRpe != null) && <AthleteLoggedValues video={video} />}
+        </DisclosureSection>
+      ) : null}
 
       {feedbackLocked && !isEditing && !athleteReplyText ? (
         <button
@@ -521,118 +585,131 @@ function SetCommentPanelWithBulk({
         </button>
       ) : (
         <>
-          {threadMessages.length > 0 ? (
-            <div className="mb-2 rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-900/50">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                  Thread activity
-                </p>
-                <span
+          {threadMessages.length > 0 || athleteReplyText ? (
+            <div className="mb-2">
+              <button
+                type="button"
+                onClick={() => setThreadCollapsed((prev) => !prev)}
+                className="mb-2 flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900/50 dark:text-gray-200"
+              >
+                <span className="flex items-center gap-2">
+                  Thread
+                  {needsReplyFromThread ? (
+                    <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                      Needs reply
+                    </span>
+                  ) : null}
+                  {threadMessages.length > 0 ? (
+                    <span className="text-[10px] font-normal text-gray-500 dark:text-gray-400">
+                      {threadMessages.length} message
+                      {threadMessages.length === 1 ? "" : "s"}
+                    </span>
+                  ) : null}
+                </span>
+                <ChevronDown
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                    needsReplyFromThread
-                      ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
-                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
+                    "h-4 w-4 shrink-0 text-gray-400 transition-transform",
+                    showThreadPanel && "rotate-180",
                   )}
-                >
-                  {needsReplyFromThread ? "Needs reply" : "Replied"}
-                </span>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                  {threadMessages.length} message
-                  {threadMessages.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              <div className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
-                {threadMessages.map((message, index) => {
-                  const role = normalizeThreadRole(message.role);
-                  const isNewest = index === threadMessages.length - 1;
-                  const isTargeted =
-                    !!focusMessageId && message.id === focusMessageId;
-                  return (
-                    <div
-                      key={message.id}
-                      ref={(el) => {
-                        if (el) threadMessageRefs.current.set(message.id, el);
-                        else threadMessageRefs.current.delete(message.id);
-                      }}
-                      className={cn(
-                        "rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 dark:border-gray-700 dark:bg-gray-800/60",
-                        isNewest &&
-                          "border-indigo-300 bg-indigo-50/70 dark:border-indigo-700 dark:bg-indigo-900/20",
-                        isTargeted &&
-                          "ring-1 ring-amber-400 dark:ring-amber-500",
-                      )}
-                    >
-                      <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                            roleChipClass(role),
-                          )}
-                        >
-                          {roleLabel(role)}
-                        </span>
-                        {message.createdAt ? (
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                            {formatReviewDate(message.createdAt)}
-                          </span>
-                        ) : null}
-                        {isNewest ? (
-                          <span className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-300">
-                            Newest
-                          </span>
-                        ) : null}
+                />
+              </button>
+
+              {showThreadPanel ? (
+                <div className="space-y-2">
+                  {threadMessages.length > 0 ? (
+                    <div className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-900/50">
+                      <div className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
+                        {threadMessages.map((message, index) => {
+                          const role = normalizeThreadRole(message.role);
+                          const isNewest = index === threadMessages.length - 1;
+                          const isTargeted =
+                            !!focusMessageId && message.id === focusMessageId;
+                          return (
+                            <div
+                              key={message.id}
+                              ref={(el) => {
+                                if (el)
+                                  threadMessageRefs.current.set(message.id, el);
+                                else
+                                  threadMessageRefs.current.delete(message.id);
+                              }}
+                              className={cn(
+                                "rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 dark:border-gray-700 dark:bg-gray-800/60",
+                                isNewest &&
+                                  "border-indigo-300 bg-indigo-50/70 dark:border-indigo-700 dark:bg-indigo-900/20",
+                                isTargeted &&
+                                  "ring-1 ring-amber-400 dark:ring-amber-500",
+                              )}
+                            >
+                              <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                                <span
+                                  className={cn(
+                                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                                    roleChipClass(role),
+                                  )}
+                                >
+                                  {roleLabel(role)}
+                                </span>
+                                {message.createdAt ? (
+                                  <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                    {formatReviewDate(message.createdAt)}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <LinkifiedText
+                                text={message.message}
+                                className="text-xs leading-relaxed text-gray-800 dark:text-gray-100"
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
-                      <LinkifiedText
-                        text={message.message}
-                        className="text-xs leading-relaxed text-gray-800 dark:text-gray-100"
-                      />
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-          {athleteReplyText ? (
-            <div className="mb-2 rounded-lg border border-gray-200 bg-gray-50/80 p-2.5 dark:border-gray-600 dark:bg-gray-900/40">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                Athlete reply
-              </p>
-              <LinkifiedText
-                text={athleteReplyText}
-                className="mt-1 text-xs leading-relaxed text-gray-800 dark:text-gray-100"
-              />
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {replyLimitKnown ? (
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                      replyBlocked
-                        ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
-                        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-                    )}
-                  >
-                    {replyBlocked
-                      ? "Replies blocked"
-                      : repliesRemaining == null
-                        ? "Replies allowed"
-                        : `${repliesRemaining} repl${repliesRemaining === 1 ? "y" : "ies"} left`}
-                  </span>
-                ) : null}
-                {effectiveReplyLockReason ? (
-                  <span className="text-[10px] text-rose-700 dark:text-rose-300">
-                    {effectiveReplyLockReason}
-                  </span>
-                ) : null}
-                <button
-                  type="button"
-                  disabled={saving || replyBlocked}
-                  onClick={startReply}
-                  className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
-                >
-                  Reply in this thread
-                </button>
-              </div>
+                  ) : null}
+                  {athleteReplyText ? (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-2.5 dark:border-gray-600 dark:bg-gray-900/40">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                        Athlete reply
+                      </p>
+                      <LinkifiedText
+                        text={athleteReplyText}
+                        className="mt-1 text-xs leading-relaxed text-gray-800 dark:text-gray-100"
+                      />
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {replyLimitKnown ? (
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              replyBlocked
+                                ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
+                                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+                            )}
+                          >
+                            {replyBlocked
+                              ? "Replies blocked"
+                              : repliesRemaining == null
+                                ? "Replies allowed"
+                                : `${repliesRemaining} repl${repliesRemaining === 1 ? "y" : "ies"} left`}
+                          </span>
+                        ) : null}
+                        {effectiveReplyLockReason ? (
+                          <span className="text-[10px] text-rose-700 dark:text-rose-300">
+                            {effectiveReplyLockReason}
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={saving || replyBlocked}
+                          onClick={startReply}
+                          className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
+                        >
+                          Reply in this thread
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : null}
           <textarea
@@ -739,6 +816,15 @@ function SetCommentPanelWithBulk({
   );
 }
 
+function hasPrescription(video: FormCheckInboxItem): boolean {
+  return (
+    video.prescriptionSets != null ||
+    Boolean(video.repScheme?.trim()) ||
+    formatPrescribedIntensity(video) != null ||
+    Boolean(video.targetRpe?.trim())
+  );
+}
+
 export const FormCheckInboxExerciseCard = forwardRef<
   HTMLElement,
   {
@@ -801,6 +887,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
   const [activeVideoId, setActiveVideoId] = useState<string | null>(
     () => focusVideoId,
   );
+  const [showPrescription, setShowPrescription] = useState(false);
 
   // Adopt a new deep-link focus when the URL videoId changes.
   const [prevFocusVideoId, setPrevFocusVideoId] = useState(focusVideoId);
@@ -1016,7 +1103,28 @@ export const FormCheckInboxExerciseCard = forwardRef<
 
       <div className="grid grid-cols-1 lg:grid-cols-5">
         <div className="bg-black lg:col-span-3">
-          <PrescribedValues video={active} />
+          {hasPrescription(active) ? (
+            <div className="border-b border-white/10 bg-gray-950 px-3 py-2">
+              <button
+                type="button"
+                onClick={() => setShowPrescription((prev) => !prev)}
+                className="flex w-full items-center justify-between text-xs font-semibold text-indigo-200 hover:text-white"
+              >
+                <span>Prescription</span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 transition-transform",
+                    showPrescription && "rotate-180",
+                  )}
+                />
+              </button>
+              {showPrescription ? (
+                <div className="mt-2">
+                  <PrescribedValues video={active} />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <FormCheckVideoPlayer
             key={active.id}
             src={active.videoUrl}

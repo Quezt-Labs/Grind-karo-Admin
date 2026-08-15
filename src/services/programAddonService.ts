@@ -8,17 +8,17 @@ import type {
 export const programAddonService = {
   async getAll(): Promise<ProgramAddon[]> {
     const { data } = await api.get("/admin/program-addons");
-    return data;
+    return data.data ?? data;
   },
 
   async getById(addonId: string): Promise<ProgramAddon> {
     const { data } = await api.get(`/admin/program-addons/${addonId}`);
-    return data;
+    return data.data ?? data;
   },
 
   async create(payload: CreateProgramAddonPayload): Promise<ProgramAddon> {
     const { data } = await api.post("/admin/program-addons", payload);
-    return data;
+    return data.data ?? data;
   },
 
   async update(
@@ -29,16 +29,25 @@ export const programAddonService = {
       `/admin/program-addons/${addonId}`,
       payload,
     );
-    return data;
+    return data.data ?? data;
   },
 
   async remove(addonId: string): Promise<void> {
     await api.delete(`/admin/program-addons/${addonId}`);
   },
 
-  async listForProgram(programId: string) {
+  async listForProgram(programId: string): Promise<
+    Array<{
+      id: string;
+      slug: string;
+      name: string;
+      description: string | null;
+      price: number;
+      grantsFormCheck: boolean;
+    }>
+  > {
     const { data } = await api.get(`/admin/programs/${programId}/addons`);
-    return data as Array<{
+    return (data.data ?? data) as Array<{
       id: string;
       slug: string;
       name: string;
@@ -57,7 +66,7 @@ export const programAddonService = {
       addonId,
       priceOverride: priceOverride ?? undefined,
     });
-    return data;
+    return data.data ?? data;
   },
 
   async unlinkAddon(programId: string, addonId: string) {

@@ -47,7 +47,11 @@ import {
 } from "@/components/users/athleteActivitySections";
 import { cn } from "@/utils/cn";
 import { planGrantsFormCheck } from "@/utils/coachingPlanCapabilities";
-import type { CoachingAddonStatus, Purchase, FormCheckQuota } from "@/types/user";
+import type {
+  CoachingAddonStatus,
+  Purchase,
+  FormCheckQuota,
+} from "@/types/user";
 import type { CoachingPlan } from "@/types/program";
 import { CoachingSetupStatusBadge } from "./users/CoachingSetupStatusBadge";
 import { AthleteAssignmentSection } from "@/components/users/AthleteAssignmentSection";
@@ -227,6 +231,17 @@ export function UserDetailPage() {
     clearScope,
   ]);
 
+  useEffect(() => {
+    if (window.location.hash !== "#record-payment-panel") return;
+    setMainTab("coaching");
+    requestAnimationFrame(() => {
+      document.getElementById("record-payment-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [setMainTab]);
+
   const displayCoachingSub =
     scope.mode === "subscription" ? scope.subscription : primaryCoachingSub;
 
@@ -325,9 +340,12 @@ export function UserDetailPage() {
     });
 
   const jumpToRecordPayment = () => {
-    const el = document.getElementById("record-payment-panel");
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setMainTab("coaching");
+    requestAnimationFrame(() => {
+      const el = document.getElementById("record-payment-panel");
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   return (
@@ -1004,7 +1022,8 @@ function CoachingEntitlementsSection({
     entitlements?.formCheck?.source?.trim() ||
     computedFormCheckSource;
   const backendManaged = entitlements?.managedByBackend === true;
-  const toggleAllowed = entitlements?.formCheck?.adminOverrideEditable !== false;
+  const toggleAllowed =
+    entitlements?.formCheck?.adminOverrideEditable !== false;
 
   const mutation = useMutation({
     mutationFn: (next: boolean) =>
@@ -1024,7 +1043,8 @@ function CoachingEntitlementsSection({
       toast.error(err.message || "Failed to update set video setting");
     },
   });
-  const toggleDisabled = mutation.isPending || megaUltraActive || !toggleAllowed;
+  const toggleDisabled =
+    mutation.isPending || megaUltraActive || !toggleAllowed;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -1102,7 +1122,7 @@ function CoachingEntitlementsSection({
               ? "Always enabled with active MEGA/ULTRA coaching"
               : !toggleAllowed
                 ? "Managed by backend entitlement rules"
-              : undefined
+                : undefined
           }
         >
           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">

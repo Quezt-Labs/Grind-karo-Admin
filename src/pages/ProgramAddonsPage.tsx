@@ -67,6 +67,7 @@ export function ProgramAddonsPage() {
       queryClient.invalidateQueries({ queryKey: ["program-addons"] });
       setDeleteTarget(null);
     },
+    onError: () => toast.error("Failed to deactivate program add-on"),
   });
 
   const handleSearch = useCallback((value: string) => setSearchTerm(value), []);

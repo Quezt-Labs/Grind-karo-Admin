@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import {
@@ -21,16 +21,13 @@ const mocks = vi.hoisted(() => ({
   getAll: vi.fn(),
   markRead: vi.fn(),
   markAllRead: vi.fn(),
-  getWorkoutThread: vi.fn(),
-  getSheetsThread: vi.fn(),
-  getThreadVideoContext: vi.fn(),
-  replyThread: vi.fn(),
 }));
 
 vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom",
-  );
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
   return {
     ...actual,
     useNavigate: () => mocks.navigate,
@@ -50,28 +47,6 @@ vi.mock("@/services/notificationService", () => ({
   },
 }));
 
-vi.mock("@/services/workoutVideoCommentService", () => ({
-  workoutVideoCommentService: {
-    getWorkoutThread: mocks.getWorkoutThread,
-    getSheetsThread: mocks.getSheetsThread,
-    getThreadVideoContext: mocks.getThreadVideoContext,
-    replyThread: mocks.replyThread,
-  },
-}));
-
-vi.mock("react-hot-toast", () => ({
-  default: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-vi.mock("@/components/shared/FormCheckVideoPlayer", () => ({
-  FormCheckVideoPlayer: ({ src }: { src: string }) => (
-    <div data-testid="form-check-video-player">{src}</div>
-  ),
-}));
-
 function makeFormCheckNotification(
   overrides: Partial<AdminNotification> = {},
 ): AdminNotification {
@@ -85,32 +60,42 @@ function makeFormCheckNotification(
     category: "form_check",
     priority: "critical",
     payload: {
-      userId: "user-1",
+      athleteId: "athlete-user-1",
       athleteName: "Rahul",
       videoId: "video-1",
       commentId: "comment-1",
       threadType: "workout",
-      exerciseName: "Bench Press",
-      setNumber: 2,
-      state: "needs_reply",
       preview: "Preview text from notification payload",
-      fullMessage:
-        "Full athlete message with full context that should be readable in the modal.",
-      videoUrl: "https://cdn.example.com/video-1.mp4",
     },
     ...overrides,
   };
 }
 
+function makeChatNotification(): AdminNotification {
+  return {
+    id: "notif-chat-1",
+    type: "CHAT_MESSAGE",
+    title: "New message",
+    message: "Hey coach",
+    createdAt: "2026-08-09T00:00:00.000Z",
+    readAt: null,
+    category: "chat",
+    priority: "normal",
+    payload: {
+      userId: "user-chat-1",
+    },
+  };
+}
+
 function makeUnreadResponse(
-  notification: AdminNotification,
+  items: AdminNotification[],
 ): NotificationListResponse {
   return {
-    total: 1,
-    unreadCount: 1,
+    total: items.length,
+    unreadCount: items.length,
     limit: 20,
     offset: 0,
-    items: [notification],
+    items,
   };
 }
 
@@ -132,10 +117,10 @@ function renderBell() {
 
 async function openPanel(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTitle("Notifications"));
-  await screen.findByText("Action required · Form check");
+  await screen.findByText("Notifications");
 }
 
-describe("NotificationBell form-check modal flow", () => {
+describe("NotificationBell", () => {
   beforeEach(() => {
     useNotificationStore.getState().reset();
     mocks.navigate.mockReset();
@@ -143,43 +128,10 @@ describe("NotificationBell form-check modal flow", () => {
     mocks.getAll.mockReset();
     mocks.markRead.mockReset();
     mocks.markAllRead.mockReset();
-    mocks.getWorkoutThread.mockReset();
-    mocks.getSheetsThread.mockReset();
-    mocks.getThreadVideoContext.mockReset();
-    mocks.replyThread.mockReset();
 
-    const notification = makeFormCheckNotification();
     mocks.getUnreadCount.mockResolvedValue(1);
-    mocks.getAll.mockResolvedValue(makeUnreadResponse(notification));
-    mocks.markRead.mockResolvedValue(notification);
+    mocks.markRead.mockResolvedValue(makeFormCheckNotification());
     mocks.markAllRead.mockResolvedValue({ markedRead: 1 });
-    mocks.replyThread.mockResolvedValue({});
-    mocks.getWorkoutThread.mockResolvedValue({
-      messages: [
-        {
-          id: "m1",
-          role: "athlete",
-          message: "Athlete thread message",
-          createdAt: "2026-08-10T00:00:00.000Z",
-        },
-      ],
-      replyLimit: 3,
-      repliesUsed: 1,
-      repliesRemaining: 2,
-      canAthleteReply: true,
-      replyLockReason: null,
-      videoUrl: null,
-    });
-    mocks.getSheetsThread.mockResolvedValue({
-      messages: [],
-      replyLimit: null,
-      repliesUsed: null,
-      repliesRemaining: null,
-      canAthleteReply: null,
-      replyLockReason: null,
-      videoUrl: null,
-    });
-    mocks.getThreadVideoContext.mockResolvedValue({ videoUrl: null });
   });
 
   afterEach(() => {
@@ -187,179 +139,112 @@ describe("NotificationBell form-check modal flow", () => {
     cleanup();
   });
 
-  it("opens a modal when a form-check notification card body is clicked", async () => {
+  it("renders grouped form-check rows in the unread list", async () => {
     const user = userEvent.setup();
+    const notification = makeFormCheckNotification();
+    mocks.getAll.mockResolvedValue(makeUnreadResponse([notification]));
+
     renderBell();
     await openPanel(user);
 
-    await user.click(screen.getByText("Preview text from notification payload"));
-
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Rahul")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Full athlete message with full context that should be readable in the modal.",
-      ),
+      screen.getByText("Preview text from notification payload"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Athlete thread message")).toBeInTheDocument();
+    expect(screen.getByText("Form check")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("keeps Open thread and Quick reply buttons functional without accidental modal open", async () => {
+  it("navigates to form-check thread route when a form-check row is clicked", async () => {
     const user = userEvent.setup();
+    const notification = makeFormCheckNotification();
+    mocks.getAll.mockResolvedValue(makeUnreadResponse([notification]));
+
     renderBell();
     await openPanel(user);
 
-    await user.click(screen.getByRole("button", { name: "Quick reply" }));
-    expect(screen.getByPlaceholderText("Reply to athlete…")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(screen.getByText("Rahul"));
 
-    await user.click(screen.getByRole("button", { name: "Open thread" }));
+    expect(mocks.markRead).toHaveBeenCalledWith("notif-1");
     expect(mocks.navigate).toHaveBeenCalledTimes(1);
-    const firstNavigation = (mocks.navigate as Mock).mock.calls[0]?.[0] as string;
-    expect(firstNavigation).toContain("/form-checks?");
-    expect(firstNavigation).toContain("commentId=comment-1");
+    const navigation = (mocks.navigate as Mock).mock.calls[0]?.[0] as string;
+    expect(navigation).toContain("/form-checks?");
+    expect(navigation).toContain("userId=athlete-user-1");
+    expect(navigation).toContain("commentId=comment-1");
   });
 
-  it("prefers athlete context for deep-link userId over generic payload userId", async () => {
+  it("groups multiple form-check notifications into one row", async () => {
     const user = userEvent.setup();
-    const notification = makeFormCheckNotification({
+    const first = makeFormCheckNotification({ id: "notif-1" });
+    const second = makeFormCheckNotification({
+      id: "notif-2",
+      createdAt: "2026-08-11T00:00:00.000Z",
+      message: "Another update",
       payload: {
-        userId: "coach-user-1",
-        athleteId: "athlete-user-1",
-        deepLink: {
-          userId: "athlete-user-2",
-        },
-        athleteName: "Rahul",
-        videoId: "video-1",
-        commentId: "comment-1",
-        threadType: "workout",
-        preview: "Preview text from notification payload",
-        fullMessage:
-          "Full athlete message with full context that should be readable in the modal.",
+        ...first.payload,
+        preview: "Second preview",
       },
     });
-    mocks.getAll.mockResolvedValueOnce(makeUnreadResponse(notification));
+    mocks.getAll.mockResolvedValue(makeUnreadResponse([first, second]));
+
     renderBell();
     await openPanel(user);
 
-    await user.click(screen.getByRole("button", { name: "Open thread" }));
-    const firstNavigation = (mocks.navigate as Mock).mock.calls[0]?.[0] as string;
-    expect(firstNavigation).toContain("userId=athlete-user-1");
+    expect(screen.getByText(/2 updates · Second preview/)).toBeInTheDocument();
+    expect(screen.getAllByText("Rahul")).toHaveLength(1);
   });
 
-  it("shows fallback state in modal when thread context cannot be fetched", async () => {
+  it("filters notifications with All, Form checks, and Other chips", async () => {
     const user = userEvent.setup();
-    mocks.getWorkoutThread.mockRejectedValueOnce(new Error("timeout"));
+    const formCheck = makeFormCheckNotification();
+    const chat = makeChatNotification();
+    mocks.getAll.mockResolvedValue(makeUnreadResponse([formCheck, chat]));
+
     renderBell();
     await openPanel(user);
 
-    await user.click(screen.getByText("Preview text from notification payload"));
-
-    const dialog = await screen.findByRole("dialog");
-    await waitFor(() => {
-      expect(
-        within(dialog).getByText(/Unable to load full thread context/i),
-      ).toBeInTheDocument();
-    });
+    expect(screen.getByRole("button", { name: "All (2)" })).toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", { name: "Open thread" }),
+      screen.getByRole("button", { name: "Form checks (1)" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Other (1)" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Other (1)" }));
+    expect(screen.getByText("New message")).toBeInTheDocument();
+    expect(screen.queryByText("Rahul")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Form checks (1)" }));
+    expect(screen.getByText("Rahul")).toBeInTheDocument();
+    expect(screen.queryByText("New message")).not.toBeInTheDocument();
   });
 
-  it("renders discussion video player when URL is present in notification payload", async () => {
+  it("navigates to chat when a chat notification is clicked", async () => {
     const user = userEvent.setup();
-    renderBell();
-    await openPanel(user);
-
-    await user.click(screen.getByText("Preview text from notification payload"));
-
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Discussion video")).toBeInTheDocument();
-    expect(within(dialog).getByTestId("form-check-video-player")).toHaveTextContent(
-      "https://cdn.example.com/video-1.mp4",
-    );
-  });
-
-  it("fetches and renders discussion video when payload lacks URL but thread context provides one", async () => {
-    const user = userEvent.setup();
-    mocks.getAll.mockResolvedValue(
-      makeUnreadResponse(
-        makeFormCheckNotification({
-          payload: {
-            ...makeFormCheckNotification().payload,
-            videoUrl: undefined,
-          },
-        }),
-      ),
-    );
-    mocks.getWorkoutThread.mockResolvedValue({
-      messages: [
-        {
-          id: "m1",
-          role: "athlete",
-          message: "Athlete thread message",
-          createdAt: "2026-08-10T00:00:00.000Z",
-        },
-      ],
-      replyLimit: 3,
-      repliesUsed: 1,
-      repliesRemaining: 2,
-      canAthleteReply: true,
-      replyLockReason: null,
-      videoUrl: "https://cdn.example.com/video-from-thread.mp4",
-    });
+    const chat = makeChatNotification();
+    mocks.getAll.mockResolvedValue(makeUnreadResponse([chat]));
 
     renderBell();
     await openPanel(user);
 
-    await user.click(screen.getByText("Preview text from notification payload"));
+    await user.click(screen.getByText("New message"));
 
-    const dialog = await screen.findByRole("dialog");
-    await waitFor(() => {
-      expect(within(dialog).getByTestId("form-check-video-player")).toHaveTextContent(
-        "https://cdn.example.com/video-from-thread.mp4",
-      );
-    });
+    expect(mocks.markRead).toHaveBeenCalledWith("notif-chat-1");
+    expect(mocks.navigate).toHaveBeenCalledWith("/chat?userId=user-chat-1");
   });
 
-  it("shows discussion video fallback text when no video URL is available", async () => {
+  it("marks all notifications as read from the panel header", async () => {
     const user = userEvent.setup();
     mocks.getAll.mockResolvedValue(
-      makeUnreadResponse(
-        makeFormCheckNotification({
-          payload: {
-            ...makeFormCheckNotification().payload,
-            videoUrl: undefined,
-          },
-        }),
-      ),
+      makeUnreadResponse([makeFormCheckNotification()]),
     );
-    mocks.getWorkoutThread.mockResolvedValue({
-      messages: [
-        {
-          id: "m1",
-          role: "athlete",
-          message: "Athlete thread message",
-          createdAt: "2026-08-10T00:00:00.000Z",
-        },
-      ],
-      replyLimit: 3,
-      repliesUsed: 1,
-      repliesRemaining: 2,
-      canAthleteReply: true,
-      replyLockReason: null,
-    });
 
     renderBell();
     await openPanel(user);
 
-    await user.click(screen.getByText("Preview text from notification payload"));
+    await user.click(screen.getByRole("button", { name: "Mark all read" }));
 
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Discussion video")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(
-        within(dialog).getByText("Video unavailable in this notification context."),
-      ).toBeInTheDocument();
-    });
+    expect(mocks.markAllRead).toHaveBeenCalledTimes(1);
   });
 });

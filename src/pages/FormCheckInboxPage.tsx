@@ -5,10 +5,8 @@ import toast from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
-import {
-  FormCheckInboxAthleteList,
-  FormCheckInboxTierTabs,
-} from "@/components/form-check/FormCheckInboxAthleteList";
+import { FormCheckInboxAthleteList } from "@/components/form-check/FormCheckInboxAthleteList";
+import { FormCheckInboxToolbar } from "@/components/form-check/FormCheckInboxToolbar";
 import { FormCheckInboxAthleteHeader } from "@/components/form-check/FormCheckInboxAthleteHeader";
 import { FormCheckInboxExerciseList } from "@/components/form-check/FormCheckInboxExerciseList";
 import { FormCheckMissingList } from "@/components/form-check/FormCheckMissingList";
@@ -23,10 +21,9 @@ import {
 } from "@/hooks/formCheckQueryKeys";
 import {
   useFormCheckAthletes,
-  useFormCheckVideoDays,
-  useFormCheckVideoWeeks,
-  useFormCheckVideos,
+  useFormCheckAthleteDetail,
 } from "@/hooks/useFormCheckInbox";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useFormCheckMutations } from "@/hooks/useFormCheckMutations";
 import { useFormCheckInboxRoute } from "@/hooks/useFormCheckInboxRoute";
 import { useIsAdmin } from "@/hooks/useRole";
@@ -41,7 +38,6 @@ import {
 } from "@/utils/formCheckWeekUtils";
 import { sortFeedbackVideos } from "@/utils/formCheckReview";
 import { deriveFormCheckThreadAccessState } from "@/utils/formCheckThreadAccessState";
-import { cn } from "@/utils/cn";
 
 function athleteLabel(
   athlete: Pick<FormCheckInboxAthlete, "userName" | "userEmail">,
@@ -89,6 +85,8 @@ export function FormCheckInboxPage() {
 
   const isMissingView = view === "missing";
   const [exerciseSearch, setExerciseSearch] = useState("");
+  const [athleteSearch, setAthleteSearch] = useState("");
+  const debouncedAthleteSearch = useDebounce(athleteSearch.trim(), 300);
 
   // Reset pagination whenever the filter/scope changes. Handled during render
   // (not an effect) to avoid a cascading re-render.
@@ -101,7 +99,7 @@ export function FormCheckInboxPage() {
   }
 
   const { data: athletesData, isLoading: athletesLoading } =
-    useFormCheckAthletes(reviewFilter);
+    useFormCheckAthletes(reviewFilter, handlerFilter, debouncedAthleteSearch);
 
   const { data: missingData, isLoading: missingLoading } = useQuery({
     queryKey: formCheckKeys.missing(),
@@ -109,22 +107,11 @@ export function FormCheckInboxPage() {
     enabled: isMissingView,
   });
 
-  const { data: weekModel } = useFormCheckVideoWeeks({
-    userId: selectedUserId,
-    reviewFilter,
-    enabled: !!selectedUserId && !isMissingView,
-  });
-
-  const { data: dayModel } = useFormCheckVideoDays({
-    userId: selectedUserId,
-    reviewFilter,
-    weekNumber,
-    enabled: !!selectedUserId && !isMissingView,
-  });
-
   const {
     isLoading: videosLoading,
     isFetching: videosFetching,
+    weekModel,
+    dayModel,
     videos,
     exerciseGroups,
     pendingTargets,
@@ -133,7 +120,7 @@ export function FormCheckInboxPage() {
     pendingExerciseCount,
     totalSetCount,
     hasMore,
-  } = useFormCheckVideos({
+  } = useFormCheckAthleteDetail({
     userId: selectedUserId,
     reviewFilter,
     weekNumber,
@@ -146,7 +133,11 @@ export function FormCheckInboxPage() {
 
   // Deep-linked video may already be reviewed — widen filter so it can surface.
   useEffect(() => {
-    if ((!focusVideoId && !focusCommentId) || !selectedUserId || videosLoading) {
+    if (
+      (!focusVideoId && !focusCommentId) ||
+      !selectedUserId ||
+      videosLoading
+    ) {
       return;
     }
     const found = videos.some(
@@ -185,7 +176,8 @@ export function FormCheckInboxPage() {
     if (focusVideoId) return focusVideoId;
     if (!focusCommentId) return null;
     return (
-      videos.find((video) => video.coachCommentId === focusCommentId)?.id ?? null
+      videos.find((video) => video.coachCommentId === focusCommentId)?.id ??
+      null
     );
   }, [focusVideoId, focusCommentId, videos]);
 
@@ -222,24 +214,30 @@ export function FormCheckInboxPage() {
   const missingTierAthletes = planTier === "mega" ? missingMega : missingUltra;
   const missingTotal = missingData?.total ?? 0;
 
-  const handlerCounts = useMemo(
-    () => ({
-      all: tierAthletes.length,
-      assistant_coach: tierAthletes.filter(
-        (a) => a.formCheckHandler === "assistant_coach",
-      ).length,
-      admin: tierAthletes.filter((a) => a.formCheckHandler === "admin").length,
-    }),
-    [tierAthletes],
-  );
-
   const megaPending = megaAthletes.reduce((sum, a) => sum + a.pendingCount, 0);
   const ultraPending = ultraAthletes.reduce(
     (sum, a) => sum + a.pendingCount,
     0,
   );
   const globalPending = megaPending + ultraPending;
-  const tierPending = planTier === "mega" ? megaPending : ultraPending;
+
+  const tierCounts = useMemo(
+    () => ({
+      megaAthletes: isMissingView ? missingMega.length : megaAthletes.length,
+      ultraAthletes: isMissingView ? missingUltra.length : ultraAthletes.length,
+      megaPending: isMissingView ? missingMega.length : megaPending,
+      ultraPending: isMissingView ? missingUltra.length : ultraPending,
+    }),
+    [
+      isMissingView,
+      missingMega.length,
+      missingUltra.length,
+      megaAthletes.length,
+      ultraAthletes.length,
+      megaPending,
+      ultraPending,
+    ],
+  );
 
   const filteredQueue = useMemo(
     () => filterAthletesByHandler(tierAthletes, handlerFilter),
@@ -346,7 +344,8 @@ export function FormCheckInboxPage() {
   }, [nextAthleteInQueue, handleSelectAthlete, clearAthleteSelection]);
 
   const hasThreadDeepLink = !!focusCommentId || !!focusVideoId;
-  const hasThreadTypeOnly = !!focusThreadType && !focusCommentId && !focusVideoId;
+  const hasThreadTypeOnly =
+    !!focusThreadType && !focusCommentId && !focusVideoId;
   const shouldResolveThreadContext =
     !!selectedUserId &&
     !selectedAthlete &&
@@ -354,17 +353,22 @@ export function FormCheckInboxPage() {
     !!focusCommentId &&
     !isMissingView;
 
-  const { data: threadResolution, isLoading: resolvingThreadContext } = useQuery({
-    queryKey: ["form-check-thread-context", focusThreadType ?? "workout", focusCommentId],
-    queryFn: () =>
-      workoutVideoCommentService.resolveThreadContext(
+  const { data: threadResolution, isLoading: resolvingThreadContext } =
+    useQuery({
+      queryKey: [
+        "form-check-thread-context",
         focusThreadType ?? "workout",
-        focusCommentId!,
-      ),
-    enabled: shouldResolveThreadContext,
-    retry: false,
-    staleTime: 15_000,
-  });
+        focusCommentId,
+      ],
+      queryFn: () =>
+        workoutVideoCommentService.resolveThreadContext(
+          focusThreadType ?? "workout",
+          focusCommentId!,
+        ),
+      enabled: shouldResolveThreadContext,
+      retry: false,
+      staleTime: 15_000,
+    });
 
   useEffect(() => {
     if (!shouldResolveThreadContext) return;
@@ -404,56 +408,23 @@ export function FormCheckInboxPage() {
 
   return (
     <div>
-      <PageHeader title="Form Check Inbox" description={subtitle} />
+      <PageHeader title="Video inbox" description={subtitle} />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {(
-          [
-            { value: "inbox" as const, label: "Inbox" },
-            {
-              value: "missing" as const,
-              label: "Missing",
-              count: isMissingView ? missingTotal : undefined,
-            },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => setView(tab.value)}
-            className={cn(
-              "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
-              view === tab.value
-                ? "bg-indigo-600 text-white"
-                : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800",
-            )}
-          >
-            {tab.label}
-            {"count" in tab && tab.count != null && tab.count > 0 ? (
-              <span
-                className={cn(
-                  "ml-2 rounded-full px-2 py-0.5 text-xs font-bold",
-                  view === tab.value
-                    ? "bg-white/20 text-white"
-                    : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200",
-                )}
-              >
-                {tab.count}
-              </span>
-            ) : null}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-4 border-b border-gray-200 pb-4 dark:border-gray-700">
-        <FormCheckInboxTierTabs
+      <div className="mb-4">
+        <FormCheckInboxToolbar
+          view={view}
           planTier={planTier}
-          megaAthletes={isMissingView ? missingMega : megaAthletes}
-          ultraAthletes={isMissingView ? missingUltra : ultraAthletes}
-          megaPending={isMissingView ? missingMega.length : megaPending}
-          ultraPending={isMissingView ? missingUltra.length : ultraPending}
-          pendingLabel={isMissingView ? "missing" : "pending"}
-          onPlanChange={setPlanTier}
+          reviewFilter={reviewFilter}
+          handlerFilter={handlerFilter}
+          tierCounts={tierCounts}
+          globalPending={globalPending}
+          missingTotal={missingTotal}
+          isMissingView={isMissingView}
+          showHandlerFilter={isAdmin}
+          onViewChange={setView}
+          onPlanTierChange={setPlanTier}
+          onReviewFilterChange={setReviewFilter}
+          onHandlerFilterChange={setHandlerFilter}
         />
       </div>
 
@@ -696,13 +667,10 @@ export function FormCheckInboxPage() {
           planTier={planTier}
           tierAthletes={tierAthletes}
           reviewFilter={reviewFilter}
-          handlerFilter={handlerFilter}
-          handlerCounts={handlerCounts}
-          tierPending={tierPending}
           isLoading={athletesLoading}
+          search={athleteSearch}
+          onSearchChange={setAthleteSearch}
           onSelectAthlete={handleSelectAthlete}
-          onReviewFilterChange={setReviewFilter}
-          onHandlerFilterChange={setHandlerFilter}
         />
       )}
     </div>

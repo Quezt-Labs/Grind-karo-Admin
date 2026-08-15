@@ -28,6 +28,7 @@ import {
   Megaphone,
   ClipboardCheck,
   PlayCircle,
+  AlertTriangle,
   LayoutList,
   Briefcase,
   CalendarClock,
@@ -67,27 +68,43 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    key: "people",
-    title: "People",
+    key: "form-checks",
+    title: "Form checks",
     items: [
-      { path: "/coupons", label: "Coupons", icon: Ticket },
-      { path: "/polls", label: "Polls", icon: Vote },
-      { path: "/users", label: "Users", icon: Users },
-      { path: "/form-checks", label: "Form checks", icon: Video },
+      { path: "/form-checks", label: "Video inbox", icon: Video },
       {
         path: "/form-check-action-queue",
-        label: "Action queue",
+        label: "Reply queue",
         icon: ClipboardCheck,
       },
       { path: "/form-check-sla", label: "SLA dashboard", icon: Gauge },
-      { path: "/chat", label: "Chat", icon: MessageCircle },
+    ],
+  },
+  {
+    key: "billing",
+    title: "Billing",
+    items: [
+      { path: "/subscriptions", label: "Subscriptions", icon: Award },
       {
-        path: "/upload-incidents",
-        label: "Upload incidents",
-        icon: Upload,
+        path: "/coaching-renewals",
+        label: "Renewals & overdue",
+        icon: CalendarClock,
       },
-      { path: "/client-errors", label: "Client errors", icon: Bug },
-      { path: "/upload-failures", label: "Upload failures", icon: Upload },
+      {
+        path: "/payments-ops",
+        label: "Payment ops",
+        icon: AlertTriangle,
+      },
+      { path: "/plans", label: "Plans", icon: CreditCard },
+      { path: "/addons", label: "Coaching Add-ons", icon: Puzzle },
+      { path: "/program-addons", label: "Program Add-ons", icon: Puzzle },
+      {
+        path: "/program-purchases",
+        label: "Program purchases",
+        icon: ShoppingBag,
+      },
+      { path: "/book-purchases", label: "Book purchases", icon: BookOpen },
+      { path: "/coupons", label: "Coupons", icon: Ticket },
     ],
   },
   {
@@ -97,35 +114,24 @@ const NAV_SECTIONS: NavSection[] = [
       { path: "/programs", label: "Programs", icon: BookOpen },
       { path: "/program-templates", label: "Templates", icon: LayoutList },
       { path: "/program-books", label: "Program Books", icon: FileText },
-      { path: "/program-addons", label: "Program Add-ons", icon: Puzzle },
-      {
-        path: "/program-purchases",
-        label: "Purchases",
-        icon: ShoppingBag,
-      },
-      { path: "/program-reviews", label: "Program Reviews", icon: Star },
       { path: "/exercises", label: "Exercises", icon: Dumbbell },
       { path: "/rpe-calculator", label: "RPE calculator", icon: Calculator },
     ],
   },
   {
-    key: "coaching",
-    title: "Coaching",
+    key: "management",
+    title: "Management",
     items: [
-      { path: "/coach/locations", label: "Athlete locations", icon: MapPin },
+      { path: "/users", label: "Users", icon: Users },
+      { path: "/chat", label: "Chat", icon: MessageCircle },
       { path: "/coach/ops-board", label: "Daily ops", icon: ClipboardCheck },
-      { path: "/plans", label: "Plans", icon: CreditCard },
-      { path: "/addons", label: "Coaching Add-ons", icon: Puzzle },
-      { path: "/subscriptions", label: "Subscriptions", icon: Award },
-      {
-        path: "/coaching-renewals",
-        label: "Renewals & overdue",
-        icon: CalendarClock,
-      },
-      { path: "/reviews", label: "Coaching Reviews", icon: MessageSquare },
-      { path: "/big-lift-pr", label: "Big 3 PRs", icon: Dumbbell },
+      { path: "/coach/locations", label: "Athlete locations", icon: MapPin },
       { path: "/announcements", label: "Announcements", icon: Megaphone },
       { path: "/video-library", label: "Video Library", icon: PlayCircle },
+      { path: "/polls", label: "Polls", icon: Vote },
+      { path: "/big-lift-pr", label: "Big 3 PRs", icon: Dumbbell },
+      { path: "/reviews", label: "Coaching Reviews", icon: MessageSquare },
+      { path: "/program-reviews", label: "Program Reviews", icon: Star },
     ],
   },
   {
@@ -140,6 +146,14 @@ const NAV_SECTIONS: NavSection[] = [
       { path: "/contact", label: "Contact Inbox", icon: Inbox },
     ],
   },
+  {
+    key: "system",
+    title: "System",
+    items: [
+      { path: "/client-errors", label: "Client errors", icon: Bug },
+      { path: "/upload-failures", label: "Upload failures", icon: Upload },
+    ],
+  },
 ];
 
 const COACH_NAV_SECTIONS: NavSection[] = [
@@ -147,27 +161,29 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     key: "coach",
     title: "Coaching",
     items: [
+      { path: "/coach/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { path: "/workspace", label: "Workspace", icon: Briefcase },
       { path: "/coach/athletes", label: "My Athletes", icon: Users },
       { path: "/coach/ops-board", label: "Daily ops", icon: ClipboardCheck },
       { path: "/coach/locations", label: "Locations", icon: MapPin },
-      { path: "/form-checks", label: "Form checks", icon: Video },
-      {
-        path: "/form-check-action-queue",
-        label: "Action queue",
-        icon: ClipboardCheck,
-      },
-      { path: "/form-check-sla", label: "SLA dashboard", icon: Gauge },
-      {
-        path: "/upload-incidents",
-        label: "Upload incidents",
-        icon: Upload,
-      },
       {
         path: "/coaching-renewals",
         label: "Renewals & overdue",
         icon: CalendarClock,
       },
+    ],
+  },
+  {
+    key: "form-checks",
+    title: "Form checks",
+    items: [
+      { path: "/form-checks", label: "Video inbox", icon: Video },
+      {
+        path: "/form-check-action-queue",
+        label: "Reply queue",
+        icon: ClipboardCheck,
+      },
+      { path: "/form-check-sla", label: "SLA dashboard", icon: Gauge },
       { path: "/chat", label: "Chat", icon: MessageCircle },
     ],
   },
@@ -175,16 +191,20 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     key: "programs",
     title: "Programs",
     items: [
-      { path: "/plans", label: "Coaching Plans", icon: CreditCard },
       { path: "/programs", label: "Programs", icon: BookOpen },
       { path: "/program-templates", label: "Templates", icon: LayoutList },
       { path: "/exercises", label: "Exercises", icon: Dumbbell },
       { path: "/rpe-calculator", label: "RPE calculator", icon: Calculator },
+      { path: "/plans", label: "Coaching Plans", icon: CreditCard },
     ],
   },
 ];
 
 const COLLAPSED_STORAGE_KEY = "grind-karo-sidebar-collapsed";
+const DEFAULT_COLLAPSED_SECTIONS: Record<string, boolean> = {
+  marketing: true,
+  system: true,
+};
 const COLLAPSIBLE_SECTIONS = NAV_SECTIONS.filter((s) => s.items.length > 1);
 
 function isNavActive(pathname: string, path: string): boolean {
@@ -205,12 +225,14 @@ function activeItemInSection(
 function readCollapsedSections(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(COLLAPSED_STORAGE_KEY);
-    if (!raw) return {};
+    if (!raw) return { ...DEFAULT_COLLAPSED_SECTIONS };
     const parsed = JSON.parse(raw) as unknown;
-    if (typeof parsed !== "object" || parsed === null) return {};
-    return parsed as Record<string, boolean>;
+    if (typeof parsed !== "object" || parsed === null) {
+      return { ...DEFAULT_COLLAPSED_SECTIONS };
+    }
+    return { ...DEFAULT_COLLAPSED_SECTIONS, ...parsed };
   } catch {
-    return {};
+    return { ...DEFAULT_COLLAPSED_SECTIONS };
   }
 }
 
@@ -458,18 +480,21 @@ export function Sidebar() {
       return COACH_NAV_SECTIONS;
     }
     return NAV_SECTIONS.map((section) => {
-      if (section.key !== "people") return section;
+      if (section.key !== "management") return section;
+      const usersIndex = section.items.findIndex(
+        (item) => item.path === "/users",
+      );
+      if (usersIndex === -1) return section;
       return {
         ...section,
         items: [
-          section.items[0]!,
-          section.items[1]!,
+          ...section.items.slice(0, usersIndex + 1),
           {
             path: "/assistant-coaches",
             label: "Assistant coaches",
             icon: UserCog,
           },
-          ...section.items.slice(2),
+          ...section.items.slice(usersIndex + 1),
         ],
       };
     });

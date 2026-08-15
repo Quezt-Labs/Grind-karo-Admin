@@ -16,6 +16,7 @@ export interface DashboardOverview {
     coaching: DashboardBreakdownItem;
     programs: DashboardBreakdownItem;
     books: DashboardBreakdownItem;
+    addons: DashboardBreakdownItem;
   };
   activeSubscriptions: number;
   uniqueCustomers: number;
@@ -31,7 +32,8 @@ export interface MonthlyRevenuePoint {
 export type RecentSaleKind =
   | "coaching_subscription"
   | "program_purchase"
-  | "book_purchase";
+  | "book_purchase"
+  | "program_addon_purchase";
 
 export interface RecentSale {
   id: string;
