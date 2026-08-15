@@ -17,13 +17,17 @@ import {
 } from "@/components/ui/ShadDialog";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
 import { planService } from "@/services/planService";
-import {
-  orderedActiveCoachingSubscriptions,
-} from "@/utils/coachingCapabilities";
+import { orderedActiveCoachingSubscriptions } from "@/utils/coachingCapabilities";
 import { apiErrorMessage } from "@/utils/apiErrorMessage";
 import { formatINR } from "@/pages/users/usersConstants";
 import type { Purchase } from "@/types/user";
 import type { CoachingPlan } from "@/types/program";
+import {
+  allowedSwitchTargets,
+  planDisplayName,
+  switchButtonLabel,
+  switchDirectionFor,
+} from "@/utils/coachingPlanSwitch";
 import { cn } from "@/utils/cn";
 
 type Props = {
@@ -72,37 +76,6 @@ function overdueGraceInfo(sub: { status: string; expiresAt: string }) {
     : { daysLeft: 0, pastGrace: true as const };
 }
 
-function normalizeSlug(slug: string) {
-  return slug.trim().toLowerCase();
-}
-
-function switchPartnerSlug(slug: string): "mega" | "ultra" | null {
-  const key = normalizeSlug(slug);
-  if (key === "mini") return "mega";
-  if (key === "mega") return "ultra";
-  if (key === "ultra") return "mega";
-  return null;
-}
-
-function switchDirectionFor(
-  fromSlug: string,
-  toSlug: string,
-): "upgrade" | "downgrade" {
-  const from = normalizeSlug(fromSlug);
-  const to = normalizeSlug(toSlug);
-  if (from === "ultra" && to === "mega") return "downgrade";
-  return "upgrade";
-}
-
-function switchButtonLabel(fromSlug: string, toSlug: string): string {
-  const to = normalizeSlug(toSlug);
-  const direction = switchDirectionFor(fromSlug, toSlug);
-  const targetName = to === "ultra" ? "Ultra" : to === "mega" ? "Mega" : to;
-  return direction === "upgrade"
-    ? `Upgrade to ${targetName}`
-    : `Downgrade to ${targetName}`;
-}
-
 function switchDialogTitle(direction: "upgrade" | "downgrade", toName: string) {
   return direction === "upgrade"
     ? `Upgrade to ${toName}?`
@@ -144,7 +117,9 @@ export function UserActiveCoachingPlansPanel({
   const plansBySlug = useMemo(() => {
     const map = new Map<string, CoachingPlan>();
     for (const plan of plans) {
-      if (plan.isActive) map.set(normalizeSlug(plan.slug), plan);
+      if (plan.isActive) {
+        map.set(plan.slug.trim().toLowerCase(), plan);
+      }
     }
     return map;
   }, [plans]);
@@ -159,7 +134,7 @@ export function UserActiveCoachingPlansPanel({
     primarySubscriptionId &&
     manageablePlans.some((p) => p.id === primarySubscriptionId)
       ? primarySubscriptionId
-      : activePlans[0]?.id ?? manageablePlans[0]?.id;
+      : (activePlans[0]?.id ?? manageablePlans[0]?.id);
 
   const primaryMutation = useMutation({
     mutationFn: (subscriptionId: string) =>
@@ -234,15 +209,12 @@ export function UserActiveCoachingPlansPanel({
       toast.error(apiErrorMessage(err, "Failed to switch plan")),
   });
 
-  function openSwitch(sub: ActiveCoachingSub) {
-    const partner = switchPartnerSlug(sub.planSlug);
-    if (!partner) return;
-    const targetPlan = plansBySlug.get(partner);
-    if (!targetPlan) {
-      toast.error(`${partner.toUpperCase()} plan not found or inactive`);
+  function openSwitch(sub: ActiveCoachingSub, targetPlan: CoachingPlan) {
+    const direction = switchDirectionFor(sub.planSlug, targetPlan.slug);
+    if (!direction) {
+      toast.error("That plan switch is not allowed");
       return;
     }
-    const direction = switchDirectionFor(sub.planSlug, partner);
     setSwitchTarget({ subscription: sub, targetPlan, direction });
     setSwitchAmount(String(targetPlan.price));
     setSwitchReason("");
@@ -277,10 +249,9 @@ export function UserActiveCoachingPlansPanel({
         {manageablePlans.map((sub) => {
           const isPrimary = sub.id === pinnedId;
           const grace = overdueGraceInfo(sub);
-          const partner = switchPartnerSlug(sub.planSlug);
-          const switchLabel = partner
-            ? switchButtonLabel(sub.planSlug, partner)
-            : null;
+          const switchTargets = allowedSwitchTargets(sub.planSlug)
+            .map((slug) => plansBySlug.get(slug))
+            .filter((plan): plan is CoachingPlan => plan != null);
           const configuredPlanFee = planById.get(sub.planId)?.price ?? null;
           const canMutateSubscription = sub.status === "ACTIVE";
 
@@ -335,10 +306,7 @@ export function UserActiveCoachingPlansPanel({
                       ? "pending"
                       : `paid ${formatINR(sub.totalAmount)}`}
                     {configuredPlanFee != null ? (
-                      <>
-                        {" "}
-                        · Configured fee {formatINR(configuredPlanFee)}
-                      </>
+                      <> · Configured fee {formatINR(configuredPlanFee)}</>
                     ) : null}
                   </p>
                 </div>
@@ -359,15 +327,20 @@ export function UserActiveCoachingPlansPanel({
                       Show in app
                     </label>
                   )}
-                  {switchLabel && canMutateSubscription && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => openSwitch(sub)}
-                    >
-                      <ArrowDownUp className="mr-1 h-3.5 w-3.5" />
-                      {switchLabel}
-                    </Button>
+                  {switchTargets.length > 0 && canMutateSubscription && (
+                    <>
+                      {switchTargets.map((targetPlan) => (
+                        <Button
+                          key={targetPlan.id}
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => openSwitch(sub, targetPlan)}
+                        >
+                          <ArrowDownUp className="mr-1 h-3.5 w-3.5" />
+                          {switchButtonLabel(sub.planSlug, targetPlan.slug)}
+                        </Button>
+                      ))}
+                    </>
                   )}
                   {canMutateSubscription ? (
                     <Button
@@ -427,11 +400,7 @@ export function UserActiveCoachingPlansPanel({
               <DialogTitle>
                 {switchDialogTitle(
                   switchTarget.direction,
-                  normalizeSlug(switchTarget.targetPlan.slug) === "ultra"
-                    ? "Ultra"
-                    : normalizeSlug(switchTarget.targetPlan.slug) === "mega"
-                      ? "Mega"
-                      : switchTarget.targetPlan.name,
+                  planDisplayName(switchTarget.targetPlan.slug),
                 )}
               </DialogTitle>
               <DialogDescription>
