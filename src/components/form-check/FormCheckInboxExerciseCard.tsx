@@ -5,7 +5,6 @@ import {
   useState,
   forwardRef,
   type MutableRefObject,
-  type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -86,56 +85,45 @@ function PrescribedMetric({
   );
 }
 
-function DisclosureSection({
-  title,
-  badge,
-  defaultOpen = false,
-  forceOpen = false,
-  children,
-  className,
-}: {
-  title: string;
-  badge?: string;
-  defaultOpen?: boolean;
-  forceOpen?: boolean;
-  children: ReactNode;
-  className?: string;
-}) {
-  const [open, setOpen] = useState(defaultOpen || forceOpen);
-  const isOpen = forceOpen || open;
+function setLoadLabel(video: FormCheckInboxItem): string | null {
+  return formatLoadKg(video.actualLoad) ?? formatPrescribedIntensity(video);
+}
+
+function AllSetsLoadStrip({ videos }: { videos: FormCheckInboxItem[] }) {
+  if (videos.length <= 1) return null;
+
+  const rows = videos.map((video) => ({
+    id: video.id,
+    setNumber: video.setNumber,
+    load: setLoadLabel(video),
+    rpe: formatLoggedRpe(video.actualRpe) ?? video.targetRpe?.trim() ?? null,
+    reps:
+      video.actualReps != null
+        ? `${video.actualReps}`
+        : video.repScheme?.trim() || null,
+  }));
+
+  if (rows.every((row) => !row.load && !row.rpe && !row.reps)) return null;
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-gray-200 dark:border-gray-600",
-        className,
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800/60"
-      >
-        <span className="flex items-center gap-2">
-          {title}
-          {badge ? (
-            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-              {badge}
-            </span>
+    <div className="flex flex-wrap gap-1.5 border-b border-gray-200 bg-gray-50/80 px-4 py-2 dark:border-gray-700 dark:bg-gray-900/40">
+      {rows.map((row) => (
+        <span
+          key={row.id}
+          className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-[11px] font-medium text-gray-800 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-600"
+        >
+          <span className="text-gray-500 dark:text-gray-400">
+            Set {row.setNumber}
+          </span>
+          {row.load ? (
+            <span className="font-mono tabular-nums">{row.load}</span>
+          ) : null}
+          {row.reps ? <span className="text-gray-500">{row.reps}</span> : null}
+          {row.rpe ? (
+            <span className="text-gray-500 dark:text-gray-400">{row.rpe}</span>
           ) : null}
         </span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 text-gray-400 transition-transform",
-            isOpen && "rotate-180",
-          )}
-        />
-      </button>
-      {isOpen ? (
-        <div className="border-t border-gray-200 px-3 py-2 dark:border-gray-600">
-          {children}
-        </div>
-      ) : null}
+      ))}
     </div>
   );
 }
@@ -169,6 +157,32 @@ function PrescribedValues({ video }: { video: FormCheckInboxItem }) {
         <PrescribedMetric label="Load" value={load} />
         <PrescribedMetric label="RPE" value={rpe} />
       </div>
+    </div>
+  );
+}
+
+function PrescriptionGlance({ video }: { video: FormCheckInboxItem }) {
+  const sets =
+    video.prescriptionSets != null
+      ? video.prescriptionSets === 1
+        ? `Set ${video.setNumber}`
+        : `${video.prescriptionSets} sets`
+      : null;
+  const reps = video.repScheme?.trim() || null;
+  const load = formatPrescribedIntensity(video);
+  const rpe = video.targetRpe?.trim() ? `RPE ${video.targetRpe.trim()}` : null;
+  const parts = [sets, reps, load, rpe].filter(Boolean);
+  if (parts.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-indigo-200 bg-indigo-50/80 px-3 py-2 dark:border-indigo-900/50 dark:bg-indigo-950/30">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-800 dark:text-indigo-300">
+        Prescribed
+        {video.setNumber != null ? ` · Set ${video.setNumber}` : ""}
+      </p>
+      <p className="mt-0.5 text-sm font-medium text-indigo-950 dark:text-indigo-100">
+        {parts.join(" · ")}
+      </p>
     </div>
   );
 }
@@ -452,12 +466,8 @@ function SetCommentPanelWithBulk({
     video.actualReps != null ||
     video.actualLoad != null ||
     video.actualRpe != null;
-  const threadExpandedByDefault =
-    needsReplyFromThread || isFocusedThread || focusAction === "reply";
-  const [threadCollapsed, setThreadCollapsed] = useState(
-    () => !threadExpandedByDefault,
-  );
-  const showThreadPanel = threadExpandedByDefault || !threadCollapsed;
+  const [threadCollapsed, setThreadCollapsed] = useState(false);
+  const showThreadPanel = !threadCollapsed;
 
   const updateComment = (next: string) => {
     setComment(next);
@@ -537,6 +547,23 @@ function SetCommentPanelWithBulk({
 
   return (
     <div className="flex h-full flex-col p-3 lg:p-4">
+      {hasAthleteContext || hasPrescription(video) ? (
+        <div className="mb-3 space-y-2">
+          {hasPrescription(video) ? <PrescriptionGlance video={video} /> : null}
+          {(video.actualSets != null ||
+            video.actualReps != null ||
+            video.actualLoad != null ||
+            video.actualRpe != null) && <AthleteLoggedValues video={video} />}
+          {(video.setNotes?.trim() || video.athleteNotes?.trim()) && (
+            <FormCheckAthleteNotesBlocks
+              setNotes={video.setNotes}
+              setNumber={video.setNumber}
+              athleteNotes={video.athleteNotes}
+            />
+          )}
+        </div>
+      ) : null}
+
       <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
         <MessageSquare className="h-3 w-3" />
         Coach comment
@@ -555,24 +582,6 @@ function SetCommentPanelWithBulk({
           athleteReply={video.athleteReply}
           athleteRepliedAt={video.athleteRepliedAt}
         />
-      ) : null}
-
-      {hasAthleteContext ? (
-        <DisclosureSection title="Athlete notes & logged sets" className="mb-3">
-          {(video.setNotes?.trim() || video.athleteNotes?.trim()) && (
-            <div className="mb-3">
-              <FormCheckAthleteNotesBlocks
-                setNotes={video.setNotes}
-                setNumber={video.setNumber}
-                athleteNotes={video.athleteNotes}
-              />
-            </div>
-          )}
-          {(video.actualSets != null ||
-            video.actualReps != null ||
-            video.actualLoad != null ||
-            video.actualRpe != null) && <AthleteLoggedValues video={video} />}
-        </DisclosureSection>
       ) : null}
 
       {feedbackLocked && !isEditing && !athleteReplyText ? (
@@ -618,7 +627,7 @@ function SetCommentPanelWithBulk({
                 <div className="space-y-2">
                   {threadMessages.length > 0 ? (
                     <div className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-900/50">
-                      <div className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
+                      <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
                         {threadMessages.map((message, index) => {
                           const role = normalizeThreadRole(message.role);
                           const isNewest = index === threadMessages.length - 1;
@@ -887,7 +896,6 @@ export const FormCheckInboxExerciseCard = forwardRef<
   const [activeVideoId, setActiveVideoId] = useState<string | null>(
     () => focusVideoId,
   );
-  const [showPrescription, setShowPrescription] = useState(false);
 
   // Adopt a new deep-link focus when the URL videoId changes.
   const [prevFocusVideoId, setPrevFocusVideoId] = useState(focusVideoId);
@@ -1056,6 +1064,7 @@ export const FormCheckInboxExerciseCard = forwardRef<
           <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
             {videos.map((video, index) => {
               const isActive = index === activeIndex;
+              const load = setLoadLabel(video);
               return (
                 <button
                   key={video.id}
@@ -1069,6 +1078,18 @@ export const FormCheckInboxExerciseCard = forwardRef<
                   )}
                 >
                   Set {video.setNumber}
+                  {load ? (
+                    <span
+                      className={cn(
+                        "font-mono text-[10px] tabular-nums",
+                        isActive
+                          ? "text-indigo-100"
+                          : "text-gray-500 dark:text-gray-400",
+                      )}
+                    >
+                      {load}
+                    </span>
+                  ) : null}
                   {isFormCheckReviewed(video) ? (
                     <CheckCircle2
                       className={cn(
@@ -1101,30 +1122,11 @@ export const FormCheckInboxExerciseCard = forwardRef<
         </div>
       ) : null}
 
+      <AllSetsLoadStrip videos={videos} />
+
       <div className="grid grid-cols-1 lg:grid-cols-5">
         <div className="bg-black lg:col-span-3">
-          {hasPrescription(active) ? (
-            <div className="border-b border-white/10 bg-gray-950 px-3 py-2">
-              <button
-                type="button"
-                onClick={() => setShowPrescription((prev) => !prev)}
-                className="flex w-full items-center justify-between text-xs font-semibold text-indigo-200 hover:text-white"
-              >
-                <span>Prescription</span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition-transform",
-                    showPrescription && "rotate-180",
-                  )}
-                />
-              </button>
-              {showPrescription ? (
-                <div className="mt-2">
-                  <PrescribedValues video={active} />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          {hasPrescription(active) ? <PrescribedValues video={active} /> : null}
           <FormCheckVideoPlayer
             key={active.id}
             src={active.videoUrl}
