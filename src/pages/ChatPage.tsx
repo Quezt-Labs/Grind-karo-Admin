@@ -1017,7 +1017,11 @@ function MessageBubble({
         {msg.type === "AUDIO" && msg.mediaUrl && (
           <>
             <ChatAudioPlayer
-              src={msg.mediaPlaybackUrl ?? msg.mediaUrl}
+              src={
+                msg.mediaPlaybackUrl?.startsWith("/")
+                  ? `${String(import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "")}${msg.mediaPlaybackUrl}`
+                  : (msg.mediaPlaybackUrl ?? msg.mediaUrl)
+              }
               originalUrl={msg.mediaUrl}
               isFromUser={isFromUser}
             />
