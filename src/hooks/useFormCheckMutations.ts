@@ -19,8 +19,6 @@ export function useFormCheckMutations(userId?: string) {
 
   const invalidate = () => invalidateFormCheckQueries(queryClient, { userId });
 
-  // Keep the commented video on screen (patch in place) and only refresh
-  // counts — refetching the list would drop it from the `uncommentedOnly` view.
   const applyPatch = (patches: FormCheckCommentPatch[]) => {
     patchFormCheckVideoComments(queryClient, patches);
     invalidateFormCheckCounts(queryClient, { userId });

@@ -80,11 +80,9 @@ export function invalidateFormCheckQueries(
 }
 
 /**
- * Refresh counts / athlete lists / chips WITHOUT refetching the video list.
- * Refetching the video list re-applies `uncommentedOnly` and drops the item
- * you just commented on, making the video vanish mid-review. Instead we patch
- * the cached item in place (see `patchFormCheckVideoComments`) and only
- * invalidate the surrounding count queries.
+ * Refresh counts / athlete lists / week-day chips without a full inbox refetch.
+ * The commented video is dropped from pending caches in
+ * `patchFormCheckVideoComments`.
  */
 export function invalidateFormCheckCounts(
   queryClient: {
@@ -118,10 +116,37 @@ export type FormCheckCommentPatch = {
   coachCommentUpdatedAt?: string | null;
 };
 
+function findCommentPatch(
+  item: FormCheckInboxItem,
+  patches: FormCheckCommentPatch[],
+) {
+  return patches.find(
+    (p) =>
+      !!item.exerciseLogId &&
+      p.exerciseLogId === item.exerciseLogId &&
+      p.setNumber === item.setNumber,
+  );
+}
+
+function withPatchedComment(
+  item: FormCheckInboxItem,
+  patch: FormCheckCommentPatch,
+): FormCheckInboxItem {
+  return {
+    ...item,
+    coachComment: patch.comment,
+    coachCommentId: patch.coachCommentId ?? item.coachCommentId,
+    coachCommentUpdatedAt:
+      patch.coachCommentUpdatedAt ??
+      item.coachCommentUpdatedAt ??
+      new Date().toISOString(),
+    reviewed: true,
+  };
+}
+
 /**
- * Optimistically apply saved coach comments to every cached video-inbox query
- * so the just-commented set stays on screen (now showing saved feedback +
- * "Reviewed"), instead of disappearing on the next `uncommentedOnly` refetch.
+ * Apply saved coach comments to cached inbox queries. Pending filters drop
+ * the commented set immediately so it leaves the review queue.
  */
 export function patchFormCheckVideoComments(
   queryClient: QueryClient,
@@ -129,34 +154,53 @@ export function patchFormCheckVideoComments(
 ) {
   if (patches.length === 0) return;
 
-  queryClient.setQueriesData<FormCheckInboxResponse>(
-    { queryKey: ["form-check-inbox"] },
-    (old) => {
-      if (!old?.items?.length) return old;
+  const dropFromPending = (old: FormCheckInboxResponse | undefined) => {
+    if (!old?.items?.length) return old;
+    const items = old.items.filter((item) => !findCommentPatch(item, patches));
+    if (items.length === old.items.length) return old;
+    const removed = old.items.length - items.length;
+    return {
+      ...old,
+      items,
+      total: Math.max(0, old.total - removed),
+      pendingCount: Math.max(0, old.pendingCount - removed),
+    };
+  };
 
-      let changed = false;
-      const items: FormCheckInboxItem[] = old.items.map((item) => {
-        const patch = patches.find(
-          (p) =>
-            !!item.exerciseLogId &&
-            p.exerciseLogId === item.exerciseLogId &&
-            p.setNumber === item.setNumber,
-        );
-        if (!patch) return item;
-        changed = true;
-        return {
-          ...item,
-          coachComment: patch.comment,
-          coachCommentId: patch.coachCommentId ?? item.coachCommentId,
-          coachCommentUpdatedAt:
-            patch.coachCommentUpdatedAt ??
-            item.coachCommentUpdatedAt ??
-            new Date().toISOString(),
-          reviewed: true,
-        };
-      });
+  const patchInPlace = (old: FormCheckInboxResponse | undefined) => {
+    if (!old?.items?.length) return old;
+    let changed = false;
+    let newlyReviewed = 0;
+    const items: FormCheckInboxItem[] = old.items.map((item) => {
+      const patch = findCommentPatch(item, patches);
+      if (!patch) return item;
+      changed = true;
+      if (!item.coachComment?.trim()) newlyReviewed += 1;
+      return withPatchedComment(item, patch);
+    });
+    if (!changed) return old;
+    return {
+      ...old,
+      items,
+      pendingCount: Math.max(0, old.pendingCount - newlyReviewed),
+    };
+  };
 
-      return changed ? { ...old, items } : old;
-    },
-  );
+  for (const prefix of [
+    "form-check-inbox",
+    "form-check-inbox-athlete-detail",
+  ]) {
+    queryClient.setQueriesData<FormCheckInboxResponse>(
+      { queryKey: [prefix, "pending"] },
+      dropFromPending,
+    );
+    queryClient.setQueriesData<FormCheckInboxResponse>(
+      { queryKey: [prefix, "reviewed"] },
+      patchInPlace,
+    );
+    queryClient.setQueriesData<FormCheckInboxResponse>(
+      { queryKey: [prefix, "all"] },
+      patchInPlace,
+    );
+  }
 }
