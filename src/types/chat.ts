@@ -13,6 +13,7 @@ export interface ChatMessage {
   content: string | null;
   type: MessageType;
   mediaUrl: string | null;
+  mediaContentType?: string | null;
   mediaPlaybackUrl?: string | null;
   parentMessageId?: string | null;
   parent?: ParentMessageSnippet | null;
@@ -33,5 +34,6 @@ export interface SendMessagePayload {
   content?: string;
   type: MessageType;
   mediaUrl?: string;
+  mediaContentType?: string;
   parentMessageId?: string;
 }
