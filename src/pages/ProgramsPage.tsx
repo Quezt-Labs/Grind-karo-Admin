@@ -23,7 +23,11 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
 import { programService } from "@/services/programService";
 import { programTemplateService } from "@/services/programTemplateService";
-import type { Program } from "@/types/programs";
+import type { Program, TrainingVertical } from "@/types/programs";
+import {
+  TRAINING_VERTICAL_LABELS,
+  TRAINING_VERTICAL_OPTIONS,
+} from "@/utils/trainingVerticals";
 import { useIsAdmin } from "@/hooks/useRole";
 
 function formatINR(rupees: number): string {
@@ -35,12 +39,14 @@ function formatINR(rupees: number): string {
 }
 
 type StatusFilter = "all" | "active" | "inactive";
+type VerticalFilter = "all" | TrainingVertical;
 
 export function ProgramsPage() {
   const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [verticalFilter, setVerticalFilter] = useState<VerticalFilter>("all");
   const [deleteTarget, setDeleteTarget] = useState<Program | null>(null);
   const [editTarget, setEditTarget] = useState<Program | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -99,6 +105,11 @@ export function ProgramsPage() {
     if (statusFilter === "active") list = list.filter((p) => p.isActive);
     else if (statusFilter === "inactive")
       list = list.filter((p) => !p.isActive);
+    if (verticalFilter !== "all") {
+      list = list.filter(
+        (p) => (p.trainingVertical ?? "POWERLIFTING") === verticalFilter,
+      );
+    }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       list = list.filter(
@@ -108,7 +119,7 @@ export function ProgramsPage() {
       );
     }
     return list.sort((a, b) => a.displayOrder - b.displayOrder);
-  }, [programs, searchTerm, statusFilter]);
+  }, [programs, searchTerm, statusFilter, verticalFilter]);
 
   return (
     <div className="space-y-6">
@@ -165,6 +176,33 @@ export function ProgramsPage() {
               >
                 {tab.count}
               </span>
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+          <button
+            onClick={() => setVerticalFilter("all")}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              verticalFilter === "all"
+                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+            )}
+          >
+            All verticals
+          </button>
+          {TRAINING_VERTICAL_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setVerticalFilter(option.value)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                verticalFilter === option.value
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+              )}
+            >
+              {option.label}
             </button>
           ))}
         </div>
@@ -350,6 +388,13 @@ function ProgramCard({
               {program.tagline}
             </p>
           )}
+          <p className="mt-2 text-xs font-medium uppercase tracking-wide text-primary-600 dark:text-primary-400">
+            {
+              TRAINING_VERTICAL_LABELS[
+                program.trainingVertical ?? "POWERLIFTING"
+              ]
+            }
+          </p>
         </div>
 
         {/* Chips row */}

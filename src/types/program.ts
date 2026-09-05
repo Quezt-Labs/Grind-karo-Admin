@@ -1,4 +1,9 @@
 // ---- Enums --------------------------------------------------------------
+export type TrainingVertical =
+  | "GENERAL_STRENGTH_NUTRITION"
+  | "POWERLIFTING"
+  | "HYBRID_TRAINING";
+
 export type CoachingSubscriptionStatus =
   | "PENDING"
   | "ACTIVE"
@@ -30,6 +35,8 @@ export interface CoachingPlan {
   displayOrder: number;
   isActive: boolean;
   maxSlots: number | null;
+  trainingVertical: TrainingVertical;
+  consultationBookingUrl?: string | null;
   slotsTaken?: number;
   slotsRemaining?: number | null;
   createdAt: string;
@@ -52,6 +59,8 @@ export interface CreateCoachingPlanPayload {
   displayOrder?: number;
   isActive?: boolean;
   maxSlots?: number | null;
+  trainingVertical?: TrainingVertical;
+  consultationBookingUrl?: string | null;
 }
 
 export type UpdateCoachingPlanPayload = Partial<CreateCoachingPlanPayload>;

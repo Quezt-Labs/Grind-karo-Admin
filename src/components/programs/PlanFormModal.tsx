@@ -21,6 +21,10 @@ import { BADGE_OPTIONS } from "@/components/ui/badgeOptions";
 import { planService } from "@/services/planService";
 import type { CoachingPlan } from "@/types/program";
 import { toSlug } from "@/utils/toSlug";
+import {
+  DEFAULT_TRAINING_VERTICAL,
+  TRAINING_VERTICAL_OPTIONS,
+} from "@/utils/trainingVerticals";
 
 const planSchema = z.object({
   slug: z
@@ -37,9 +41,18 @@ const planSchema = z.object({
   badge: z.string().optional(),
   displayOrder: z.coerce.number().min(0),
   isActive: z.boolean(),
+  trainingVertical: z.enum([
+    "GENERAL_STRENGTH_NUTRITION",
+    "POWERLIFTING",
+    "HYBRID_TRAINING",
+  ]),
   maxSlots: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? null : v),
     z.coerce.number().int().min(1).nullable(),
+  ),
+  consultationBookingUrl: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().url("Must be a valid URL").optional(),
   ),
 });
 
@@ -83,7 +96,9 @@ export function PlanFormModal({
           badge: plan.badge || "",
           displayOrder: plan.displayOrder,
           isActive: plan.isActive,
+          trainingVertical: plan.trainingVertical ?? DEFAULT_TRAINING_VERTICAL,
           maxSlots: plan.maxSlots ?? null,
+          consultationBookingUrl: plan.consultationBookingUrl ?? "",
         }
       : {
           slug: "",
@@ -97,7 +112,9 @@ export function PlanFormModal({
           badge: "",
           displayOrder: 0,
           isActive: true,
+          trainingVertical: DEFAULT_TRAINING_VERTICAL,
           maxSlots: null,
+          consultationBookingUrl: "",
         },
   });
 
@@ -147,7 +164,11 @@ export function PlanFormModal({
       badge: data.badge || null,
       displayOrder: data.displayOrder,
       isActive: data.isActive,
+      trainingVertical: data.trainingVertical,
       maxSlots: data.maxSlots ?? null,
+      consultationBookingUrl: data.consultationBookingUrl?.trim()
+        ? data.consultationBookingUrl.trim()
+        : null,
     };
 
     if (isEdit && plan) {
@@ -207,6 +228,21 @@ export function PlanFormModal({
             {...register("description")}
           />
 
+          <Controller
+            name="trainingVertical"
+            control={control}
+            render={({ field }) => (
+              <Select
+                id="plan-training-vertical"
+                label="Training Vertical"
+                options={TRAINING_VERTICAL_OPTIONS}
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.trainingVertical?.message}
+              />
+            )}
+          />
+
           <div className="grid gap-4 sm:grid-cols-3">
             <Input
               id="plan-price"
@@ -245,6 +281,21 @@ export function PlanFormModal({
             error={errors.maxSlots?.message}
             {...register("maxSlots")}
           />
+
+          <div>
+            <Input
+              id="plan-consultation-url"
+              label="Consultation booking URL (optional)"
+              type="url"
+              placeholder="https://calendly.com/grindkaro/..."
+              error={errors.consultationBookingUrl?.message}
+              {...register("consultationBookingUrl")}
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              If set, the website shows Schedule a call instead of checkout. Use
+              a Calendly link with Google Meet as the event location.
+            </p>
+          </div>
 
           <Controller
             control={control}

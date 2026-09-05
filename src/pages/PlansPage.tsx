@@ -17,6 +17,12 @@ import type { Column } from "@/types/dashboard";
 import type { CoachingPlan } from "@/types/program";
 import { PlanFormModal } from "@/components/programs/PlanFormModal";
 import { billingPeriodWeeks } from "@/utils/coachingBillingPeriod";
+import {
+  TRAINING_VERTICAL_LABELS,
+  TRAINING_VERTICAL_OPTIONS,
+} from "@/utils/trainingVerticals";
+import { isConsultationPlan } from "@/utils/consultationPlans";
+import type { TrainingVertical } from "@/types/program";
 import { useIsAdmin } from "@/hooks/useRole";
 
 function formatINR(rupees: number): string {
@@ -31,9 +37,11 @@ type PlanRow = {
   id: string;
   name: string;
   slug: string;
+  trainingVertical: string;
   price: string;
   validityMonths: string;
   badge: string;
+  checkout: string;
   displayOrder: string;
   isActive: string;
   reviews: string;
@@ -42,6 +50,7 @@ type PlanRow = {
 const planColumns: Column<PlanRow>[] = [
   { key: "name", header: "Plan Name", sortable: true },
   { key: "slug", header: "Slug", sortable: true },
+  { key: "trainingVertical", header: "Vertical", sortable: true },
   { key: "price", header: "Lifter fee", sortable: true },
   { key: "validityMonths", header: "Validity", sortable: true },
   {
@@ -55,6 +64,7 @@ const planColumns: Column<PlanRow>[] = [
         <LevelBadge level={value as string} />
       ),
   },
+  { key: "checkout", header: "Checkout", sortable: true },
   { key: "displayOrder", header: "Order", sortable: true },
   {
     key: "isActive",
@@ -66,12 +76,14 @@ const planColumns: Column<PlanRow>[] = [
 ];
 
 type StatusFilter = "all" | "active" | "inactive";
+type VerticalFilter = "all" | TrainingVertical;
 
 export function PlansPage() {
   const navigate = useNavigate();
   const isAdmin = useIsAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [verticalFilter, setVerticalFilter] = useState<VerticalFilter>("all");
   const [deleteTarget, setDeleteTarget] = useState<CoachingPlan | null>(null);
   const [editTarget, setEditTarget] = useState<CoachingPlan | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -127,6 +139,12 @@ export function PlansPage() {
       filtered = filtered.filter((p) => !p.isActive);
     }
 
+    if (verticalFilter !== "all") {
+      filtered = filtered.filter(
+        (p) => (p.trainingVertical ?? "POWERLIFTING") === verticalFilter,
+      );
+    }
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -139,16 +157,19 @@ export function PlansPage() {
       id: p.id,
       name: p.name,
       slug: p.slug,
+      trainingVertical:
+        TRAINING_VERTICAL_LABELS[p.trainingVertical ?? "POWERLIFTING"],
       price: formatINR(p.price),
       validityMonths: `${billingPeriodWeeks(p.validityMonths)} weeks`,
       badge: p.badge || "—",
+      checkout: isConsultationPlan(p) ? "Consultation" : "Payment",
       displayOrder: String(p.displayOrder),
       isActive: p.isActive ? "Active" : "Inactive",
       reviews: p.totalReviews
         ? `${p.averageRating.toFixed(1)}★ (${p.totalReviews})`
         : "—",
     }));
-  }, [plans, searchTerm, statusFilter]);
+  }, [plans, searchTerm, statusFilter, verticalFilter]);
 
   const actionsColumn = {
     key: "id" as keyof PlanRow & string,
@@ -245,6 +266,33 @@ export function PlansPage() {
               >
                 {tab.count}
               </span>
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+          <button
+            onClick={() => setVerticalFilter("all")}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              verticalFilter === "all"
+                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+            )}
+          >
+            All verticals
+          </button>
+          {TRAINING_VERTICAL_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setVerticalFilter(option.value)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                verticalFilter === option.value
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+              )}
+            >
+              {option.label}
             </button>
           ))}
         </div>

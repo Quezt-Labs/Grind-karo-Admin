@@ -16,10 +16,15 @@ import { CheckboxField } from "@/components/ui/CheckboxField";
 import { FormModal } from "@/components/ui/FormModal";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { Select } from "@/components/ui/Select";
 import { ImageUploadField } from "@/components/shared/ImageUploadField";
 import { PdfUploadField } from "@/components/shared/PdfUploadField";
 import { programService } from "@/services/programService";
 import type { Program, ProgramTree } from "@/types/programs";
+import {
+  DEFAULT_TRAINING_VERTICAL,
+  TRAINING_VERTICAL_OPTIONS,
+} from "@/utils/trainingVerticals";
 
 /** Strip a full Google Sheets URL down to just the file id segment */
 function extractSheetId(value: string): string {
@@ -48,6 +53,11 @@ const programSchema = z.object({
   highlights: z.array(z.object({ value: z.string() })),
   displayOrder: z.coerce.number().min(0),
   isActive: z.boolean(),
+  trainingVertical: z.enum([
+    "GENERAL_STRENGTH_NUTRITION",
+    "POWERLIFTING",
+    "HYBRID_TRAINING",
+  ]),
   googleSpreadsheetId: z
     .string()
     .optional()
@@ -129,6 +139,8 @@ export function ProgramFormModal({
             : [{ value: "" }],
           displayOrder: program.displayOrder,
           isActive: program.isActive,
+          trainingVertical:
+            program.trainingVertical ?? DEFAULT_TRAINING_VERTICAL,
           googleSpreadsheetId: program.googleSpreadsheetId ?? "",
           autoAssignSheetId: program.autoAssignSheetId ?? "",
         }
@@ -148,6 +160,7 @@ export function ProgramFormModal({
           highlights: [{ value: "" }],
           displayOrder: 0,
           isActive: true,
+          trainingVertical: DEFAULT_TRAINING_VERTICAL,
           googleSpreadsheetId: "",
           autoAssignSheetId: "",
         },
@@ -222,6 +235,7 @@ export function ProgramFormModal({
         highlights: data.highlights.map((h) => h.value).filter(Boolean),
         displayOrder: data.displayOrder,
         isActive: data.isActive,
+        trainingVertical: data.trainingVertical,
         googleSpreadsheetId: data.googleSpreadsheetId || null,
         autoAssignSheetId: data.autoAssignSheetId || null,
       });
@@ -252,6 +266,7 @@ export function ProgramFormModal({
         highlights: data.highlights.map((h) => h.value).filter(Boolean),
         displayOrder: data.displayOrder,
         isActive: data.isActive,
+        trainingVertical: data.trainingVertical,
         googleSpreadsheetId: data.googleSpreadsheetId || null,
         autoAssignSheetId: data.autoAssignSheetId || null,
       });
@@ -314,6 +329,21 @@ export function ProgramFormModal({
           rows={3}
           placeholder="Long-form description with markdown support..."
           {...register("description")}
+        />
+
+        <Controller
+          name="trainingVertical"
+          control={control}
+          render={({ field }) => (
+            <Select
+              id="prog-training-vertical"
+              label="Training Vertical"
+              options={TRAINING_VERTICAL_OPTIONS}
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.trainingVertical?.message}
+            />
+          )}
         />
 
         <div>

@@ -36,6 +36,11 @@ export interface ExercisesGrouped {
 }
 
 // ---- Programs (top-level) -----------------------------------------------
+export type TrainingVertical =
+  | "GENERAL_STRENGTH_NUTRITION"
+  | "POWERLIFTING"
+  | "HYBRID_TRAINING";
+
 export interface Program {
   id: string;
   slug: string;
@@ -52,6 +57,7 @@ export interface Program {
   highlights: string[];
   displayOrder: number;
   isActive: boolean;
+  trainingVertical: TrainingVertical;
   kind?: "RETAIL" | "COACHING" | "TEMPLATE";
   assignedUserId?: string | null;
   /** Only present in admin endpoints (GET /admin/programs, /admin/programs/:id) */
@@ -79,6 +85,7 @@ export interface CreateProgramPayload {
   highlights?: string[];
   displayOrder?: number;
   isActive?: boolean;
+  trainingVertical?: TrainingVertical;
   /** Link this program to a specific Google Sheets workbook. Omit to leave unchanged; null to fall back to env GOOGLE_SPREADSHEET_ID. */
   googleSpreadsheetId?: string | null;
   /** Auto-assign: every new PAID purchase links this sheet to the buyer if they have none. */
