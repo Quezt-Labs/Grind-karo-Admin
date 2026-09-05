@@ -1,11 +1,11 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 export interface StatsData {
   id: string;
   title: string;
   value: string;
   change: number;
-  changeType: 'increase' | 'decrease';
+  changeType: "increase" | "decrease";
   icon: string;
 }
 
@@ -14,7 +14,7 @@ export interface UserRecord {
   name: string;
   email: string;
   role: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   joinedAt: string;
 }
 
@@ -22,5 +22,6 @@ export interface Column<T> {
   key: keyof T & string;
   header: string;
   sortable?: boolean;
+  stopRowClick?: boolean;
   render?: (value: T[keyof T], row: T) => ReactNode;
 }

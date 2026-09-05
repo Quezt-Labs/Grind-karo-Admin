@@ -23,6 +23,7 @@ interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   isLoading?: boolean;
+  onRowClick?: (row: T) => void;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -31,6 +32,7 @@ export function DataTable<T extends { id: string }>({
   data,
   columns,
   isLoading = false,
+  onRowClick,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>(null);
@@ -140,11 +142,23 @@ export function DataTable<T extends { id: string }>({
         </TableHeader>
         <TableBody>
           {paginatedData.map((row) => (
-            <TableRow key={row.id}>
+            <TableRow
+              key={row.id}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              className={cn(
+                onRowClick &&
+                  "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40",
+              )}
+            >
               {columns.map((col) => (
                 <TableCell
                   key={col.key}
                   className="whitespace-nowrap px-3 py-3 sm:px-4"
+                  onClick={
+                    col.stopRowClick && onRowClick
+                      ? (event) => event.stopPropagation()
+                      : undefined
+                  }
                 >
                   {col.render
                     ? col.render(row[col.key], row)

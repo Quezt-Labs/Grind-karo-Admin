@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Search, Video, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -54,6 +55,7 @@ function filterAthletesByHandler(
 }
 
 export function FormCheckInboxPage() {
+  const navigate = useNavigate();
   const isAdmin = useIsAdmin();
   const route = useFormCheckInboxRoute();
   const {
@@ -65,6 +67,7 @@ export function FormCheckInboxPage() {
     focusMessageId,
     focusThreadType,
     focusAction,
+    returnTo,
     reviewFilter,
     layout,
     handlerFilter,
@@ -198,6 +201,39 @@ export function FormCheckInboxPage() {
     const all = [...athletesData.mega, ...athletesData.ultra];
     return all.find((a) => a.userId === selectedUserId) ?? null;
   }, [athletesData, selectedUserId]);
+
+  useEffect(() => {
+    if (
+      !selectedUserId ||
+      !athletesData ||
+      athletesLoading ||
+      selectedAthlete
+    ) {
+      return;
+    }
+    const inUltra = athletesData.ultra.some((a) => a.userId === selectedUserId);
+    const inMega = athletesData.mega.some((a) => a.userId === selectedUserId);
+    if (inUltra && planTier !== "ultra") {
+      setPlanTier("ultra");
+    } else if (inMega && planTier !== "mega") {
+      setPlanTier("mega");
+    }
+  }, [
+    selectedUserId,
+    athletesData,
+    athletesLoading,
+    selectedAthlete,
+    planTier,
+    setPlanTier,
+  ]);
+
+  const handleBackFromAthlete = useCallback(() => {
+    if (returnTo?.startsWith("/")) {
+      navigate(returnTo);
+      return;
+    }
+    clearAthleteSelection();
+  }, [returnTo, navigate, clearAthleteSelection]);
 
   const megaAthletes = useMemo(
     () => athletesData?.mega ?? [],
@@ -346,6 +382,11 @@ export function FormCheckInboxPage() {
   const hasThreadDeepLink = !!focusCommentId || !!focusVideoId;
   const hasThreadTypeOnly =
     !!focusThreadType && !focusCommentId && !focusVideoId;
+  const showAthleteListMismatch =
+    !!selectedUserId &&
+    !athletesLoading &&
+    !selectedAthlete &&
+    (hasThreadDeepLink || hasThreadTypeOnly);
   const shouldResolveThreadContext =
     !!selectedUserId &&
     !selectedAthlete &&
@@ -434,7 +475,7 @@ export function FormCheckInboxPage() {
           athletes={missingTierAthletes}
           isLoading={missingLoading}
         />
-      ) : selectedUserId && !athletesLoading && !selectedAthlete ? (
+      ) : showAthleteListMismatch ? (
         <div className="space-y-3">
           {threadAccessState.tone === "deny" ? (
             <ErrorAlert message={threadAccessState.message} />
@@ -446,7 +487,7 @@ export function FormCheckInboxPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={clearAthleteSelection}
+              onClick={handleBackFromAthlete}
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
             >
               Back to athlete list
@@ -480,7 +521,7 @@ export function FormCheckInboxPage() {
             pendingSetCount={pendingSetCount}
             pendingExerciseCount={pendingExerciseCount}
             totalExerciseCount={exerciseGroups.length}
-            onBack={clearAthleteSelection}
+            onBack={handleBackFromAthlete}
             onReviewFilterChange={setReviewFilter}
             selectedWeek={weekNumber}
             selectedDay={dayNumber}

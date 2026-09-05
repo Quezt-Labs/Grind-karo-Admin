@@ -16,6 +16,10 @@ import { PageLoader } from "@/components/shared/PageLoader";
 import { LoginPage } from "@/pages/LoginPage";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  FORM_CHECK_CLIENTS_PATH,
+  LEGACY_FORM_CHECK_CLIENTS_PATH,
+} from "@/lib/formCheckNavRoutes";
+import {
   AddonsPage,
   AssistantCoachesPage,
   CoachAthleteDetailPage,
@@ -107,11 +111,15 @@ export default function App() {
                   path="/coach/athletes/:id"
                   element={<CoachAthleteDetailPage />}
                 />
-                <Route path="/form-checks" element={<FormCheckInboxPage />} />
                 <Route
-                  path="/form-check-coaching-clients"
+                  path={FORM_CHECK_CLIENTS_PATH}
                   element={<FormCheckCoachingClientsPage />}
                 />
+                <Route
+                  path={LEGACY_FORM_CHECK_CLIENTS_PATH}
+                  element={<Navigate to={FORM_CHECK_CLIENTS_PATH} replace />}
+                />
+                <Route path="/form-checks" element={<FormCheckInboxPage />} />
                 <Route
                   path="/form-check/queue"
                   element={<Navigate to="/form-check-action-queue" replace />}

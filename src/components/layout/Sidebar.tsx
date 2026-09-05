@@ -46,11 +46,18 @@ import toast from "react-hot-toast";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { useFormCheckPendingCount } from "@/hooks/useFormCheckPendingCount";
 import { useChatUnreadTotal } from "@/hooks/useChatBadges";
+import {
+  FORM_CHECK_INBOX_PATH,
+  FORM_CHECK_CLIENTS_PATH,
+  FORM_CHECK_ACTION_QUEUE_PATH,
+  FORM_CHECK_SLA_PATH,
+} from "@/lib/formCheckNavRoutes";
 
 type NavItem = {
   path: string;
   label: string;
   icon: LucideIcon;
+  exact?: boolean;
 };
 
 type NavSection = {
@@ -72,18 +79,23 @@ const NAV_SECTIONS: NavSection[] = [
     key: "form-checks",
     title: "Form checks",
     items: [
-      { path: "/form-checks", label: "Video inbox", icon: Video },
       {
-        path: "/form-check-coaching-clients",
+        path: FORM_CHECK_INBOX_PATH,
+        label: "Video inbox",
+        icon: Video,
+        exact: true,
+      },
+      {
+        path: FORM_CHECK_CLIENTS_PATH,
         label: "Coaching clients",
         icon: UserCheck,
       },
       {
-        path: "/form-check-action-queue",
+        path: FORM_CHECK_ACTION_QUEUE_PATH,
         label: "Reply queue",
         icon: ClipboardCheck,
       },
-      { path: "/form-check-sla", label: "SLA dashboard", icon: Gauge },
+      { path: FORM_CHECK_SLA_PATH, label: "SLA dashboard", icon: Gauge },
     ],
   },
   {
@@ -183,18 +195,23 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     key: "form-checks",
     title: "Form checks",
     items: [
-      { path: "/form-checks", label: "Video inbox", icon: Video },
       {
-        path: "/form-check-coaching-clients",
+        path: FORM_CHECK_INBOX_PATH,
+        label: "Video inbox",
+        icon: Video,
+        exact: true,
+      },
+      {
+        path: FORM_CHECK_CLIENTS_PATH,
         label: "Coaching clients",
         icon: UserCheck,
       },
       {
-        path: "/form-check-action-queue",
+        path: FORM_CHECK_ACTION_QUEUE_PATH,
         label: "Reply queue",
         icon: ClipboardCheck,
       },
-      { path: "/form-check-sla", label: "SLA dashboard", icon: Gauge },
+      { path: FORM_CHECK_SLA_PATH, label: "SLA dashboard", icon: Gauge },
       { path: "/chat", label: "Chat", icon: MessageCircle },
     ],
   },
@@ -218,19 +235,25 @@ const DEFAULT_COLLAPSED_SECTIONS: Record<string, boolean> = {
 };
 const COLLAPSIBLE_SECTIONS = NAV_SECTIONS.filter((s) => s.items.length > 1);
 
-function isNavActive(pathname: string, path: string): boolean {
-  return pathname === path || (path !== "/" && pathname.startsWith(path + "/"));
+function isNavActive(pathname: string, path: string, exact = false): boolean {
+  if (exact) return pathname === path;
+  if (pathname === path) return true;
+  return path !== "/" && pathname.startsWith(`${path}/`);
 }
 
 function sectionIsActive(pathname: string, section: NavSection): boolean {
-  return section.items.some((item) => isNavActive(pathname, item.path));
+  return section.items.some((item) =>
+    isNavActive(pathname, item.path, item.exact),
+  );
 }
 
 function activeItemInSection(
   pathname: string,
   section: NavSection,
 ): NavItem | undefined {
-  return section.items.find((item) => isNavActive(pathname, item.path));
+  return section.items.find((item) =>
+    isNavActive(pathname, item.path, item.exact),
+  );
 }
 
 function readCollapsedSections(): Record<string, boolean> {
@@ -402,7 +425,7 @@ function CollapsibleNavSection({
               <li key={item.path}>
                 <NavItemLink
                   item={item}
-                  active={isNavActive(pathname, item.path)}
+                  active={isNavActive(pathname, item.path, item.exact)}
                   onNavigate={onNavigate}
                   badgeCount={badgeByPath?.[item.path]}
                 />
@@ -481,7 +504,7 @@ export function Sidebar() {
   const { data: chatUnread = 0 } = useChatUnreadTotal();
   const badgeByPath = useMemo((): Record<string, number> | undefined => {
     const badges: Record<string, number> = {};
-    if (formCheckPending > 0) badges["/form-checks"] = formCheckPending;
+    if (formCheckPending > 0) badges[FORM_CHECK_INBOX_PATH] = formCheckPending;
     if (chatUnread > 0) badges["/chat"] = chatUnread;
     return Object.keys(badges).length > 0 ? badges : undefined;
   }, [formCheckPending, chatUnread]);

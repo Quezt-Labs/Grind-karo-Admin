@@ -79,6 +79,7 @@ export function useFormCheckInboxRoute() {
   const focusMessageId = searchParams.get("messageId");
   const focusThreadType = parseThreadType(searchParams.get("threadType"));
   const focusAction = searchParams.get("action");
+  const returnTo = searchParams.get("returnTo");
   const reviewFilter = parseReview(searchParams.get("review"));
   const layout = parseLayout(searchParams.get("layout"), reviewFilter);
   const weekNumber = parseWeek(searchParams.get("week"));
@@ -102,7 +103,10 @@ export function useFormCheckInboxRoute() {
   }, [isAssistantCoach, searchParams, setSearchParams]);
 
   const patchParams = useCallback(
-    (patch: Record<string, string | null | undefined>) => {
+    (
+      patch: Record<string, string | null | undefined>,
+      options?: { replace?: boolean },
+    ) => {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -112,7 +116,7 @@ export function useFormCheckInboxRoute() {
           }
           return next;
         },
-        { replace: true },
+        { replace: options?.replace ?? false },
       );
     },
     [setSearchParams],
@@ -121,11 +125,14 @@ export function useFormCheckInboxRoute() {
   useEffect(() => {
     if (!focusThreadType) return;
     if (focusCommentId || focusVideoId) return;
-    patchParams({
-      threadType: null,
-      action: null,
-      messageId: null,
-    });
+    patchParams(
+      {
+        threadType: null,
+        action: null,
+        messageId: null,
+      },
+      { replace: true },
+    );
   }, [focusThreadType, focusCommentId, focusVideoId, patchParams]);
 
   const setView = useCallback(
@@ -182,49 +189,61 @@ export function useFormCheckInboxRoute() {
       videoId?: string | null;
       threadType?: ThreadFocusType | null;
     }) => {
-      patchParams({
-        userId: patch.userId,
-        videoId: patch.videoId,
-        threadType: patch.threadType,
-      });
+      patchParams(
+        {
+          userId: patch.userId,
+          videoId: patch.videoId,
+          threadType: patch.threadType,
+        },
+        { replace: true },
+      );
     },
     [patchParams],
   );
 
   const setFocusVideoId = useCallback(
     (videoId: string | null) => {
-      patchParams({ videoId, commentId: null, messageId: null, action: null });
+      patchParams(
+        { videoId, commentId: null, messageId: null, action: null },
+        { replace: true },
+      );
     },
     [patchParams],
   );
 
   const clearThreadFocus = useCallback(() => {
-    patchParams({
-      commentId: null,
-      messageId: null,
-      threadType: null,
-      action: null,
-    });
+    patchParams(
+      {
+        commentId: null,
+        messageId: null,
+        threadType: null,
+        action: null,
+      },
+      { replace: true },
+    );
   }, [patchParams]);
 
   const setReviewFilter = useCallback(
     (next: ReviewFilter) => {
-      patchParams({
-        review: next,
-        layout:
-          next === "pending"
-            ? "videos"
-            : next === "reviewed"
-              ? "feedback"
-              : undefined,
-      });
+      patchParams(
+        {
+          review: next,
+          layout:
+            next === "pending"
+              ? "videos"
+              : next === "reviewed"
+                ? "feedback"
+                : undefined,
+        },
+        { replace: true },
+      );
     },
     [patchParams],
   );
 
   const setLayout = useCallback(
     (next: InboxLayout) => {
-      patchParams({ layout: next });
+      patchParams({ layout: next }, { replace: true });
     },
     [patchParams],
   );
@@ -233,7 +252,7 @@ export function useFormCheckInboxRoute() {
     (week: number | null) => {
       const weekParam =
         week == null ? null : week === -1 ? "none" : String(week);
-      patchParams({ week: weekParam, day: null });
+      patchParams({ week: weekParam, day: null }, { replace: true });
     },
     [patchParams],
   );
@@ -241,14 +260,14 @@ export function useFormCheckInboxRoute() {
   const setDayNumber = useCallback(
     (day: number | null) => {
       const dayParam = day == null ? null : day === -1 ? "none" : String(day);
-      patchParams({ day: dayParam });
+      patchParams({ day: dayParam }, { replace: true });
     },
     [patchParams],
   );
 
   const setHandlerFilter = useCallback(
     (next: HandlerFilter) => {
-      patchParams({ handler: next });
+      patchParams({ handler: next }, { replace: true });
     },
     [patchParams],
   );
@@ -276,6 +295,7 @@ export function useFormCheckInboxRoute() {
       focusMessageId,
       focusThreadType,
       focusAction,
+      returnTo,
       reviewFilter,
       layout,
       handlerFilter,
@@ -303,6 +323,7 @@ export function useFormCheckInboxRoute() {
       focusMessageId,
       focusThreadType,
       focusAction,
+      returnTo,
       reviewFilter,
       layout,
       handlerFilter,
