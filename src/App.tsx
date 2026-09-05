@@ -24,6 +24,7 @@ import {
   FormCheckActionQueuePage,
   FormCheckSlaPage,
   FormCheckInboxPage,
+  FormCheckCoachingClientsPage,
   BookPurchasesPage,
   CoachDashboardPage,
   PaymentsOpsPage,
@@ -107,6 +108,10 @@ export default function App() {
                   element={<CoachAthleteDetailPage />}
                 />
                 <Route path="/form-checks" element={<FormCheckInboxPage />} />
+                <Route
+                  path="/form-check-coaching-clients"
+                  element={<FormCheckCoachingClientsPage />}
+                />
                 <Route
                   path="/form-check/queue"
                   element={<Navigate to="/form-check-action-queue" replace />}

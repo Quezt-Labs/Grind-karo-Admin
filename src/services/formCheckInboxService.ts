@@ -75,6 +75,28 @@ export interface FormCheckInboxAthletesByPlan {
   ultra: FormCheckInboxAthlete[];
 }
 
+export interface FormCheckCoachingClient {
+  userId: string;
+  userName: string | null;
+  userEmail: string;
+  coachingSubscriptionsCount: number;
+  totalSpent: number;
+  lastPurchaseAt: string | null;
+  isActive: boolean;
+  activePlanName: string | null;
+  activePlanSlug: string | null;
+  activePlanTier: "mini" | "mega" | "ultra" | null;
+  expiresAt: string | null;
+  pendingFormCheckCount: number;
+}
+
+export interface FormCheckCoachingClientsResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  items: FormCheckCoachingClient[];
+}
+
 export interface FormCheckMissingAthlete {
   userId: string;
   userName: string | null;
@@ -254,6 +276,42 @@ export const formCheckInboxService = {
     return {
       mega: (payload.mega ?? []).map(normalize),
       ultra: (payload.ultra ?? []).map(normalize),
+    };
+  },
+
+  async listCoachingClients(params?: {
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<FormCheckCoachingClientsResponse> {
+    const { data } = await api.get(
+      "/admin/form-check-videos/coaching-clients",
+      {
+        params,
+      },
+    );
+    const payload = data.data ?? data;
+    const normalize = (
+      row: Partial<FormCheckCoachingClient>,
+    ): FormCheckCoachingClient => ({
+      userId: row.userId!,
+      userName: row.userName ?? null,
+      userEmail: row.userEmail!,
+      coachingSubscriptionsCount: row.coachingSubscriptionsCount ?? 0,
+      totalSpent: row.totalSpent ?? 0,
+      lastPurchaseAt: row.lastPurchaseAt ?? null,
+      isActive: row.isActive ?? false,
+      activePlanName: row.activePlanName ?? null,
+      activePlanSlug: row.activePlanSlug ?? null,
+      activePlanTier: row.activePlanTier ?? null,
+      expiresAt: row.expiresAt ?? null,
+      pendingFormCheckCount: row.pendingFormCheckCount ?? 0,
+    });
+    return {
+      total: payload.total ?? 0,
+      limit: payload.limit ?? params?.limit ?? 50,
+      offset: payload.offset ?? params?.offset ?? 0,
+      items: (payload.items ?? []).map(normalize),
     };
   },
 

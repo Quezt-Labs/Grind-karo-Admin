@@ -34,6 +34,7 @@ import {
   CalendarClock,
   Calculator,
   Gauge,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -72,6 +73,11 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Form checks",
     items: [
       { path: "/form-checks", label: "Video inbox", icon: Video },
+      {
+        path: "/form-check-coaching-clients",
+        label: "Coaching clients",
+        icon: UserCheck,
+      },
       {
         path: "/form-check-action-queue",
         label: "Reply queue",
@@ -178,6 +184,11 @@ const COACH_NAV_SECTIONS: NavSection[] = [
     title: "Form checks",
     items: [
       { path: "/form-checks", label: "Video inbox", icon: Video },
+      {
+        path: "/form-check-coaching-clients",
+        label: "Coaching clients",
+        icon: UserCheck,
+      },
       {
         path: "/form-check-action-queue",
         label: "Reply queue",
