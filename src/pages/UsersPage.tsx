@@ -38,6 +38,7 @@ export function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<
     "" | "USER" | "ADMIN" | "ASSISTANT_COACH"
   >("");
+  const [phoneFilter, setPhoneFilter] = useState<"" | "true" | "false">("");
   const [coachingSetupFilter, setCoachingSetupFilter] =
     useState<CoachingSetupStatusFilter>("awaiting_program");
   const [coachingSetupStateFilter, setCoachingSetupStateFilter] =
@@ -67,11 +68,12 @@ export function UsersPage() {
     isLoading: usersLoading,
     isError: usersError,
   } = useQuery({
-    queryKey: ["admin-users", search, roleFilter],
+    queryKey: ["admin-users", search, roleFilter, phoneFilter],
     queryFn: () =>
       userService.getAll({
         q: search || undefined,
         role: roleFilter || undefined,
+        hasPhone: phoneFilter || undefined,
         limit: 500,
       }),
     enabled: tab === "all",
@@ -121,6 +123,7 @@ export function UsersPage() {
       id: u.id,
       name: u.name || "—",
       email: u.email,
+      phone: u.phone ?? null,
       role: u.role,
       createdAt: new Date(u.createdAt).toLocaleDateString(),
     }));
@@ -145,6 +148,7 @@ export function UsersPage() {
       id: m.id,
       name: m.name || "—",
       email: m.email,
+      phone: m.phone ?? null,
       planName: m.planName,
       planSlug: m.planSlug,
       city: m.city?.trim() || "—",
@@ -244,35 +248,54 @@ export function UsersPage() {
 
         <div className="flex items-center gap-2">
           {tab === "all" && (
-            <Select
-              value={roleFilter || "__all__"}
-              onValueChange={(v) =>
-                setRoleFilter(
-                  (v === "__all__" ? "" : v) as
-                    | ""
-                    | "USER"
-                    | "ADMIN"
-                    | "ASSISTANT_COACH",
-                )
-              }
-            >
-              <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm h-9 w-36 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                <SelectValue placeholder="All roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All roles</SelectItem>
-                <SelectItem value="USER">User</SelectItem>
-                <SelectItem value="ADMIN">Admin</SelectItem>
-                <SelectItem value="ASSISTANT_COACH">Assistant coach</SelectItem>
-              </SelectContent>
-            </Select>
+            <>
+              <Select
+                value={roleFilter || "__all__"}
+                onValueChange={(v) =>
+                  setRoleFilter(
+                    (v === "__all__" ? "" : v) as
+                      | ""
+                      | "USER"
+                      | "ADMIN"
+                      | "ASSISTANT_COACH",
+                  )
+                }
+              >
+                <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm h-9 w-36 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All roles</SelectItem>
+                  <SelectItem value="USER">User</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="ASSISTANT_COACH">Assistant coach</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={phoneFilter || "__all__"}
+                onValueChange={(v) =>
+                  setPhoneFilter(
+                    (v === "__all__" ? "" : v) as "" | "true" | "false",
+                  )
+                }
+              >
+                <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm h-9 w-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                  <SelectValue placeholder="Phone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All phones</SelectItem>
+                  <SelectItem value="true">Has number</SelectItem>
+                  <SelectItem value="false">Missing number</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
           )}
           <DebouncedSearch
             onSearch={handleSearch}
             placeholder={
               tab === "coaching-setup"
-                ? "Search name, email, city, state..."
-                : "Search by name or email..."
+                ? "Search name, email, phone, city, state..."
+                : "Search by name, email, or phone..."
             }
             className="w-full sm:w-72"
           />

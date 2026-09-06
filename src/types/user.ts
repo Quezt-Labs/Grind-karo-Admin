@@ -6,6 +6,7 @@ export interface AdminUser {
   id: string;
   name: string | null;
   email: string;
+  phone?: string | null;
   role: "USER" | "ADMIN" | "ASSISTANT_COACH";
   plan: string | null;
   spreadsheetId?: string | null;
@@ -332,6 +333,7 @@ export interface CoachingSetupMember {
   id: string;
   name: string | null;
   email: string;
+  phone?: string | null;
   setupStatus: CoachingSetupStatus;
   planName: string;
   planSlug: string;

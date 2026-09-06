@@ -1,5 +1,6 @@
 import { cn } from "@/utils/cn";
 import type { Column } from "@/types/dashboard";
+import { formatAdminPhone } from "@/utils/phoneStatus";
 
 export function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -13,6 +14,7 @@ export type UserRow = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   role: string;
   createdAt: string;
 };
@@ -33,6 +35,7 @@ export type CoachingSetupRow = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   planName: string;
   planSlug: string;
   city: string;
@@ -45,6 +48,26 @@ export type CoachingSetupRow = {
 export const userColumns: Column<UserRow>[] = [
   { key: "name", header: "Name", sortable: true },
   { key: "email", header: "Email", sortable: true },
+  {
+    key: "phone",
+    header: "Phone",
+    sortable: true,
+    render: (value) => {
+      const { label, missing } = formatAdminPhone(value as string | null);
+      return (
+        <span
+          className={cn(
+            "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+            missing
+              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+              : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+          )}
+        >
+          {label}
+        </span>
+      );
+    },
+  },
   {
     key: "role",
     header: "Role",

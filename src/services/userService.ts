@@ -19,6 +19,7 @@ import type { AdminWorkoutLogsResponse } from "@/types/workoutLogs";
 export interface UserFilters {
   q?: string;
   role?: "USER" | "ADMIN" | "ASSISTANT_COACH";
+  hasPhone?: "true" | "false";
   limit?: number;
   offset?: number;
 }

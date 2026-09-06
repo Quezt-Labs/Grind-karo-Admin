@@ -23,8 +23,10 @@ import {
   Pencil,
   LogIn,
   Trash2,
+  Phone,
 } from "lucide-react";
 import { formatAthleteLocation } from "@/lib/indianStates";
+import { formatAdminPhone } from "@/utils/phoneStatus";
 import toast from "react-hot-toast";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Spinner } from "@/components/ui/Spinner";
@@ -287,6 +289,7 @@ export function UserDetailPage() {
     return <ErrorAlert message="Failed to load user details." />;
   }
 
+  const phoneStatus = formatAdminPhone(user.phone);
   const chatEnabled = purchasesData.chatEnabled ?? false;
   const formCheckEnabled = purchasesData.formCheckEnabled ?? false;
   const formCheckQuota = purchasesData.formCheckQuota;
@@ -382,6 +385,16 @@ export function UserDetailPage() {
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <Mail className="h-3.5 w-3.5" /> {user.email}
+            </span>
+            <span className="flex items-center gap-1">
+              <Phone className="h-3.5 w-3.5" />
+              {phoneStatus.missing ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                  Number missing
+                </span>
+              ) : (
+                phoneStatus.label
+              )}
             </span>
             <span className="flex items-center gap-1">
               <User className="h-3.5 w-3.5" /> {user.role}
