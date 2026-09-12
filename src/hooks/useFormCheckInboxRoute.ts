@@ -64,7 +64,9 @@ function parseDay(value: string | null): number | null {
 
 function parseThreadType(value: string | null): ThreadFocusType | null {
   if (!value) return null;
-  return value === "sheets" ? "sheets" : value === "workout" ? "workout" : null;
+  if (value === "sheets" || value === "sheet") return "sheets";
+  if (value === "workout" || value === "program") return "workout";
+  return null;
 }
 
 export function useFormCheckInboxRoute() {
@@ -77,7 +79,9 @@ export function useFormCheckInboxRoute() {
   const focusVideoId = searchParams.get("videoId");
   const focusCommentId = searchParams.get("commentId");
   const focusMessageId = searchParams.get("messageId");
-  const focusThreadType = parseThreadType(searchParams.get("threadType"));
+  const focusThreadType =
+    parseThreadType(searchParams.get("threadType")) ??
+    parseThreadType(searchParams.get("source"));
   const focusAction = searchParams.get("action");
   const returnTo = searchParams.get("returnTo");
   const reviewFilter = parseReview(searchParams.get("review"));

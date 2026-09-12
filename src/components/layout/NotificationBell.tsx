@@ -74,7 +74,8 @@ function pickString(...values: unknown[]): string | null {
 }
 
 function parseThreadType(value: unknown): FormCheckThreadType | null {
-  if (value === "workout" || value === "sheets") return value;
+  if (value === "workout" || value === "program") return "workout";
+  if (value === "sheets" || value === "sheet") return "sheets";
   return null;
 }
 
@@ -84,7 +85,7 @@ type FormCheckNotificationMeta = {
   videoId: string | null;
   commentId: string | null;
   messageId: string | null;
-  threadType: FormCheckThreadType;
+  threadType: FormCheckThreadType | null;
   preview: string;
   groupKey: string;
 };
@@ -141,7 +142,9 @@ function formCheckMeta(n: AdminNotification): FormCheckNotificationMeta {
     parseThreadType(payload.thread_type) ??
     parseThreadType(deepLink?.threadType) ??
     parseThreadType(deepLink?.thread_type) ??
-    "workout";
+    parseThreadType(payload.source) ??
+    parseThreadType(deepLink?.source) ??
+    null;
   const athleteName = pickString(
     payload.athleteName,
     payload.athlete_name,

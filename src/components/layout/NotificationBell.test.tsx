@@ -155,6 +155,29 @@ describe("NotificationBell", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("navigates sheets form-check replies using source mapping, not workout default", async () => {
+    const user = userEvent.setup();
+    const notification = makeFormCheckNotification({
+      payload: {
+        userId: "athlete-user-1",
+        athleteName: "Rahul",
+        videoId: "sheet-video-1",
+        commentId: "comment-sheet",
+        source: "sheet",
+        preview: "Sheet reply",
+      },
+    });
+    mocks.getAll.mockResolvedValue(makeUnreadResponse([notification]));
+
+    renderBell();
+    await openPanel(user);
+    await user.click(screen.getByText("Rahul"));
+
+    const navigation = (mocks.navigate as Mock).mock.calls[0]?.[0] as string;
+    expect(navigation).toContain("threadType=sheets");
+    expect(navigation).toContain("videoId=sheet-video-1");
+  });
+
   it("navigates to form-check thread route when a form-check row is clicked", async () => {
     const user = userEvent.setup();
     const notification = makeFormCheckNotification();
