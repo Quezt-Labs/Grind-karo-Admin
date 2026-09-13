@@ -1,4 +1,5 @@
 import api from "./api";
+import { useAuthStore } from "@/store/authStore";
 import type { AdminLoginPayload, AuthResponse } from "@/types/auth";
 
 export const authService = {
@@ -16,7 +17,8 @@ export const authService = {
 
   async logout(): Promise<void> {
     try {
-      await api.post("/auth/logout");
+      const refreshToken = useAuthStore.getState().refreshToken;
+      await api.post("/auth/logout", refreshToken ? { refreshToken } : {});
     } catch {
       // Silently fail — we clear local state regardless
     }
