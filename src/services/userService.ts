@@ -8,6 +8,7 @@ import type {
   UserProgressEntry,
   CoachingSetupListResponse,
   CoachingSetupStatusFilter,
+  ProgramTrialsListResponse,
   CreateAdminUserPayload,
   CreateAdminUserResponse,
   BulkCreateUsersResponse,
@@ -38,6 +39,13 @@ export interface PurchaserFilters {
   offset?: number;
 }
 
+export interface ProgramTrialFilters {
+  q?: string;
+  active?: "true" | "false";
+  limit?: number;
+  offset?: number;
+}
+
 export const userService = {
   async getAll(filters?: UserFilters): Promise<PaginatedResponse<AdminUser>> {
     const { data } = await api.get("/admin/users", { params: filters });
@@ -57,6 +65,15 @@ export const userService = {
     filters?: CoachingSetupFilters,
   ): Promise<CoachingSetupListResponse> {
     const { data } = await api.get("/admin/users/coaching-setup", {
+      params: filters,
+    });
+    return data;
+  },
+
+  async getProgramTrials(
+    filters?: ProgramTrialFilters,
+  ): Promise<ProgramTrialsListResponse> {
+    const { data } = await api.get("/admin/users/program-trials", {
       params: filters,
     });
     return data;

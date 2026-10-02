@@ -29,7 +29,20 @@ export type PurchaserRow = {
   lastPurchase: string;
 };
 
-export type Tab = "all" | "purchasers" | "coaching-setup";
+export type Tab = "all" | "purchasers" | "coaching-setup" | "program-trials";
+
+export type ProgramTrialRow = {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  programName: string;
+  trialStatus: string;
+  startedAt: string;
+  expiresAt: string;
+  purchased: string;
+};
 
 export type CoachingSetupRow = {
   id: string;
@@ -97,4 +110,72 @@ export const purchaserColumns: Column<PurchaserRow>[] = [
   { key: "programPurchases", header: "Programs", sortable: true },
   { key: "totalSpent", header: "Total Spent", sortable: true },
   { key: "lastPurchase", header: "Last Purchase", sortable: true },
+];
+
+export const programTrialColumns: Column<ProgramTrialRow>[] = [
+  { key: "name", header: "Name", sortable: true },
+  { key: "email", header: "Email", sortable: true },
+  {
+    key: "phone",
+    header: "Phone",
+    sortable: true,
+    render: (value) => {
+      const { label, missing } = formatAdminPhone(value as string | null);
+      return (
+        <span
+          className={cn(
+            "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+            missing
+              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+              : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+          )}
+        >
+          {label}
+        </span>
+      );
+    },
+  },
+  { key: "programName", header: "Program", sortable: true },
+  {
+    key: "trialStatus",
+    header: "Trial",
+    sortable: true,
+    render: (value) => {
+      const active = value === "Active";
+      return (
+        <span
+          className={cn(
+            "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+            active
+              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
+              : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+          )}
+        >
+          {value as string}
+        </span>
+      );
+    },
+  },
+  { key: "startedAt", header: "Started", sortable: true },
+  { key: "expiresAt", header: "Ends", sortable: true },
+  {
+    key: "purchased",
+    header: "Bought",
+    sortable: true,
+    render: (value) => {
+      const yes = value === "Yes";
+      return (
+        <span
+          className={cn(
+            "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+            yes
+              ? "bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-400"
+              : "bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400",
+          )}
+        >
+          {value as string}
+        </span>
+      );
+    },
+  },
 ];

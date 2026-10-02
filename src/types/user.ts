@@ -96,6 +96,25 @@ export interface Purchaser extends AdminUser {
   lastPurchaseAt: string;
 }
 
+export interface ProgramTrialLead {
+  trialId: string;
+  userId: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  programId: string;
+  programName: string;
+  programSlug: string;
+  startedAt: string;
+  expiresAt: string;
+  active: boolean;
+  purchasedProgram: boolean;
+}
+
+export interface ProgramTrialsListResponse extends PaginatedResponse<ProgramTrialLead> {
+  activeCount: number;
+}
+
 export interface PaginatedResponse<T> {
   total: number;
   limit: number;

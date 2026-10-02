@@ -1,7 +1,14 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { Users, ShoppingCart, ClipboardList, Plus, Upload } from "lucide-react";
+import {
+  Users,
+  ShoppingCart,
+  ClipboardList,
+  FlaskConical,
+  Plus,
+  Upload,
+} from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
@@ -19,11 +26,17 @@ import {
 import { AllUsersSection } from "./users/AllUsersSection";
 import { PurchasersSection } from "./users/PurchasersSection";
 import { CoachingSetupSection } from "./users/CoachingSetupSection";
+import { ProgramTrialsSection } from "./users/ProgramTrialsSection";
 import { formatINR } from "./users/usersConstants";
 import type { Tab } from "./users/usersConstants";
 import type { CoachingSetupStatusFilter } from "@/types/user";
 
-const TAB_VALUES: Tab[] = ["all", "purchasers", "coaching-setup"];
+const TAB_VALUES: Tab[] = [
+  "all",
+  "purchasers",
+  "coaching-setup",
+  "program-trials",
+];
 
 function parseTab(value: string | null): Tab {
   return TAB_VALUES.includes(value as Tab) ? (value as Tab) : "all";
@@ -43,6 +56,9 @@ export function UsersPage() {
     useState<CoachingSetupStatusFilter>("awaiting_program");
   const [coachingSetupStateFilter, setCoachingSetupStateFilter] =
     useState<string>("");
+  const [programTrialActiveFilter, setProgramTrialActiveFilter] = useState<
+    "" | "true" | "false"
+  >("");
 
   const setTab = useCallback(
     (next: Tab) => {
@@ -117,6 +133,22 @@ export function UsersPage() {
     placeholderData: keepPreviousData,
   });
 
+  const {
+    data: programTrialsData,
+    isLoading: programTrialsLoading,
+    isError: programTrialsError,
+  } = useQuery({
+    queryKey: ["admin-program-trials", search, programTrialActiveFilter],
+    queryFn: () =>
+      userService.getProgramTrials({
+        q: search || undefined,
+        active: programTrialActiveFilter || undefined,
+        limit: 500,
+      }),
+    enabled: tab === "program-trials",
+    placeholderData: keepPreviousData,
+  });
+
   const userRows = useMemo(() => {
     if (!usersData?.items) return [];
     return usersData.items.map((u) => ({
@@ -158,6 +190,22 @@ export function UsersPage() {
       expiresAt: new Date(m.expiresAt).toLocaleDateString(),
     }));
   }, [coachingSetupData]);
+
+  const programTrialRows = useMemo(() => {
+    if (!programTrialsData?.items) return [];
+    return programTrialsData.items.map((t) => ({
+      id: t.trialId,
+      userId: t.userId,
+      name: t.name || "—",
+      email: t.email,
+      phone: t.phone ?? null,
+      programName: t.programName,
+      trialStatus: t.active ? "Active" : "Ended",
+      startedAt: new Date(t.startedAt).toLocaleDateString(),
+      expiresAt: new Date(t.expiresAt).toLocaleDateString(),
+      purchased: t.purchasedProgram ? "Yes" : "No",
+    }));
+  }, [programTrialsData]);
 
   return (
     <div className="space-y-6">
@@ -216,6 +264,12 @@ export function UsersPage() {
                 count: coachingSetupData?.counts?.awaitingProgram,
                 icon: <ClipboardList className="h-3.5 w-3.5" />,
               },
+              {
+                key: "program-trials",
+                label: "Program demos",
+                count: programTrialsData?.activeCount,
+                icon: <FlaskConical className="h-3.5 w-3.5" />,
+              },
             ] as const
           ).map((t) => (
             <button
@@ -247,6 +301,25 @@ export function UsersPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {tab === "program-trials" && (
+            <Select
+              value={programTrialActiveFilter || "__all__"}
+              onValueChange={(v) =>
+                setProgramTrialActiveFilter(
+                  (v === "__all__" ? "" : v) as "" | "true" | "false",
+                )
+              }
+            >
+              <SelectTrigger className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm h-9 w-44 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                <SelectValue placeholder="All trials" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All trials</SelectItem>
+                <SelectItem value="true">Active only</SelectItem>
+                <SelectItem value="false">Ended only</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           {tab === "all" && (
             <>
               <Select
@@ -268,7 +341,9 @@ export function UsersPage() {
                   <SelectItem value="__all__">All roles</SelectItem>
                   <SelectItem value="USER">User</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
-                  <SelectItem value="ASSISTANT_COACH">Assistant coach</SelectItem>
+                  <SelectItem value="ASSISTANT_COACH">
+                    Assistant coach
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <Select
@@ -295,7 +370,9 @@ export function UsersPage() {
             placeholder={
               tab === "coaching-setup"
                 ? "Search name, email, phone, city, state..."
-                : "Search by name, email, or phone..."
+                : tab === "program-trials"
+                  ? "Search name, email, phone, program..."
+                  : "Search by name, email, or phone..."
             }
             className="w-full sm:w-72"
           />
@@ -328,6 +405,14 @@ export function UsersPage() {
           stateFilter={coachingSetupStateFilter}
           onStateFilterChange={setCoachingSetupStateFilter}
           counts={coachingSetupData?.counts}
+        />
+      )}
+
+      {tab === "program-trials" && (
+        <ProgramTrialsSection
+          rows={programTrialRows}
+          isLoading={programTrialsLoading}
+          isError={programTrialsError}
         />
       )}
     </div>

@@ -1,0 +1,78 @@
+import { memo } from "react";
+import { useNavigate } from "react-router-dom";
+import { FlaskConical, Eye, MessageCircle } from "lucide-react";
+import { DataTable } from "@/components/ui/DataTable";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { programTrialColumns } from "./usersConstants";
+import type { ProgramTrialRow } from "./usersConstants";
+
+type Props = {
+  rows: ProgramTrialRow[];
+  isLoading: boolean;
+  isError: boolean;
+};
+
+export const ProgramTrialsSection = memo(function ProgramTrialsSection({
+  rows,
+  isLoading,
+  isError,
+}: Props) {
+  const navigate = useNavigate();
+
+  const actionsColumn = {
+    key: "userId" as keyof ProgramTrialRow & string,
+    header: "Actions",
+    render: (
+      _: ProgramTrialRow[keyof ProgramTrialRow],
+      row: ProgramTrialRow,
+    ) => (
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={() => navigate(`/users/${row.userId}`)}
+          className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+          title="View user"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => navigate(`/chat?userId=${row.userId}`)}
+          className="rounded p-1.5 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400"
+          title="Open chat"
+        >
+          <MessageCircle className="h-4 w-4" />
+        </button>
+      </div>
+    ),
+  };
+
+  if (isError) {
+    return (
+      <ErrorAlert message="Failed to load program trials. Please try again later." />
+    );
+  }
+
+  if (!isLoading && rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20">
+          <FlaskConical className="h-8 w-8 text-primary-500" />
+        </div>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          No program demos yet
+        </h3>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+          Athletes who start a 3-day retail program trial will show up here so
+          you can follow up.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <DataTable
+      data={rows}
+      columns={[...programTrialColumns, actionsColumn]}
+      isLoading={isLoading}
+    />
+  );
+});
