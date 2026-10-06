@@ -39,6 +39,7 @@ import {
   ContactSubmissionsPage,
   ClientErrorsPage,
   UploadFailuresPage,
+  UploadSessionsPage,
   CouponDetailPage,
   CouponsPage,
   PollDetailPage,
@@ -218,6 +219,10 @@ export default function App() {
                   <Route
                     path="/upload-failures"
                     element={<UploadFailuresPage />}
+                  />
+                  <Route
+                    path="/upload-sessions"
+                    element={<UploadSessionsPage />}
                   />
                   <Route path="/coupons" element={<CouponsPage />} />
                   <Route path="/coupons/:id" element={<CouponDetailPage />} />

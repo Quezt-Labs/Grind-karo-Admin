@@ -170,6 +170,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: "/client-errors", label: "Client errors", icon: Bug },
       { path: "/upload-failures", label: "Upload failures", icon: Upload },
+      { path: "/upload-sessions", label: "Upload sessions", icon: Upload },
     ],
   },
 ];

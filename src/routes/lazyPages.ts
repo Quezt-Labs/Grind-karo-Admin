@@ -93,6 +93,10 @@ export const UploadFailuresPage = lazyPage(
   () => import("@/pages/UploadFailuresPage"),
   "UploadFailuresPage",
 );
+export const UploadSessionsPage = lazyPage(
+  () => import("@/pages/UploadSessionsPage"),
+  "UploadSessionsPage",
+);
 export const CouponsPage = lazyPage(
   () => import("@/pages/CouponsPage"),
   "CouponsPage",
