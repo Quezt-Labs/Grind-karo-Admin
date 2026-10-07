@@ -53,7 +53,7 @@ const razorpayAmount = apiResponse.amount * 100; // rupees → paise for Razorpa
 ### Auth
 
 - **Public** endpoints: no token required.
-- **User** endpoints (`/coaching/subscriptions/*`): `Authorization: Bearer <access_token>` from the OTP flow (`/auth/otp/send` + `/auth/otp/verify`). Returned tokens carry `role: "USER"`.
+- **User** endpoints (`/coaching/subscriptions/*`): `Authorization: Bearer <access_token>` from Google sign-in (`POST /auth/google`). Returned tokens carry `role: "USER"`.
 - **Admin** endpoints (`/admin/coaching/*`): `Authorization: Bearer <access_token>` obtained via **`POST /auth/admin/login`** (email + password). Admin tokens carry `role: "ADMIN"` and are enforced by `AdminGuard` — a regular user token will be rejected with **403**, missing/invalid tokens with **401**.
 - **Admin accounts are NOT creatable through HTTP.** They are bootstrapped server-side only:
   ```bash

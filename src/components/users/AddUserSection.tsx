@@ -174,7 +174,7 @@ export function AddUserSection({ onClose }: Props) {
         Add user
       </h2>
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        App users sign in with OTP. Assistant coaches use the admin login with
+        App users sign in with Google. Assistant coaches use the admin login with
         email and password. Existing emails update the user and grant access.
       </p>
 
