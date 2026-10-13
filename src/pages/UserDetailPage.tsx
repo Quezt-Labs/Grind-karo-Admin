@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CreditCard,
+  IdCard,
   ShoppingBag,
   Calendar,
   Mail,
@@ -71,6 +72,7 @@ import { useUserDetail, type UserDetailTab } from "@/hooks/useUserDetail";
 import { useUserActivityScope } from "@/hooks/useUserActivityScope";
 import { planService } from "@/services/planService";
 import { AddonEntitlementsPanel } from "@/components/users/AddonEntitlementsPanel";
+import { UserAccountPanel } from "@/components/users/UserAccountPanel";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -100,6 +102,7 @@ function formatDateTime(iso: string): string {
 
 function parseTab(value: string | null): UserDetailTab {
   if (value === "coaching" || value === "setup") return "coaching";
+  if (value === "account") return "account";
   if (value === "purchases") return "purchases";
   if (value === "activity") return "activity";
   return "activity";
@@ -323,6 +326,11 @@ export function UserDetailPage() {
       badge: pendingVideoCount > 0 ? pendingVideoCount : undefined,
     },
     {
+      key: "account",
+      label: "Account",
+      icon: <IdCard className="h-3.5 w-3.5" />,
+    },
+    {
       key: "coaching",
       label: "Coaching",
       icon: <Settings2 className="h-3.5 w-3.5" />,
@@ -492,6 +500,16 @@ export function UserDetailPage() {
             </button>
           ))}
       </div>
+
+      {activeTab === "account" && (
+        <UserAccountPanel
+          user={user}
+          purchases={purchases}
+          intake={intakeData}
+          intakeLoading={intakeLoading}
+          planName={displayCoachingSub?.planName ?? null}
+        />
+      )}
 
       {activeTab === "coaching" && showCoachingTab && (
         <div className="space-y-4">

@@ -12,7 +12,7 @@ import { coachingProgramMatchesSubscription } from "@/utils/coachingProgramPlanM
 import { hasCoachingAthleteContext } from "@/components/users/athleteActivitySections";
 import { formCheckInboxService } from "@/services/formCheckInboxService";
 
-export type UserDetailTab = "activity" | "coaching" | "purchases";
+export type UserDetailTab = "activity" | "account" | "coaching" | "purchases";
 
 export function useUserDetail(
   userId: string | undefined,
