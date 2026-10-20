@@ -64,6 +64,7 @@ import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjus
 import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
 import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
 import { CopyEmailButton } from "@/components/users/CopyEmailButton";
+// TODO 5: import { CopyPhoneButton } from "@/components/users/CopyPhoneButton";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
@@ -395,7 +396,10 @@ export function UserDetailPage() {
                   Number missing
                 </span>
               ) : (
-                phoneStatus.label
+                <>
+                  {phoneStatus.label}
+                  {/* TODO 6: Render <CopyPhoneButton phone={phoneStatus.label} /> beside the label (same row as Copy email). */}
+                </>
               )}
             </span>
             <span className="flex items-center gap-1">
