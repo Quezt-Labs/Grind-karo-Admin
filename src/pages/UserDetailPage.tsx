@@ -71,6 +71,7 @@ import { useUserDetail, type UserDetailTab } from "@/hooks/useUserDetail";
 import { useUserActivityScope } from "@/hooks/useUserActivityScope";
 import { planService } from "@/services/planService";
 import { AddonEntitlementsPanel } from "@/components/users/AddonEntitlementsPanel";
+import { CopyEmailButton } from "@/components/users/CopyEmailButton";
 
 function formatINR(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -385,6 +386,7 @@ export function UserDetailPage() {
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <Mail className="h-3.5 w-3.5" /> {user.email}
+              <CopyEmailButton email={user.email} />
             </span>
             <span className="flex items-center gap-1">
               <Phone className="h-3.5 w-3.5" />
