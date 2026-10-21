@@ -63,8 +63,8 @@ import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
 import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
 import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
-import { CopyEmailButton } from "@/components/users/CopyEmailButton";
-// TODO 5: import { CopyPhoneButton } from "@/components/users/CopyPhoneButton";
+// TODO 5 — Import CopyEmailButton (after CopyEmailButton.tsx TODO 1–4 are done).
+import { CopyPhoneButton } from "@/components/users/CopyPhoneButton";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
@@ -385,9 +385,13 @@ export function UserDetailPage() {
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+            {/* Header meta row — Copy email wiring: TODO 6 below */}
             <span className="flex items-center gap-1">
               <Mail className="h-3.5 w-3.5" /> {user.email}
-              <CopyEmailButton email={user.email} />
+              {/* TODO 6 — Mount CopyEmailButton in this <span> (sibling after {user.email}).
+                  • Prop: email={user.email}
+                  • Same flex row as the Mail icon — coaches click next to the address they see
+                  • No API calls from here; user is already loaded via useUserDetail */}
             </span>
             <span className="flex items-center gap-1">
               <Phone className="h-3.5 w-3.5" />
@@ -398,7 +402,7 @@ export function UserDetailPage() {
               ) : (
                 <>
                   {phoneStatus.label}
-                  {/* TODO 6: Render <CopyPhoneButton phone={phoneStatus.label} /> beside the label (same row as Copy email). */}
+                 <CopyPhoneButton phone={phoneStatus.label} />
                 </>
               )}
             </span>
