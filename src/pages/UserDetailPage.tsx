@@ -64,7 +64,9 @@ import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjus
 import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
 import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
 // TODO 5 — Import CopyEmailButton (after CopyEmailButton.tsx TODO 1–4 are done).
-import { CopyPhoneButton } from "@/components/users/CopyPhoneButton";
+import { CopyEmailButton } from "@/components/users/CopyEmailButton";
+// TODO 5 (Copy phone) — import { CopyPhoneButton } from "@/components/users/CopyPhoneButton";
+//   Add after CopyEmailButton import once CopyPhoneButton.tsx TODO 1–4 are complete.
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
@@ -392,7 +394,9 @@ export function UserDetailPage() {
                   • Prop: email={user.email}
                   • Same flex row as the Mail icon — coaches click next to the address they see
                   • No API calls from here; user is already loaded via useUserDetail */}
+                  <CopyEmailButton email={user.email} />
             </span>
+            {/* Phone row — Copy phone wiring: TODO 6 (Copy phone task) below */}
             <span className="flex items-center gap-1">
               <Phone className="h-3.5 w-3.5" />
               {phoneStatus.missing ? (
@@ -402,7 +406,10 @@ export function UserDetailPage() {
               ) : (
                 <>
                   {phoneStatus.label}
-                 <CopyPhoneButton phone={phoneStatus.label} />
+                  {/* TODO 6 (Copy phone) — Mount CopyPhoneButton as sibling after phoneStatus.label.
+                      • Prop: phone={phoneStatus.label}
+                      • Only inside the else branch (when phone is not missing)
+                      • Do not render when the amber "Number missing" pill shows */}
                 </>
               )}
             </span>
