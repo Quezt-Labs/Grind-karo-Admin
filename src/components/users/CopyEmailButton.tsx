@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/Button";
+
 
 /**
  * Athlete header — one-click copy for the email address already shown in the UI.
@@ -11,10 +10,9 @@ import { Button } from "@/components/ui/Button";
 
 type CopyEmailButtonProps = {
   /** Must match the email string rendered in UserDetailPage header. */
-  email: string;
 };
 
-export function CopyEmailButton({ email }: CopyEmailButtonProps) {
+
   // TODO 2 — copied feedback state
   //   • useState<boolean> for whether we are showing "Copied"
   //   • useEffect depends on [copied]: when true, start a single timeout (TODO 1 ms) then set copied false
@@ -31,5 +29,5 @@ export function CopyEmailButton({ email }: CopyEmailButtonProps) {
   //   • onClick={() => void copyEmail()}
   //   • children: copied ? "Copied" : "Copy email"
 
-  return null;
-}
+ 
+
