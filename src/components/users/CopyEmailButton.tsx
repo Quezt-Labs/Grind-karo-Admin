@@ -8,9 +8,9 @@
 // TODO 1 — Add module constant COPIED_CONFIRMATION_MS (number, milliseconds).
 //          Pick a value so coaches can read "Copied" before the label resets (~2 seconds).
 
-type CopyEmailButtonProps = {
+
   /** Must match the email string rendered in UserDetailPage header. */
-};
+
 
 
   // TODO 2 — copied feedback state
