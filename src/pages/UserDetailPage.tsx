@@ -63,7 +63,6 @@ import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { CoachingFeeAdjustmentsPanel } from "@/components/users/CoachingFeeAdjustmentsPanel";
 import { ProgramGrantPanel } from "@/components/users/ProgramGrantPanel";
 import { PurchaseDatesEditor } from "@/components/users/PurchaseDatesEditor";
-import { CopyEmailButton } from "@/components/users/CopyEmailButton";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { coachingSubscriptionService } from "@/services/coachingSubscriptionService";
@@ -386,7 +385,6 @@ export function UserDetailPage() {
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <Mail className="h-3.5 w-3.5" /> {user.email}
-              <CopyEmailButton email={user.email} />
             </span>
             <span className="flex items-center gap-1">
               <Phone className="h-3.5 w-3.5" />
