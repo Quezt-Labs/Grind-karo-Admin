@@ -3,6 +3,8 @@ import api from "./api";
 export type AdminUploadSessionItem = {
   uploadSessionId: string;
   userId: string;
+  userName?: string | null;
+  userEmail?: string | null;
   purpose: string;
   source?: string | null;
   filename: string;
