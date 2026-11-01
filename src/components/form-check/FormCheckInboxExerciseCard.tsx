@@ -438,28 +438,23 @@ function SetCommentPanelWithBulk({
     threadState?.replyLimit ?? video.coachReplyLimit ?? null;
   const effectiveRepliesUsed =
     threadState?.repliesUsed ?? video.coachReplyUsed ?? null;
-  const effectiveRepliesRemaining =
+  const athleteRepliesRemaining =
     threadState?.repliesRemaining ??
     video.coachRepliesRemaining ??
     (effectiveReplyLimit != null && effectiveRepliesUsed != null
       ? Math.max(0, effectiveReplyLimit - effectiveRepliesUsed)
       : null);
-  const effectiveReplyBlocked =
-    (threadState?.canAthleteReply != null
-      ? !threadState.canAthleteReply
-      : undefined) ??
-    video.coachReplyBlocked ??
-    false;
-  const effectiveReplyLockReason =
-    threadState?.replyLockReason ?? video.coachReplyBlockReason ?? null;
-  const replyLimitKnown =
+  const athleteReplyLimitKnown =
     effectiveReplyLimit != null ||
-    effectiveRepliesRemaining != null ||
-    effectiveReplyBlocked;
-  const repliesRemaining = effectiveRepliesRemaining;
-  const replyBlocked =
-    effectiveReplyBlocked === true ||
-    (repliesRemaining != null && repliesRemaining <= 0);
+    athleteRepliesRemaining != null ||
+    threadState?.canAthleteReply != null;
+  const athleteReplyLimitReached =
+    (threadState?.canAthleteReply != null && !threadState.canAthleteReply) ||
+    (athleteRepliesRemaining != null && athleteRepliesRemaining <= 0);
+  const athleteReplyLockReason =
+    threadState?.replyLockReason ?? video.coachReplyBlockReason ?? null;
+  const coachReplyBlocked = video.coachReplyBlocked === true;
+  const coachCanReply = !coachReplyBlocked;
   const hasAthleteContext =
     Boolean(video.setNotes?.trim() || video.athleteNotes?.trim()) ||
     video.actualSets != null ||
@@ -481,7 +476,7 @@ function SetCommentPanelWithBulk({
   };
 
   const startReply = () => {
-    if (!athleteReplyText || replyBlocked) return;
+    if (!athleteReplyText || !coachCanReply) return;
     setReplyingToAthlete(true);
     setIsEditing(true);
     const intro = `Replying to athlete:`;
@@ -685,30 +680,35 @@ function SetCommentPanelWithBulk({
                         className="mt-1 text-xs leading-relaxed text-gray-800 dark:text-gray-100"
                       />
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {replyLimitKnown ? (
+                        {athleteReplyLimitKnown ? (
                           <span
                             className={cn(
                               "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                              replyBlocked
-                                ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
-                                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+                              athleteReplyLimitReached
+                                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                                : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
                             )}
                           >
-                            {replyBlocked
-                              ? "Replies blocked"
-                              : repliesRemaining == null
-                                ? "Replies allowed"
-                                : `${repliesRemaining} repl${repliesRemaining === 1 ? "y" : "ies"} left`}
+                            {athleteReplyLimitReached
+                              ? "Athlete can't reply"
+                              : athleteRepliesRemaining == null
+                                ? "Athlete can reply"
+                                : `Athlete: ${athleteRepliesRemaining} repl${athleteRepliesRemaining === 1 ? "y" : "ies"} left`}
                           </span>
                         ) : null}
-                        {effectiveReplyLockReason ? (
-                          <span className="text-[10px] text-rose-700 dark:text-rose-300">
-                            {effectiveReplyLockReason}
+                        {athleteReplyLimitReached && athleteReplyLockReason ? (
+                          <span className="text-[10px] text-amber-800 dark:text-amber-200">
+                            {athleteReplyLockReason}
+                          </span>
+                        ) : null}
+                        {coachReplyBlocked ? (
+                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                            Coach reply blocked
                           </span>
                         ) : null}
                         <button
                           type="button"
-                          disabled={saving || replyBlocked}
+                          disabled={saving || !coachCanReply}
                           onClick={startReply}
                           className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
                         >

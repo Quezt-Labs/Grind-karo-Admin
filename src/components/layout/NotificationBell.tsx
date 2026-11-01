@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
@@ -15,11 +15,18 @@ import {
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { notificationService } from "@/services/notificationService";
-import { type FormCheckThreadType } from "@/services/workoutVideoCommentService";
-import { useNotificationStore } from "@/store/notificationStore";
 import type { AdminNotification, NotificationListResponse } from "@/types/user";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  NOTIFICATION_INBOX_QUERY_KEY,
+  useNotificationInbox,
+} from "@/hooks/useNotificationInbox";
 import { buildFormCheckThreadRoute } from "@/utils/formCheckRoutes";
+import {
+  formCheckMeta,
+  isFormCheckNotification,
+  type FormCheckNotificationMeta,
+} from "@/utils/notificationInboxDisplay";
 
 type NotificationFilter = "all" | "form_check" | "other";
 
@@ -59,126 +66,6 @@ function categoryLabel(category: string): string {
   }
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-}
-
-function pickString(...values: unknown[]): string | null {
-  for (const value of values) {
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-  return null;
-}
-
-function parseThreadType(value: unknown): FormCheckThreadType | null {
-  if (value === "workout" || value === "program") return "workout";
-  if (value === "sheets" || value === "sheet") return "sheets";
-  return null;
-}
-
-type FormCheckNotificationMeta = {
-  userId: string | null;
-  athleteName: string | null;
-  videoId: string | null;
-  commentId: string | null;
-  messageId: string | null;
-  threadType: FormCheckThreadType | null;
-  preview: string;
-  groupKey: string;
-};
-
-function isFormCheckNotification(n: AdminNotification): boolean {
-  return (
-    n.type.includes("FORM_CHECK") ||
-    inferCategory(n).toLowerCase() === "form_check"
-  );
-}
-
-function formCheckMeta(n: AdminNotification): FormCheckNotificationMeta {
-  const payload = asRecord(n.payload) ?? {};
-  const athlete = asRecord(payload.athlete);
-  const deepLink =
-    asRecord(payload.deepLink) ??
-    asRecord(payload.deeplink) ??
-    asRecord(payload.link);
-  const userId = pickString(
-    payload.athleteId,
-    payload.athlete_id,
-    athlete?.id,
-    deepLink?.athleteId,
-    deepLink?.athlete_id,
-    deepLink?.userId,
-    deepLink?.user_id,
-    payload.targetUserId,
-    payload.target_user_id,
-    payload.userId,
-    payload.user_id,
-  );
-  const videoId = pickString(
-    payload.videoId,
-    payload.video_id,
-    payload.workoutSetVideoId,
-    payload.sheetSetVideoId,
-    deepLink?.videoId,
-    deepLink?.video_id,
-  );
-  const commentId = pickString(
-    payload.commentId,
-    payload.comment_id,
-    deepLink?.commentId,
-    deepLink?.comment_id,
-  );
-  const messageId = pickString(
-    payload.messageId,
-    payload.message_id,
-    deepLink?.messageId,
-    deepLink?.message_id,
-  );
-  const threadType =
-    parseThreadType(payload.threadType) ??
-    parseThreadType(payload.thread_type) ??
-    parseThreadType(deepLink?.threadType) ??
-    parseThreadType(deepLink?.thread_type) ??
-    parseThreadType(payload.source) ??
-    parseThreadType(deepLink?.source) ??
-    null;
-  const athleteName = pickString(
-    payload.athleteName,
-    payload.athlete_name,
-    payload.userName,
-    payload.user_name,
-    payload.name,
-  );
-  const preview =
-    pickString(
-      payload.preview,
-      payload.messagePreview,
-      payload.comment,
-      n.message,
-    ) ?? n.message;
-  const groupKey =
-    pickString(
-      payload.groupKey,
-      payload.group_key,
-      commentId,
-      videoId && userId ? `${userId}:${videoId}:${threadType}` : null,
-      userId ? `${userId}:${threadType}` : null,
-    ) ?? n.id;
-  return {
-    userId,
-    athleteName,
-    videoId,
-    commentId,
-    messageId,
-    threadType,
-    preview,
-    groupKey,
-  };
-}
-
 function iconForNotification(n: AdminNotification) {
   if (n.type === "COACHING_SUBSCRIPTION_PAID") return CreditCard;
   if (n.type === "BOOK_PURCHASE_PAID" || n.type === "PROGRAM_PURCHASE_PAID")
@@ -204,23 +91,24 @@ function iconToneClass(n: AdminNotification): string {
   return "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400";
 }
 
+function pickString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { unreadCount, setUnreadCount } = useNotificationStore();
-
-  useQuery({
-    queryKey: ["notification-unread-count"],
-    queryFn: async () => {
-      const count = await notificationService.getUnreadCount({
-        gracefulForbidden: true,
-      });
-      setUnreadCount(count);
-      return count;
-    },
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: false,
-  });
+  const { badgeCount } = useNotificationInbox();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -242,9 +130,9 @@ export function NotificationBell() {
         title="Notifications"
       >
         <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-        {unreadCount > 0 && (
+        {badgeCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-            {unreadCount > 99 ? "99+" : unreadCount}
+            {badgeCount > 99 ? "99+" : badgeCount}
           </span>
         )}
       </button>
@@ -259,57 +147,42 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   const isAdmin = user?.role === "ADMIN";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { unreadCount, decrement, reset } = useNotificationStore();
   const [filter, setFilter] = useState<NotificationFilter>("all");
-
-  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["notifications-unread-list"],
-    queryFn: () =>
-      notificationService.getAll(
-        { unreadOnly: true, limit: 20 },
-        { gracefulForbidden: true, forbiddenAsError: true },
-      ),
-    staleTime: 5_000,
-    refetchInterval: () =>
-      typeof document !== "undefined" && document.visibilityState === "visible"
-        ? 15_000
-        : false,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-  });
+  const { items, formCheckGroups, otherItems, isLoading } =
+    useNotificationInbox();
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) => notificationService.markRead(id),
-    onMutate: async (id: string) => {
+    mutationFn: (ids: string[]) =>
+      Promise.all(ids.map((id) => notificationService.markRead(id))),
+    onMutate: async (ids: string[]) => {
       await queryClient.cancelQueries({
-        queryKey: ["notifications-unread-list"],
+        queryKey: NOTIFICATION_INBOX_QUERY_KEY,
       });
-      const previous = queryClient.getQueryData<NotificationListResponse>([
-        "notifications-unread-list",
-      ]);
+      const previous = queryClient.getQueryData<NotificationListResponse>(
+        NOTIFICATION_INBOX_QUERY_KEY,
+      );
+      const idSet = new Set(ids);
       if (previous) {
-        queryClient.setQueryData<NotificationListResponse>(
-          ["notifications-unread-list"],
-          {
-            ...previous,
-            items: previous.items.filter((n) => n.id !== id),
-            total: Math.max(0, previous.total - 1),
-            unreadCount: Math.max(0, previous.unreadCount - 1),
-          },
-        );
+        const nextItems = previous.items.filter((n) => !idSet.has(n.id));
+        queryClient.setQueryData(NOTIFICATION_INBOX_QUERY_KEY, {
+          ...previous,
+          items: nextItems,
+          total: Math.max(0, previous.total - ids.length),
+        });
       }
-      decrement();
       return { previous };
     },
-    onError: (_err, _id, context) => {
+    onError: (_err, _ids, context) => {
       if (context?.previous) {
         queryClient.setQueryData(
-          ["notifications-unread-list"],
+          NOTIFICATION_INBOX_QUERY_KEY,
           context.previous,
         );
       }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({
-        queryKey: ["notification-unread-count"],
+        queryKey: NOTIFICATION_INBOX_QUERY_KEY,
       });
     },
   });
@@ -317,12 +190,15 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   const markAllMutation = useMutation({
     mutationFn: () => notificationService.markAllRead(),
     onSuccess: () => {
-      reset();
-      queryClient.invalidateQueries({
-        queryKey: ["notifications-unread-list"],
+      queryClient.setQueryData(NOTIFICATION_INBOX_QUERY_KEY, {
+        total: 0,
+        unreadCount: 0,
+        limit: 100,
+        offset: 0,
+        items: [],
       });
-      queryClient.invalidateQueries({
-        queryKey: ["notification-unread-count"],
+      void queryClient.invalidateQueries({
+        queryKey: NOTIFICATION_INBOX_QUERY_KEY,
       });
     },
   });
@@ -337,19 +213,23 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     });
   }
 
-  function openFormCheckNotification(notification: AdminNotification) {
+  function openFormCheckNotification(
+    notification: AdminNotification,
+    groupedNotifications: AdminNotification[],
+  ) {
     const meta = formCheckMeta(notification);
-    markReadMutation.mutate(notification.id);
+    const ids = groupedNotifications.map((entry) => entry.id);
+    markReadMutation.mutate(ids);
     navigate(buildFormCheckRoute(meta));
     onClose();
   }
 
   function handleClickNotification(n: AdminNotification) {
     if (isFormCheckNotification(n)) {
-      openFormCheckNotification(n);
+      openFormCheckNotification(n, [n]);
       return;
     }
-    markReadMutation.mutate(n.id);
+    markReadMutation.mutate([n.id]);
 
     const payload = asRecord(n.payload) ?? {};
     const userId = pickString(payload.userId, payload.user_id);
@@ -376,56 +256,6 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const items = useMemo(() => data?.items ?? [], [data?.items]);
-
-  const formCheckGroups = useMemo(() => {
-    const candidates = items
-      .filter((item) => isFormCheckNotification(item))
-      .map((notification) => ({
-        notification,
-        meta: formCheckMeta(notification),
-      }));
-    const groups = new Map<
-      string,
-      { meta: FormCheckNotificationMeta; notifications: AdminNotification[] }
-    >();
-    candidates.forEach(({ notification, meta }) => {
-      const existing = groups.get(meta.groupKey);
-      if (existing) {
-        existing.notifications.push(notification);
-        return;
-      }
-      groups.set(meta.groupKey, { meta, notifications: [notification] });
-    });
-    return Array.from(groups.entries())
-      .map(([key, value]) => ({
-        key,
-        meta: value.meta,
-        notifications: value.notifications.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        ),
-      }))
-      .sort(
-        (a, b) =>
-          new Date(b.notifications[0].createdAt).getTime() -
-          new Date(a.notifications[0].createdAt).getTime(),
-      );
-  }, [items]);
-
-  const formCheckGroupIds = useMemo(() => {
-    const ids = new Set<string>();
-    formCheckGroups.forEach((group) => {
-      group.notifications.forEach((item) => ids.add(item.id));
-    });
-    return ids;
-  }, [formCheckGroups]);
-
-  const otherItems = useMemo(
-    () => items.filter((item) => !formCheckGroupIds.has(item.id)),
-    [formCheckGroupIds, items],
-  );
-
   const filterCounts = useMemo(
     () => ({
       all: formCheckGroups.length + otherItems.length,
@@ -445,8 +275,43 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     return otherItems;
   }, [filter, otherItems]);
 
-  const hasVisibleItems =
-    visibleFormCheckGroups.length > 0 || visibleOtherItems.length > 0;
+  type NotificationPanelRow =
+    | {
+        kind: "form_check";
+        key: string;
+        group: (typeof formCheckGroups)[number];
+        sortAt: number;
+      }
+    | {
+        kind: "other";
+        key: string;
+        notification: AdminNotification;
+        sortAt: number;
+      };
+
+  const visibleRows = useMemo(() => {
+    const rows: NotificationPanelRow[] = [];
+    for (const group of visibleFormCheckGroups) {
+      rows.push({
+        kind: "form_check",
+        key: group.key,
+        group,
+        sortAt: new Date(group.notifications[0]?.createdAt ?? 0).getTime(),
+      });
+    }
+    for (const notification of visibleOtherItems) {
+      rows.push({
+        kind: "other",
+        key: notification.id,
+        notification,
+        sortAt: new Date(notification.createdAt).getTime(),
+      });
+    }
+    rows.sort((a, b) => b.sortAt - a.sortAt);
+    return rows;
+  }, [visibleFormCheckGroups, visibleOtherItems]);
+
+  const hasVisibleItems = visibleRows.length > 0;
 
   return (
     <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:w-96">
@@ -455,11 +320,6 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
             Notifications
           </h3>
-          {isError ? (
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-              List unavailable
-            </span>
-          ) : null}
         </div>
         <div className="flex items-center gap-1">
           {items.length > 0 && (
@@ -482,7 +342,7 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      {items.length > 0 && !isLoading && !isError ? (
+      {items.length > 0 && !isLoading ? (
         <div className="flex gap-1 border-b px-3 py-2 dark:border-gray-700">
           {(
             [
@@ -524,51 +384,6 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
               </div>
             ))}
           </div>
-        ) : isError ? (
-          <div className="p-4">
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-              <p className="font-semibold">Notification list unavailable</p>
-              <p className="mt-1 text-xs">
-                {error instanceof Error
-                  ? error.message
-                  : "Server rejected the notification list request."}
-              </p>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-[11px]">Unread count: {unreadCount}</span>
-                <button
-                  type="button"
-                  onClick={() => void refetch()}
-                  disabled={isFetching}
-                  className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800 disabled:opacity-50 dark:border-amber-700 dark:bg-gray-900 dark:text-amber-200"
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : items.length === 0 && unreadCount > 0 ? (
-          <div className="p-4">
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-              <p className="font-semibold">
-                Unread count is available, but list is empty
-              </p>
-              <p className="mt-1 text-xs">
-                This may be a temporary notification sync issue. Retrying may
-                restore items.
-              </p>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-[11px]">Unread count: {unreadCount}</span>
-                <button
-                  type="button"
-                  onClick={() => void refetch()}
-                  disabled={isFetching}
-                  className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800 disabled:opacity-50 dark:border-amber-700 dark:bg-gray-900 dark:text-amber-200"
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <Bell className="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
@@ -584,55 +399,59 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <div>
-            {visibleFormCheckGroups.map((group) => {
-              const primary = group.notifications[0];
-              const primaryMeta = formCheckMeta(primary);
-              const groupedCount = group.notifications.length;
-              const Icon = iconForNotification(primary);
-              return (
-                <button
-                  key={group.key}
-                  type="button"
-                  onClick={() => openFormCheckNotification(primary)}
-                  className="flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-gray-50 last:border-b-0 dark:border-gray-700 dark:hover:bg-gray-700/50"
-                >
-                  <div
-                    className={cn(
-                      "mt-0.5 shrink-0 rounded-lg p-2",
-                      iconToneClass(primary),
-                    )}
+            {visibleRows.map((row) => {
+              if (row.kind === "form_check") {
+                const group = row.group;
+                const primary = group.notifications[0];
+                const primaryMeta = formCheckMeta(primary);
+                const groupedCount = group.notifications.length;
+                const Icon = iconForNotification(primary);
+                return (
+                  <button
+                    key={row.key}
+                    type="button"
+                    onClick={() =>
+                      openFormCheckNotification(primary, group.notifications)
+                    }
+                    className="flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-gray-50 last:border-b-0 dark:border-gray-700 dark:hover:bg-gray-700/50"
                   >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {primaryMeta.athleteName ?? primary.title}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
-                      {groupedCount > 1
-                        ? `${groupedCount} updates · ${primaryMeta.preview}`
-                        : primaryMeta.preview}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                        {timeAgo(primary.createdAt)}
-                      </p>
-                      <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
-                        Form check
-                      </span>
+                    <div
+                      className={cn(
+                        "mt-0.5 shrink-0 rounded-lg p-2",
+                        iconToneClass(primary),
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
                     </div>
-                  </div>
-                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-500" />
-                </button>
-              );
-            })}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {primaryMeta.athleteName ?? primary.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                        {groupedCount > 1
+                          ? `${groupedCount} updates · ${primaryMeta.preview}`
+                          : primaryMeta.preview}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                          {timeAgo(primary.createdAt)}
+                        </p>
+                        <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                          Form check
+                        </span>
+                      </div>
+                    </div>
+                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-500" />
+                  </button>
+                );
+              }
 
-            {visibleOtherItems.map((n) => {
+              const n = row.notification;
               const Icon = iconForNotification(n);
               const category = inferCategory(n);
               return (
                 <button
-                  key={n.id}
+                  key={row.key}
                   type="button"
                   onClick={() => handleClickNotification(n)}
                   className="flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-gray-50 last:border-b-0 dark:border-gray-700 dark:hover:bg-gray-700/50"

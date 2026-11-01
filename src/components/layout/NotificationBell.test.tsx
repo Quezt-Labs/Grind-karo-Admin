@@ -12,12 +12,10 @@ import {
   vi,
 } from "vitest";
 import { NotificationBell } from "@/components/layout/NotificationBell";
-import { useNotificationStore } from "@/store/notificationStore";
 import type { AdminNotification, NotificationListResponse } from "@/types/user";
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
-  getUnreadCount: vi.fn(),
   getAll: vi.fn(),
   markRead: vi.fn(),
   markAllRead: vi.fn(),
@@ -40,7 +38,6 @@ vi.mock("@/hooks/useAuth", () => ({
 
 vi.mock("@/services/notificationService", () => ({
   notificationService: {
-    getUnreadCount: mocks.getUnreadCount,
     getAll: mocks.getAll,
     markRead: mocks.markRead,
     markAllRead: mocks.markAllRead,
@@ -122,14 +119,14 @@ async function openPanel(user: ReturnType<typeof userEvent.setup>) {
 
 describe("NotificationBell", () => {
   beforeEach(() => {
-    useNotificationStore.getState().reset();
     mocks.navigate.mockReset();
-    mocks.getUnreadCount.mockReset();
     mocks.getAll.mockReset();
     mocks.markRead.mockReset();
     mocks.markAllRead.mockReset();
 
-    mocks.getUnreadCount.mockResolvedValue(1);
+    mocks.getAll.mockResolvedValue(
+      makeUnreadResponse([makeFormCheckNotification()]),
+    );
     mocks.markRead.mockResolvedValue(makeFormCheckNotification());
     mocks.markAllRead.mockResolvedValue({ markedRead: 1 });
   });
@@ -215,6 +212,34 @@ describe("NotificationBell", () => {
 
     expect(screen.getByText(/2 updates · Second preview/)).toBeInTheDocument();
     expect(screen.getAllByText("Rahul")).toHaveLength(1);
+
+    await user.click(screen.getByText("Rahul"));
+    expect(mocks.markRead).toHaveBeenCalledTimes(2);
+    expect(mocks.markRead).toHaveBeenCalledWith("notif-1");
+    expect(mocks.markRead).toHaveBeenCalledWith("notif-2");
+  });
+
+  it("sorts All filter rows newest-first across form-check groups and other types", async () => {
+    const user = userEvent.setup();
+    const olderFormCheck = makeFormCheckNotification({
+      id: "notif-fc-old",
+      createdAt: "2026-08-08T00:00:00.000Z",
+    });
+    const newerChat = makeChatNotification();
+    newerChat.createdAt = "2026-08-12T00:00:00.000Z";
+    mocks.getAll.mockResolvedValue(
+      makeUnreadResponse([olderFormCheck, newerChat]),
+    );
+
+    renderBell();
+    await openPanel(user);
+
+    const rowButtons = screen.getAllByRole("button").filter((el) => {
+      const text = el.textContent ?? "";
+      return text.includes("Rahul") || text.includes("New message");
+    });
+    expect(rowButtons[0]?.textContent).toContain("New message");
+    expect(rowButtons[1]?.textContent).toContain("Rahul");
   });
 
   it("filters notifications with All, Form checks, and Other chips", async () => {

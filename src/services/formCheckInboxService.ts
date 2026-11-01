@@ -160,14 +160,10 @@ function normalizeInboxItem(
     (item.replies_remaining as number | null | undefined) ??
     (replyLimitObject?.remaining as number | null | undefined) ??
     null;
-  const canAthleteReply =
-    (item.canAthleteReply as boolean | null | undefined) ??
-    (item.can_athlete_reply as boolean | null | undefined) ??
-    null;
+  /** Athlete reply quota — must not block coach/assistant replies in the dashboard. */
   const coachReplyBlocked =
     (item.coachReplyBlocked as boolean | null | undefined) ??
     (item.coach_reply_blocked as boolean | null | undefined) ??
-    (canAthleteReply === null ? undefined : !canAthleteReply) ??
     (replyLimitObject?.blocked as boolean | null | undefined) ??
     false;
   const coachReplyBlockReason =

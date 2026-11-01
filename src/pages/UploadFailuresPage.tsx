@@ -11,6 +11,7 @@ import { DebouncedSearch } from "@/components/shared/DebouncedSearch";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { Button } from "@/components/ui/Button";
 import { notificationService } from "@/services/notificationService";
+import { NOTIFICATION_INBOX_QUERY_KEY } from "@/hooks/useNotificationInbox";
 import type { AdminNotification } from "@/types/user";
 
 function formatBytes(bytes: number | undefined): string {
@@ -92,12 +93,7 @@ export function UploadFailuresPage() {
     mutationFn: (id: string) => notificationService.markRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["upload-failures"] });
-      queryClient.invalidateQueries({
-        queryKey: ["notification-unread-count"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["notifications-unread-list"],
-      });
+      queryClient.invalidateQueries({ queryKey: NOTIFICATION_INBOX_QUERY_KEY });
     },
   });
 
@@ -105,12 +101,7 @@ export function UploadFailuresPage() {
     mutationFn: () => notificationService.markAllRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["upload-failures"] });
-      queryClient.invalidateQueries({
-        queryKey: ["notification-unread-count"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["notifications-unread-list"],
-      });
+      queryClient.invalidateQueries({ queryKey: NOTIFICATION_INBOX_QUERY_KEY });
     },
   });
 
@@ -119,12 +110,7 @@ export function UploadFailuresPage() {
     onSuccess: (_data, deletedId) => {
       toast.success("Upload failure report deleted");
       queryClient.invalidateQueries({ queryKey: ["upload-failures"] });
-      queryClient.invalidateQueries({
-        queryKey: ["notification-unread-count"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["notifications-unread-list"],
-      });
+      queryClient.invalidateQueries({ queryKey: NOTIFICATION_INBOX_QUERY_KEY });
       setDeleteTarget(null);
       setSelectedId((current) => (current === deletedId ? null : current));
     },
@@ -142,12 +128,7 @@ export function UploadFailuresPage() {
           : `${deletedCount} upload failures deleted`,
       );
       queryClient.invalidateQueries({ queryKey: ["upload-failures"] });
-      queryClient.invalidateQueries({
-        queryKey: ["notification-unread-count"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["notifications-unread-list"],
-      });
+      queryClient.invalidateQueries({ queryKey: NOTIFICATION_INBOX_QUERY_KEY });
       setDeleteAllOpen(false);
       setDeleteTarget(null);
       setSelectedId(null);

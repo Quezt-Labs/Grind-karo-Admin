@@ -150,10 +150,20 @@ function deepLink(item: FormCheckActionQueueItem, action?: "reply"): string {
 }
 
 function itemReplyBlocked(item: FormCheckActionQueueItem): boolean {
-  return (
-    item.replyBlocked ||
-    (item.repliesRemaining != null && item.repliesRemaining <= 0)
-  );
+  return item.replyBlocked === true;
+}
+
+function athleteReplyLimitReached(item: FormCheckActionQueueItem): boolean {
+  if (item.repliesRemaining == null) return false;
+  return item.repliesRemaining <= 0;
+}
+
+function athleteReplyLimitLabel(item: FormCheckActionQueueItem): string | null {
+  if (item.repliesRemaining == null) return null;
+  if (item.repliesRemaining <= 0) {
+    return item.replyLockReason?.trim() || "Athlete reply limit reached";
+  }
+  return `${item.repliesRemaining} athlete repl${item.repliesRemaining === 1 ? "y" : "ies"} left`;
 }
 
 function replyLockText(item: FormCheckActionQueueItem): string | null {
@@ -589,6 +599,8 @@ export function FormCheckActionQueuePage() {
               "Unknown athlete";
             const quickReplyText = draftById[item.id] ?? "";
             const isReplyBlocked = itemReplyBlocked(item);
+            const athleteLimitReached = athleteReplyLimitReached(item);
+            const athleteLimitLabel = athleteReplyLimitLabel(item);
             const lockReason = replyLockText(item);
             return (
               <article
@@ -650,18 +662,21 @@ export function FormCheckActionQueuePage() {
                         {item.unreadCount} unread
                       </span>
                     ) : null}
-                    {item.repliesRemaining != null ? (
+                    {athleteLimitLabel ? (
                       <span
                         className={cn(
                           "rounded-full px-1.5 py-0.5 font-semibold",
-                          isReplyBlocked
-                            ? "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200"
-                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
+                          athleteLimitReached
+                            ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
+                            : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
                         )}
                       >
-                        {isReplyBlocked
-                          ? "Replies blocked"
-                          : `${item.repliesRemaining} repl${item.repliesRemaining === 1 ? "y" : "ies"} left`}
+                        {athleteLimitLabel}
+                      </span>
+                    ) : null}
+                    {isReplyBlocked ? (
+                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
+                        Coach reply blocked
                       </span>
                     ) : null}
                     {item.stateReason ? <span>{item.stateReason}</span> : null}
