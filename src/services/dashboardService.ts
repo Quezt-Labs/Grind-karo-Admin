@@ -1,13 +1,17 @@
 import api from "./api";
 import type { DashboardOverviewResponse } from "@/types/dashboardOverview";
 import type {
+  BooksRevenueAnalyticsResponse,
   PlanRevenueAnalyticsResponse,
   ProgramRevenueAnalyticsResponse,
+  ProgramsRevenueAnalyticsResponse,
 } from "@/types/revenueAnalytics";
 
 export const dashboardService = {
-  async getOverview(): Promise<DashboardOverviewResponse> {
-    const { data } = await api.get("/admin/dashboard/overview");
+  async getOverview(months = 6): Promise<DashboardOverviewResponse> {
+    const { data } = await api.get("/admin/dashboard/overview", {
+      params: { months },
+    });
     return data.data ?? data;
   },
 
@@ -26,6 +30,22 @@ export const dashboardService = {
       `/admin/dashboard/program-revenue/${programId}`,
       { params: { months } },
     );
+    return data.data ?? data;
+  },
+
+  async getProgramsRevenue(
+    months = 6,
+  ): Promise<ProgramsRevenueAnalyticsResponse> {
+    const { data } = await api.get("/admin/dashboard/programs-revenue", {
+      params: { months },
+    });
+    return data.data ?? data;
+  },
+
+  async getBooksRevenue(months = 6): Promise<BooksRevenueAnalyticsResponse> {
+    const { data } = await api.get("/admin/dashboard/books-revenue", {
+      params: { months },
+    });
     return data.data ?? data;
   },
 };

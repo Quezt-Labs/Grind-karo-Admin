@@ -17,6 +17,23 @@ export interface PlanRevenueAnalyticsResponse {
   plans: PlanRevenueAnalyticsItem[];
 }
 
+export interface ProductRevenueAnalyticsItem {
+  id: string;
+  slug: string;
+  name: string;
+  stats: PlanRevenueAnalyticsItem["stats"];
+}
+
+export interface ProgramsRevenueAnalyticsResponse {
+  monthKeys: string[];
+  programs: ProductRevenueAnalyticsItem[];
+}
+
+export interface BooksRevenueAnalyticsResponse {
+  monthKeys: string[];
+  books: ProductRevenueAnalyticsItem[];
+}
+
 export interface ProgramRevenueAnalyticsResponse {
   programId: string;
   programName: string;

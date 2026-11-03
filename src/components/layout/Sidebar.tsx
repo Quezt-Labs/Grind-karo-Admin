@@ -35,6 +35,7 @@ import {
   Calculator,
   Gauge,
   UserCheck,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -102,6 +103,11 @@ const NAV_SECTIONS: NavSection[] = [
     key: "billing",
     title: "Billing",
     items: [
+      {
+        path: "/revenue-analytics",
+        label: "Revenue analytics",
+        icon: TrendingUp,
+      },
       { path: "/subscriptions", label: "Subscriptions", icon: Award },
       {
         path: "/coaching-renewals",

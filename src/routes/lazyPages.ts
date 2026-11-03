@@ -13,6 +13,10 @@ export const DashboardPage = lazyPage(
   () => import("@/pages/DashboardPage"),
   "DashboardPage",
 );
+export const RevenueAnalyticsPage = lazyPage(
+  () => import("@/pages/RevenueAnalyticsPage"),
+  "RevenueAnalyticsPage",
+);
 export const PlansPage = lazyPage(
   () => import("@/pages/PlansPage"),
   "PlansPage",

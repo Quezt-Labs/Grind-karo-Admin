@@ -1,4 +1,10 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   HandCoins,
@@ -76,6 +82,14 @@ export function CoachingFeeAdjustmentsPanel({
   const [overrideFeeDraft, setOverrideFeeDraft] = useState("");
   const [deleteTarget, setDeleteTarget] =
     useState<CoachingBillingAdjustment | null>(null);
+  const manualPaymentIdempotencyRef = useRef<string | null>(null);
+
+  const ensureManualPaymentIdempotencyKey = () => {
+    if (!manualPaymentIdempotencyRef.current) {
+      manualPaymentIdempotencyRef.current = crypto.randomUUID();
+    }
+    return manualPaymentIdempotencyRef.current;
+  };
 
   const paidCoachingSubs = useMemo(
     () =>
@@ -173,9 +187,11 @@ export function CoachingFeeAdjustmentsPanel({
         userId,
         ...coachingBillingPayload(manualPlanId, billing),
         reason: reason.trim(),
+        idempotencyKey: ensureManualPaymentIdempotencyKey(),
       }),
     onSuccess: () => {
       toast.success("Manual payment recorded");
+      manualPaymentIdempotencyRef.current = null;
       setReason("");
       setBilling((b) => ({ ...b, lifterFee: "" }));
       invalidate();

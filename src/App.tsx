@@ -45,6 +45,7 @@ import {
   PollDetailPage,
   PollsPage,
   DashboardPage,
+  RevenueAnalyticsPage,
   ExercisesPage,
   LandingPageDetailPage,
   LandingPagesPage,
@@ -179,6 +180,10 @@ export default function App() {
 
                 <Route element={<AdminOnlyRoute />}>
                   <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route
+                    path="/revenue-analytics"
+                    element={<RevenueAnalyticsPage />}
+                  />
                   <Route path="/addons" element={<AddonsPage />} />
                   <Route
                     path="/subscriptions"

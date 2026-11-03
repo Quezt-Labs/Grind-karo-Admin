@@ -242,6 +242,7 @@ export const coachingSubscriptionService = {
     feeCoversMonths?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
     startDate?: string;
     expiresAt?: string;
+    idempotencyKey?: string;
   }) {
     const { data } = await api.post(
       "/admin/coaching/subscriptions/manual-payment",

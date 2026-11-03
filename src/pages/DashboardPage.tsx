@@ -8,7 +8,6 @@ import { StatsCardsSkeleton } from "@/components/ui/Shimmer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
-import { PlanRevenueComparison } from "@/components/dashboard/PlanRevenueComparison";
 import { dashboardService } from "@/services/dashboardService";
 import type { Column } from "@/types/dashboard";
 import type { RecentSale, TopCustomer } from "@/types/dashboardOverview";
@@ -57,18 +56,7 @@ type TopCustomerRow = TopCustomer & {
 export function DashboardPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["dashboard-overview"],
-    queryFn: dashboardService.getOverview,
-    refetchInterval: 60_000,
-    refetchIntervalInBackground: false,
-  });
-
-  const {
-    data: planRevenue,
-    isLoading: planRevenueLoading,
-    isError: planRevenueError,
-  } = useQuery({
-    queryKey: ["dashboard-plan-revenue"],
-    queryFn: () => dashboardService.getPlanRevenue(6),
+    queryFn: () => dashboardService.getOverview(),
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   });
@@ -254,7 +242,14 @@ export function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Revenue, sales, and customer overview across coaching, programs, and books"
-      />
+      >
+        <Link
+          to="/revenue-analytics"
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
+        >
+          Revenue analytics <ArrowRight className="h-4 w-4" />
+        </Link>
+      </PageHeader>
 
       {isError ? (
         <ErrorAlert message="Failed to load dashboard data. Please try again later." />
@@ -287,27 +282,6 @@ export function DashboardPage() {
             </div>
             {data?.monthlyRevenue && (
               <RevenueChart data={data.monthlyRevenue} />
-            )}
-          </div>
-
-          <div className="rounded-xl border bg-white p-4 shadow-sm dark:bg-gray-800 sm:p-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Coaching plans by month
-              </h2>
-              <Link
-                to="/plans"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
-              >
-                All plans <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            {planRevenueError ? (
-              <ErrorAlert message="Failed to load plan revenue comparison." />
-            ) : planRevenueLoading || !planRevenue ? (
-              <div className="h-32 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700" />
-            ) : (
-              <PlanRevenueComparison data={planRevenue} />
             )}
           </div>
 

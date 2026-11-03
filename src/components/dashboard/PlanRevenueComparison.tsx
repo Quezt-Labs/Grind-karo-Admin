@@ -1,122 +1,27 @@
-import { Link } from "react-router-dom";
 import type { PlanRevenueAnalyticsResponse } from "@/types/revenueAnalytics";
-import { cn } from "@/utils/cn";
-
-function formatINR(rupees: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(rupees);
-}
-
-function formatINRCompact(rupees: number): string {
-  if (rupees >= 100_000) return `₹${(rupees / 100_000).toFixed(1)}L`;
-  if (rupees >= 1_000) return `₹${(rupees / 1_000).toFixed(1)}k`;
-  return formatINR(rupees);
-}
-
-function monthHeaderLabel(monthKey: string): string {
-  const d = new Date(`${monthKey}-01T00:00:00.000Z`);
-  return d.toLocaleDateString("en-IN", { month: "short", timeZone: "UTC" });
-}
+import {
+  RevenueComparisonTable,
+  type RevenueComparisonRow,
+} from "@/components/dashboard/RevenueComparisonTable";
 
 interface PlanRevenueComparisonProps {
   data: PlanRevenueAnalyticsResponse;
-  className?: string;
 }
 
-export function PlanRevenueComparison({
-  data,
-  className,
-}: PlanRevenueComparisonProps) {
-  const { monthKeys, plans } = data;
+export function PlanRevenueComparison({ data }: PlanRevenueComparisonProps) {
+  const rows: RevenueComparisonRow[] = data.plans.map((plan) => ({
+    id: plan.planId,
+    name: plan.name,
+    href: `/plans/${plan.planId}`,
+    stats: plan.stats,
+  }));
 
   return (
-    <div className={cn("overflow-x-auto", className)}>
-      <table className="min-w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="sticky left-0 z-10 bg-white py-2 pr-4 font-semibold text-gray-900 dark:bg-gray-800 dark:text-white">
-              Plan
-            </th>
-            {monthKeys.map((key) => (
-              <th
-                key={key}
-                className="px-2 py-2 text-right font-medium text-gray-600 dark:text-gray-300"
-              >
-                {monthHeaderLabel(key)}
-              </th>
-            ))}
-            <th className="px-2 py-2 text-right font-semibold text-gray-900 dark:text-white">
-              Total
-            </th>
-            <th className="px-2 py-2 text-right font-medium text-gray-600 dark:text-gray-300">
-              MoM
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {plans.map((plan) => {
-            const byMonth = new Map(
-              plan.stats.monthly.map((p) => [p.month, p]),
-            );
-            const change = plan.stats.latestMonthChangePercent;
-            return (
-              <tr
-                key={plan.planId}
-                className="border-b border-gray-100 dark:border-gray-700/80"
-              >
-                <td className="sticky left-0 z-10 bg-white py-2 pr-4 dark:bg-gray-800">
-                  <Link
-                    to={`/plans/${plan.planId}`}
-                    className="font-medium text-primary-600 hover:underline dark:text-primary-400"
-                  >
-                    {plan.name}
-                  </Link>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {plan.stats.totalSalesCount} sales in window
-                  </div>
-                </td>
-                {monthKeys.map((key) => {
-                  const point = byMonth.get(key);
-                  const revenue = point?.revenue ?? 0;
-                  const sales = point?.salesCount ?? 0;
-                  return (
-                    <td
-                      key={key}
-                      className="px-2 py-2 text-right tabular-nums text-gray-800 dark:text-gray-200"
-                      title={`${formatINR(revenue)} · ${sales} sale(s)`}
-                    >
-                      {revenue > 0 ? formatINRCompact(revenue) : "—"}
-                    </td>
-                  );
-                })}
-                <td className="px-2 py-2 text-right font-medium tabular-nums text-gray-900 dark:text-white">
-                  {formatINRCompact(plan.stats.totalRevenue)}
-                </td>
-                <td className="px-2 py-2 text-right tabular-nums">
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      change > 0 && "text-emerald-600 dark:text-emerald-400",
-                      change < 0 && "text-red-600 dark:text-red-400",
-                      change === 0 && "text-gray-500",
-                    )}
-                  >
-                    {change > 0 ? "+" : ""}
-                    {change}%
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-        Coaching plans only · includes Razorpay checkout, admin manual grants,
-        and offline renewal payments
-      </p>
-    </div>
+    <RevenueComparisonTable
+      monthKeys={data.monthKeys}
+      rows={rows}
+      nameColumn="Plan"
+      caption="Coaching plans · Razorpay, admin grants, and offline renewal payments"
+    />
   );
 }
