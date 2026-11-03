@@ -87,6 +87,11 @@ export function FormCheckInboxPage() {
   } = route;
 
   const isMissingView = view === "missing";
+  const threadDeepLinkActive =
+    !!focusCommentId || !!focusVideoId || focusAction === "reply";
+  const effectiveReviewFilter: typeof reviewFilter = threadDeepLinkActive
+    ? "all"
+    : reviewFilter;
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [athleteSearch, setAthleteSearch] = useState("");
   const debouncedAthleteSearch = useDebounce(athleteSearch.trim(), 300);
@@ -94,7 +99,7 @@ export function FormCheckInboxPage() {
   // Reset pagination whenever the filter/scope changes. Handled during render
   // (not an effect) to avoid a cascading re-render.
   const [pageSize, setPageSize] = useState(FORM_CHECK_VIDEO_LIMIT);
-  const scopeKey = `${reviewFilter}|${weekNumber ?? "all"}|${dayNumber ?? "all"}|${selectedUserId ?? "none"}`;
+  const scopeKey = `${effectiveReviewFilter}|${weekNumber ?? "all"}|${dayNumber ?? "all"}|${selectedUserId ?? "none"}|${threadDeepLinkActive ? "thread" : "browse"}`;
   const [prevScopeKey, setPrevScopeKey] = useState(scopeKey);
   if (scopeKey !== prevScopeKey) {
     setPrevScopeKey(scopeKey);
@@ -125,7 +130,7 @@ export function FormCheckInboxPage() {
     hasMore,
   } = useFormCheckAthleteDetail({
     userId: selectedUserId,
-    reviewFilter,
+    reviewFilter: effectiveReviewFilter,
     weekNumber,
     dayNumber,
     limit: pageSize,
@@ -134,47 +139,57 @@ export function FormCheckInboxPage() {
 
   const { bulkApply } = useFormCheckMutations(selectedUserId ?? undefined);
 
-  // Deep-linked video may already be reviewed — widen filter so it can surface.
   useEffect(() => {
-    if (
-      (!focusVideoId && !focusCommentId) ||
-      !selectedUserId ||
-      videosLoading
-    ) {
-      return;
-    }
-    const found = videos.some(
-      (v) =>
-        v.id === focusVideoId ||
-        (!!focusCommentId && v.coachCommentId === focusCommentId),
-    );
-    if (!found && reviewFilter === "pending") {
+    if (!threadDeepLinkActive) return;
+    if (reviewFilter !== "all") {
       setReviewFilter("all");
     }
+    if (focusAction === "reply" && layout !== "videos") {
+      setLayout("videos");
+    }
   }, [
-    focusVideoId,
-    focusCommentId,
-    selectedUserId,
-    videos,
-    videosLoading,
+    threadDeepLinkActive,
     reviewFilter,
     setReviewFilter,
+    focusAction,
+    layout,
+    setLayout,
   ]);
 
   const filteredExerciseGroups = useMemo(() => {
     const q = exerciseSearch.trim().toLowerCase();
-    if (!q) return exerciseGroups;
-    return exerciseGroups.filter((g) =>
+    let groups = exerciseGroups;
+    if (threadDeepLinkActive && (focusVideoId || focusCommentId)) {
+      const focused = groups.filter((g) =>
+        g.videos.some(
+          (v) =>
+            v.id === focusVideoId ||
+            (!!focusCommentId && v.coachCommentId === focusCommentId),
+        ),
+      );
+      if (focused.length > 0) groups = focused;
+    }
+    if (!q) return groups;
+    return groups.filter((g) =>
       g.representative.exerciseName.toLowerCase().includes(q),
     );
-  }, [exerciseGroups, exerciseSearch]);
+  }, [
+    exerciseGroups,
+    exerciseSearch,
+    threadDeepLinkActive,
+    focusVideoId,
+    focusCommentId,
+  ]);
 
   const feedbackCount = useMemo(
     () => sortFeedbackVideos(videos).length,
     [videos],
   );
 
-  const showFeedbackLog = reviewFilter !== "pending" && layout === "feedback";
+  const showFeedbackLog =
+    !threadDeepLinkActive &&
+    reviewFilter !== "pending" &&
+    layout === "feedback";
   const effectiveFocusVideoId = useMemo(() => {
     if (focusVideoId) return focusVideoId;
     if (!focusCommentId) return null;

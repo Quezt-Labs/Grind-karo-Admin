@@ -16,7 +16,7 @@ import {
   type PaymentKind,
 } from "@/services/paymentService";
 
-type TabKey = "stuck" | "search" | "history";
+type TabKey = "stuck" | "unpaid" | "search" | "history";
 
 const KIND_LABELS: Record<PaymentKind, string> = {
   coaching: "Coaching",
@@ -35,9 +35,13 @@ function formatINR(rupees: number): string {
 
 function PaymentRowCard({ row }: { row: AdminPaymentRow }) {
   const unpaid =
-    row.kind === "coaching" &&
-    (row.status === "PENDING" ||
-      (row.status === "ACTIVE" && row.razorpayPaymentId === null));
+    row.razorpayPaymentId === null &&
+    row.status !== "FAILED" &&
+    row.status !== "CANCELLED" &&
+    row.status !== "REFUNDED" &&
+    (row.kind !== "coaching" ||
+      row.status === "PENDING" ||
+      row.status === "ACTIVE");
 
   return (
     <article className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -88,7 +92,7 @@ function PaymentRowCard({ row }: { row: AdminPaymentRow }) {
 
 export function PaymentsOpsPage() {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<TabKey>("stuck");
+  const [tab, setTab] = useState<TabKey>("unpaid");
   const [kindFilter, setKindFilter] = useState<PaymentKind | "all">("all");
   const [searchQ, setSearchQ] = useState("");
 
@@ -97,9 +101,21 @@ export function PaymentsOpsPage() {
     queryFn: () =>
       paymentService.listStuck({
         kind: kindFilter,
+        minAgeMinutes: 30,
         limit: 100,
       }),
     enabled: tab === "stuck",
+  });
+
+  const unpaidQuery = useQuery({
+    queryKey: ["payments-unpaid", kindFilter],
+    queryFn: () =>
+      paymentService.listStuck({
+        kind: kindFilter,
+        minAgeMinutes: 0,
+        limit: 100,
+      }),
+    enabled: tab === "unpaid",
   });
 
   const searchQuery = useQuery({
@@ -131,6 +147,7 @@ export function PaymentsOpsPage() {
       toast.success("Purchase reconcile finished");
       console.info(report);
       void queryClient.invalidateQueries({ queryKey: ["payments-stuck"] });
+      void queryClient.invalidateQueries({ queryKey: ["payments-unpaid"] });
       void queryClient.invalidateQueries({
         queryKey: ["payments-reconcile-history-purchase"],
       });
@@ -144,6 +161,7 @@ export function PaymentsOpsPage() {
       toast.success("Coaching reconcile finished");
       console.info(report);
       void queryClient.invalidateQueries({ queryKey: ["payments-stuck"] });
+      void queryClient.invalidateQueries({ queryKey: ["payments-unpaid"] });
       void queryClient.invalidateQueries({
         queryKey: ["payments-reconcile-history-coaching"],
       });
@@ -163,13 +181,14 @@ export function PaymentsOpsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Payment ops"
-        description="Stuck checkouts, cross-product search, and reconciliation history."
+        description="Unpaid Razorpay checkouts, stuck rows, search, and reconciliation. Only rows with a captured payment id count as revenue."
       />
 
       <div className="flex flex-wrap items-center gap-2">
         {(
           [
-            { key: "stuck", label: "Stuck payments" },
+            { key: "unpaid", label: "Unpaid checkouts" },
+            { key: "stuck", label: "Stuck (>30 min)" },
             { key: "search", label: "Search" },
             { key: "history", label: "Reconcile history" },
           ] as const
@@ -237,6 +256,33 @@ export function PaymentsOpsPage() {
           </button>
         ))}
       </div>
+
+      {tab === "unpaid" ? (
+        unpaidQuery.isError ? (
+          <ErrorAlert message="Failed to load unpaid checkouts." />
+        ) : unpaidQuery.isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Shimmer key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+        ) : unpaidQuery.data?.items.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            No unpaid checkout rows — counts here should match Razorpay captured
+            payments, not every created order.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {unpaidQuery.data?.total ?? 0} unpaid checkout row(s). These do
+              not count in dashboard revenue until Razorpay captures payment.
+            </p>
+            {unpaidQuery.data?.items.map((row) => (
+              <PaymentRowCard key={`${row.kind}-${row.id}`} row={row} />
+            ))}
+          </div>
+        )
+      ) : null}
 
       {tab === "stuck" ? (
         stuckQuery.isError ? (

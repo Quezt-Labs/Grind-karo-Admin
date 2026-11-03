@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFormCheckPendingCount } from "@/hooks/useFormCheckPendingCount";
 import { FormCheckWorkSplitBanner } from "@/components/form-check/FormCheckWorkSplitBanner";
 import { buildFormCheckThreadRoute } from "@/utils/formCheckRoutes";
+import { groupFormCheckActionQueueByAthlete } from "@/utils/groupFormCheckActionQueue";
 import { formCheckQueueRefetchInterval } from "@/utils/formCheckQueue";
 import {
   formCheckActionQueueService,
@@ -171,18 +172,6 @@ function replyLockText(item: FormCheckActionQueueItem): string | null {
   if (itemReplyBlocked(item))
     return "Replies are currently blocked for this thread.";
   return null;
-}
-
-function sortQueue(items: FormCheckActionQueueItem[], tab: FormCheckQueueTab) {
-  const copy = [...items];
-  copy.sort((a, b) => {
-    const aAt = new Date(a.latestActivityAt).getTime();
-    const bAt = new Date(b.latestActivityAt).getTime();
-    const byTime = tab === "resolved" ? bAt - aAt : aAt - bAt;
-    if (byTime !== 0) return byTime;
-    return a.id.localeCompare(b.id);
-  });
-  return copy;
 }
 
 function tabCountTotal(counts: Record<FormCheckQueueTab, number>): number {
@@ -458,9 +447,13 @@ export function FormCheckActionQueuePage() {
     },
   });
 
-  const items = useMemo(
-    () => sortQueue(data?.items ?? [], tab),
+  const athleteGroups = useMemo(
+    () => groupFormCheckActionQueueByAthlete(data?.items ?? [], tab),
     [data?.items, tab],
+  );
+  const queueItemCount = useMemo(
+    () => athleteGroups.reduce((sum, group) => sum + group.items.length, 0),
+    [athleteGroups],
   );
   const busyState = isError && (busyRetrying || isBusyError(error));
 
@@ -544,7 +537,8 @@ export function FormCheckActionQueuePage() {
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
         <span>
-          Showing {items.length}
+          Showing {athleteGroups.length} athlete
+          {athleteGroups.length === 1 ? "" : "s"} · {queueItemCount}
           {data?.total != null ? ` of ${data.total}` : ""} threads.
         </span>
         <span>
@@ -580,7 +574,7 @@ export function FormCheckActionQueuePage() {
             <Shimmer key={index} className="h-24 rounded-xl" />
           ))}
         </div>
-      ) : items.length === 0 ? (
+      ) : queueItemCount === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-800">
           <AlertCircle className="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
           <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -591,204 +585,236 @@ export function FormCheckActionQueuePage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => {
-            const athleteLabel =
-              item.athleteName?.trim() ||
-              item.athleteEmail ||
-              "Unknown athlete";
-            const quickReplyText = draftById[item.id] ?? "";
-            const isReplyBlocked = itemReplyBlocked(item);
-            const athleteLimitReached = athleteReplyLimitReached(item);
-            const athleteLimitLabel = athleteReplyLimitLabel(item);
-            const lockReason = replyLockText(item);
-            return (
-              <article
-                key={item.id}
-                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-750"
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      deepLink(
-                        item,
-                        item.state === "needs_reply" ? "reply" : undefined,
-                      ),
-                    )
-                  }
-                  className="w-full text-left"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                        {athleteLabel}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-gray-600 dark:text-gray-300">
-                        {item.videoReference ?? "Form-check thread"}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                          priorityTone(item.priority),
-                        )}
-                      >
-                        {priorityLabel(item.priority)}
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                          stateTone(item.state),
-                        )}
-                      >
-                        {stateLabel(item.state)}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-sm text-gray-700 dark:text-gray-200">
-                    {item.latestCommentPreview}
+        <div className="space-y-4">
+          {athleteGroups.map((group) => (
+            <section
+              key={group.athleteId}
+              className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50/80 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/40">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                    {group.athleteName}
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-                    <span>{timeAgo(item.latestActivityAt)}</span>
-                    {item.groupedCount > 1 ? (
-                      <span className="rounded-full bg-gray-100 px-1.5 py-0.5 font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-                        {item.groupedCount} updates
-                      </span>
-                    ) : null}
-                    {item.unreadCount > 0 ? (
-                      <span className="rounded-full bg-blue-100 px-1.5 py-0.5 font-semibold text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
-                        {item.unreadCount} unread
-                      </span>
-                    ) : null}
-                    {athleteLimitLabel ? (
-                      <span
-                        className={cn(
-                          "rounded-full px-1.5 py-0.5 font-semibold",
-                          athleteLimitReached
-                            ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
-                            : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
-                        )}
-                      >
-                        {athleteLimitLabel}
-                      </span>
-                    ) : null}
-                    {isReplyBlocked ? (
-                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
-                        Coach reply blocked
-                      </span>
-                    ) : null}
-                    {item.stateReason ? <span>{item.stateReason}</span> : null}
-                    {uploadLinkageState(item) === "blocked" ? (
-                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
-                        Upload incident linked
-                        {item.uploadIncidentCount != null &&
-                        item.uploadIncidentCount > 0
-                          ? ` (${item.uploadIncidentCount})`
-                          : ""}
-                      </span>
-                    ) : uploadLinkageState(item) === "pending" ? (
-                      <span className="rounded-full bg-gray-100 px-1.5 py-0.5 font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                        Upload signal pending
-                      </span>
-                    ) : null}
-                  </div>
-                </button>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        deepLink(
-                          item,
-                          item.state === "needs_reply" ? "reply" : undefined,
-                        ),
-                      )
-                    }
-                    className="rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
-                  >
-                    Open thread
-                  </button>
-                  {item.commentId ? (
-                    <button
-                      type="button"
-                      disabled={isReplyBlocked}
-                      onClick={() =>
-                        setQuickReplyId((current) =>
-                          current === item.id ? null : item.id,
-                        )
-                      }
-                      className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
-                    >
-                      <MessageSquareReply className="h-3.5 w-3.5" />
-                      Quick reply
-                    </button>
+                  {group.athleteEmail ? (
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                      {group.athleteEmail}
+                    </p>
                   ) : null}
                 </div>
-                {lockReason ? (
-                  <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300">
-                    {lockReason}
-                  </p>
-                ) : null}
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+                  <span className="rounded-full bg-gray-200 px-2 py-0.5 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                    {group.items.length} thread
+                    {group.items.length === 1 ? "" : "s"}
+                  </span>
+                  {group.needsReplyCount > 0 ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+                      {group.needsReplyCount} need
+                      {group.needsReplyCount === 1 ? "s" : ""} reply
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {group.items.map((item) => {
+                  const quickReplyText = draftById[item.id] ?? "";
+                  const isReplyBlocked = itemReplyBlocked(item);
+                  const athleteLimitReached = athleteReplyLimitReached(item);
+                  const athleteLimitLabel = athleteReplyLimitLabel(item);
+                  const lockReason = replyLockText(item);
+                  return (
+                    <article
+                      key={item.id}
+                      className="p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-750"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            deepLink(
+                              item,
+                              item.state === "needs_reply"
+                                ? "reply"
+                                : undefined,
+                            ),
+                          )
+                        }
+                        className="w-full text-left"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                              {item.videoReference ?? "Form-check thread"}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={cn(
+                                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                priorityTone(item.priority),
+                              )}
+                            >
+                              {priorityLabel(item.priority)}
+                            </span>
+                            <span
+                              className={cn(
+                                "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                                stateTone(item.state),
+                              )}
+                            >
+                              {stateLabel(item.state)}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-sm text-gray-700 dark:text-gray-200">
+                          {item.latestCommentPreview}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                          <span>{timeAgo(item.latestActivityAt)}</span>
+                          {item.groupedCount > 1 ? (
+                            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                              {item.groupedCount} updates
+                            </span>
+                          ) : null}
+                          {item.unreadCount > 0 ? (
+                            <span className="rounded-full bg-blue-100 px-1.5 py-0.5 font-semibold text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
+                              {item.unreadCount} unread
+                            </span>
+                          ) : null}
+                          {athleteLimitLabel ? (
+                            <span
+                              className={cn(
+                                "rounded-full px-1.5 py-0.5 font-semibold",
+                                athleteLimitReached
+                                  ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
+                                  : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+                              )}
+                            >
+                              {athleteLimitLabel}
+                            </span>
+                          ) : null}
+                          {isReplyBlocked ? (
+                            <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
+                              Coach reply blocked
+                            </span>
+                          ) : null}
+                          {item.stateReason ? (
+                            <span>{item.stateReason}</span>
+                          ) : null}
+                          {uploadLinkageState(item) === "blocked" ? (
+                            <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
+                              Upload incident linked
+                              {item.uploadIncidentCount != null &&
+                              item.uploadIncidentCount > 0
+                                ? ` (${item.uploadIncidentCount})`
+                                : ""}
+                            </span>
+                          ) : uploadLinkageState(item) === "pending" ? (
+                            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                              Upload signal pending
+                            </span>
+                          ) : null}
+                        </div>
+                      </button>
 
-                {quickReplyId === item.id && item.commentId ? (
-                  <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 dark:border-gray-600 dark:bg-gray-900/50">
-                    <textarea
-                      value={quickReplyText}
-                      onChange={(event) =>
-                        setDraftById((prev) => ({
-                          ...prev,
-                          [item.id]: event.target.value,
-                        }))
-                      }
-                      rows={3}
-                      placeholder="Reply to athlete..."
-                      className="w-full resize-y rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                    />
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {isReplyBlocked
-                          ? (lockReason ??
-                            "Replies are currently blocked for this thread.")
-                          : "Reply sends immediately and keeps this queue current."}
-                      </p>
-                      <div className="flex items-center gap-2">
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setQuickReplyId(null)}
-                          className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          disabled={
-                            quickReplyMutation.isPending ||
-                            !quickReplyText.trim() ||
-                            isReplyBlocked
-                          }
                           onClick={() =>
-                            quickReplyMutation.mutate({
-                              itemId: item.id,
-                              commentId: item.commentId!,
-                              threadType: item.threadType,
-                              reply: quickReplyText.trim(),
-                            })
+                            navigate(
+                              deepLink(
+                                item,
+                                item.state === "needs_reply"
+                                  ? "reply"
+                                  : undefined,
+                              ),
+                            )
                           }
-                          className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                          className="rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
                         >
-                          <Send className="h-3.5 w-3.5" />
-                          Send
+                          Open thread
                         </button>
+                        {item.commentId ? (
+                          <button
+                            type="button"
+                            disabled={isReplyBlocked}
+                            onClick={() =>
+                              setQuickReplyId((current) =>
+                                current === item.id ? null : item.id,
+                              )
+                            }
+                            className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-600 dark:bg-gray-900 dark:text-indigo-300"
+                          >
+                            <MessageSquareReply className="h-3.5 w-3.5" />
+                            Quick reply
+                          </button>
+                        ) : null}
                       </div>
-                    </div>
-                  </div>
-                ) : null}
-              </article>
-            );
-          })}
+                      {lockReason ? (
+                        <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300">
+                          {lockReason}
+                        </p>
+                      ) : null}
+
+                      {quickReplyId === item.id && item.commentId ? (
+                        <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 dark:border-gray-600 dark:bg-gray-900/50">
+                          <textarea
+                            value={quickReplyText}
+                            onChange={(event) =>
+                              setDraftById((prev) => ({
+                                ...prev,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            rows={3}
+                            placeholder="Reply to athlete..."
+                            className="w-full resize-y rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                          />
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                              {isReplyBlocked
+                                ? (lockReason ??
+                                  "Replies are currently blocked for this thread.")
+                                : "Reply sends immediately and keeps this queue current."}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setQuickReplyId(null)}
+                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                disabled={
+                                  quickReplyMutation.isPending ||
+                                  !quickReplyText.trim() ||
+                                  isReplyBlocked
+                                }
+                                onClick={() =>
+                                  quickReplyMutation.mutate({
+                                    itemId: item.id,
+                                    commentId: item.commentId!,
+                                    threadType: item.threadType,
+                                    reply: quickReplyText.trim(),
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                              >
+                                <Send className="h-3.5 w-3.5" />
+                                Send
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
     </div>

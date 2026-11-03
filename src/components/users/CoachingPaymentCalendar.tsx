@@ -35,7 +35,8 @@ type MilestoneStatus =
   | "expired"
   | "waived"
   | "extended"
-  | "manual";
+  | "manual"
+  | "unpaid";
 
 type Milestone = {
   label: string;
@@ -71,12 +72,21 @@ function coachingMilestones(
     (row) => row.subscriptionId === sub.id,
   );
 
+  const isPaidCheckout =
+    sub.razorpayPaymentId != null && sub.status !== "CANCELLED";
+
   const milestones: Milestone[] = [
     {
-      label: "Plan started",
+      label: isPaidCheckout ? "Plan started" : "Checkout started (unpaid)",
       date: sub.startDate,
-      amount: sub.totalAmount,
-      status: start <= now ? "paid" : "upcoming",
+      amount: isPaidCheckout ? sub.totalAmount : undefined,
+      status: isPaidCheckout
+        ? start <= now
+          ? "paid"
+          : "upcoming"
+        : sub.status === "CANCELLED"
+          ? "expired"
+          : "unpaid",
     },
   ];
 
@@ -246,6 +256,8 @@ function dotClass(status: MilestoneStatus): string {
       return "border-2 border-dashed border-amber-500 bg-white dark:bg-gray-900";
     case "expired":
       return "bg-gray-400";
+    case "unpaid":
+      return "bg-rose-400";
     default:
       return "bg-amber-400";
   }
@@ -261,6 +273,7 @@ const LEGEND: { label: string; className: string }[] = [
   },
   { label: "Waived / hold", className: "bg-sky-500" },
   { label: "Extended", className: "bg-violet-500" },
+  { label: "Unpaid checkout", className: "bg-rose-400" },
   { label: "Expired", className: "bg-gray-400" },
 ];
 

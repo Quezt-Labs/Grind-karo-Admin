@@ -132,7 +132,10 @@ export function useUserDetail(
   const purchaseStats = useMemo(() => {
     if (!purchasesData) return null;
     const coaching = purchases.filter(
-      (p) => p.kind === "coaching_subscription",
+      (p) =>
+        p.kind === "coaching_subscription" &&
+        p.razorpayPaymentId != null &&
+        p.status !== "CANCELLED",
     );
     const programs = purchases.filter((p) => p.kind === "program_purchase");
     const books = purchases.filter((p) => p.kind === "book_purchase");

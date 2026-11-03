@@ -34,6 +34,7 @@ export function buildFormCheckThreadRoute(
   if (params.commentId) query.set("commentId", params.commentId);
   if (params.messageId) query.set("messageId", params.messageId);
   if (params.threadType) query.set("threadType", params.threadType);
+  if (action === "reply") query.set("layout", "videos");
   if (action) query.set("action", action);
   return `${FORM_CHECK_INBOX_PATH}?${query.toString()}`;
 }
