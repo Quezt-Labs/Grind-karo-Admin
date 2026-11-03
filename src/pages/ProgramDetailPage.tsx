@@ -24,6 +24,9 @@ import { ProgramPurchasersPanel } from "./editor/ProgramPurchasersPanel";
 import { AthleteSelectionsPanel } from "./editor/AthleteSelectionsPanel";
 import { ProgramAddonsPanel } from "@/components/programs/ProgramAddonsPanel";
 import { ProgramFormModal } from "@/components/programs/ProgramFormModal";
+import { ProgramRevenuePanel } from "@/components/dashboard/ProgramRevenuePanel";
+import { dashboardService } from "@/services/dashboardService";
+import { useIsAdmin } from "@/hooks/useRole";
 
 import { useResolveProgramKey } from "@/hooks/useResolveProgramKey";
 
@@ -35,6 +38,7 @@ export function ProgramDetailPage() {
     useResolveProgramKey(programKey);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isAdmin = useIsAdmin();
 
   const [resourceModal, setResourceModal] = useState<{
     open: boolean;
@@ -55,6 +59,12 @@ export function ProgramDetailPage() {
     queryKey: ["program-tree", programId],
     queryFn: () => programService.getTree(programId!),
     enabled: !!programId,
+  });
+
+  const { data: programRevenue } = useQuery({
+    queryKey: ["program-revenue", programId],
+    queryFn: () => dashboardService.getProgramRevenue(programId!, 12),
+    enabled: !!programId && isAdmin,
   });
 
   function refreshTree() {
@@ -145,6 +155,10 @@ export function ProgramDetailPage() {
           Build Content
         </Button>
       </div>
+
+      {isAdmin && programRevenue ? (
+        <ProgramRevenuePanel data={programRevenue} />
+      ) : null}
 
       {/* ── Purchasers ─────────────────────────────────────────────────── */}
       <ProgramPurchasersPanel programId={programId!} />
