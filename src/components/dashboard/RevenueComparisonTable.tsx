@@ -88,9 +88,7 @@ export function RevenueComparisonTable({
         </thead>
         <tbody>
           {visibleRows.map((row) => {
-            const byMonth = new Map(
-              row.stats.monthly.map((p) => [p.month, p]),
-            );
+            const byMonth = new Map(row.stats.monthly.map((p) => [p.month, p]));
             const change = row.stats.latestMonthChangePercent;
             return (
               <tr

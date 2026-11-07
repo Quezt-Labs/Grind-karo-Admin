@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { ImageUploadField } from "@/components/shared/ImageUploadField";
 import { PdfUploadField } from "@/components/shared/PdfUploadField";
+import { VideoUploadField } from "@/components/shared/VideoUploadField";
 import { programService } from "@/services/programService";
 import type { Program, ProgramTree } from "@/types/programs";
 import {
@@ -43,6 +44,8 @@ const programSchema = z.object({
   tagline: z.string().optional(),
   description: z.string().optional(),
   coverImageUrl: z.string().nullable().optional(),
+  promoVideoUrl: z.string().nullable().optional(),
+  promoVideoPosterUrl: z.string().nullable().optional(),
   pdfUrl: z.union([z.string().url(), z.literal("")]).optional(),
   badge: z.string().optional(),
   regularPrice: z.coerce.number().min(0, "Min ₹0"),
@@ -127,6 +130,8 @@ export function ProgramFormModal({
           tagline: program.tagline || "",
           description: program.description || "",
           coverImageUrl: program.coverImageUrl,
+          promoVideoUrl: program.promoVideoUrl ?? null,
+          promoVideoPosterUrl: program.promoVideoPosterUrl ?? null,
           pdfUrl: existingPdfResource?.pdfUrl ?? "",
           badge: program.badge || "",
           regularPrice: program.regularPrice,
@@ -150,6 +155,8 @@ export function ProgramFormModal({
           tagline: "",
           description: "",
           coverImageUrl: null,
+          promoVideoUrl: null,
+          promoVideoPosterUrl: null,
           pdfUrl: "",
           badge: "",
           regularPrice: 0,
@@ -168,6 +175,11 @@ export function ProgramFormModal({
 
   const highlightsArray = useFieldArray({ control, name: "highlights" });
   const coverImageUrl = useWatch({ control, name: "coverImageUrl" });
+  const promoVideoUrl = useWatch({ control, name: "promoVideoUrl" });
+  const promoVideoPosterUrl = useWatch({
+    control,
+    name: "promoVideoPosterUrl",
+  });
   const pdfUrl = useWatch({ control, name: "pdfUrl" });
   const watchedName = useWatch({ control, name: "name" });
 
@@ -226,6 +238,8 @@ export function ProgramFormModal({
         tagline: data.tagline || null,
         description: data.description || null,
         coverImageUrl: data.coverImageUrl || null,
+        promoVideoUrl: data.promoVideoUrl || null,
+        promoVideoPosterUrl: data.promoVideoPosterUrl || null,
         badge: data.badge || null,
         regularPrice: data.regularPrice,
         salePrice: data.salePrice || null,
@@ -257,6 +271,8 @@ export function ProgramFormModal({
         tagline: data.tagline || null,
         description: data.description || null,
         coverImageUrl: data.coverImageUrl || null,
+        promoVideoUrl: data.promoVideoUrl || null,
+        promoVideoPosterUrl: data.promoVideoPosterUrl || null,
         badge: data.badge || null,
         regularPrice: data.regularPrice,
         salePrice: data.salePrice || null,
@@ -353,6 +369,26 @@ export function ProgramFormModal({
           <ImageUploadField
             imageUrl={coverImageUrl ?? null}
             onImageChange={(url) => setValue("coverImageUrl", url)}
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Promo video (product page)
+          </label>
+          <VideoUploadField
+            videoUrl={promoVideoUrl ?? null}
+            onVideoChange={(url) => setValue("promoVideoUrl", url)}
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Promo video poster (optional)
+          </label>
+          <ImageUploadField
+            imageUrl={promoVideoPosterUrl ?? null}
+            onImageChange={(url) => setValue("promoVideoPosterUrl", url)}
           />
         </div>
 

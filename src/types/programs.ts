@@ -48,6 +48,8 @@ export interface Program {
   tagline: string | null;
   description: string | null;
   coverImageUrl: string | null;
+  promoVideoUrl: string | null;
+  promoVideoPosterUrl: string | null;
   badge: string | null;
   regularPrice: number;
   salePrice: number | null;
@@ -76,6 +78,8 @@ export interface CreateProgramPayload {
   tagline?: string | null;
   description?: string | null;
   coverImageUrl?: string | null;
+  promoVideoUrl?: string | null;
+  promoVideoPosterUrl?: string | null;
   badge?: string | null;
   regularPrice: number;
   salePrice?: number | null;

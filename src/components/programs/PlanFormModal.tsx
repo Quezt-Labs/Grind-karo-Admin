@@ -17,6 +17,8 @@ import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { ImageUploadField } from "@/components/shared/ImageUploadField";
+import { VideoUploadField } from "@/components/shared/VideoUploadField";
 import { BADGE_OPTIONS } from "@/components/ui/badgeOptions";
 import { planService } from "@/services/planService";
 import type { CoachingPlan } from "@/types/program";
@@ -34,6 +36,8 @@ const planSchema = z.object({
   name: z.string().min(1, "Name is required"),
   tagline: z.string().optional(),
   description: z.string().optional(),
+  promoVideoUrl: z.string().nullable().optional(),
+  promoVideoPosterUrl: z.string().nullable().optional(),
   price: z.coerce.number().min(1, "Min ₹1"),
   validityMonths: z.coerce.number().min(1, "Min 1 block (4 weeks)"),
   includedFeatures: z.array(z.object({ value: z.string() })),
@@ -85,6 +89,8 @@ export function PlanFormModal({
           name: plan.name,
           tagline: plan.tagline || "",
           description: plan.description || "",
+          promoVideoUrl: plan.promoVideoUrl ?? null,
+          promoVideoPosterUrl: plan.promoVideoPosterUrl ?? null,
           price: plan.price,
           validityMonths: plan.validityMonths,
           includedFeatures: plan.includedFeatures.length
@@ -105,6 +111,8 @@ export function PlanFormModal({
           name: "",
           tagline: "",
           description: "",
+          promoVideoUrl: null,
+          promoVideoPosterUrl: null,
           price: 4999,
           validityMonths: 3,
           includedFeatures: [{ value: "" }],
@@ -121,6 +129,11 @@ export function PlanFormModal({
   const includedArray = useFieldArray({ control, name: "includedFeatures" });
   const excludedArray = useFieldArray({ control, name: "excludedFeatures" });
   const watchedName = useWatch({ control, name: "name" });
+  const promoVideoUrl = useWatch({ control, name: "promoVideoUrl" });
+  const promoVideoPosterUrl = useWatch({
+    control,
+    name: "promoVideoPosterUrl",
+  });
   const [slugTouched, setSlugTouched] = useState(isEdit);
 
   useEffect(() => {
@@ -153,6 +166,8 @@ export function PlanFormModal({
       name: data.name,
       tagline: data.tagline || null,
       description: data.description || null,
+      promoVideoUrl: data.promoVideoUrl || null,
+      promoVideoPosterUrl: data.promoVideoPosterUrl || null,
       price: data.price,
       validityMonths: data.validityMonths,
       includedFeatures: data.includedFeatures
@@ -227,6 +242,26 @@ export function PlanFormModal({
             error={errors.description?.message}
             {...register("description")}
           />
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Promo video (plan page)
+            </label>
+            <VideoUploadField
+              videoUrl={promoVideoUrl ?? null}
+              onVideoChange={(url) => setValue("promoVideoUrl", url)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Promo video poster (optional)
+            </label>
+            <ImageUploadField
+              imageUrl={promoVideoPosterUrl ?? null}
+              onImageChange={(url) => setValue("promoVideoPosterUrl", url)}
+            />
+          </div>
 
           <Controller
             name="trainingVertical"

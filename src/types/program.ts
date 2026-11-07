@@ -27,6 +27,8 @@ export interface CoachingPlan {
   name: string;
   tagline: string | null;
   description: string | null;
+  promoVideoUrl: string | null;
+  promoVideoPosterUrl: string | null;
   price: number; // INR rupees (integer)
   validityMonths: number;
   includedFeatures: string[];
@@ -51,6 +53,8 @@ export interface CreateCoachingPlanPayload {
   name: string;
   tagline?: string | null;
   description?: string | null;
+  promoVideoUrl?: string | null;
+  promoVideoPosterUrl?: string | null;
   price: number;
   validityMonths: number;
   includedFeatures: string[];
