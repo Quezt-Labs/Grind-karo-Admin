@@ -50,6 +50,9 @@ export interface Program {
   coverImageUrl: string | null;
   promoVideoUrl: string | null;
   promoVideoPosterUrl: string | null;
+  welcomeVideoUrl: string | null;
+  welcomeVideoPosterUrl: string | null;
+  welcomeVideoDescription: string | null;
   badge: string | null;
   regularPrice: number;
   salePrice: number | null;
@@ -80,6 +83,9 @@ export interface CreateProgramPayload {
   coverImageUrl?: string | null;
   promoVideoUrl?: string | null;
   promoVideoPosterUrl?: string | null;
+  welcomeVideoUrl?: string | null;
+  welcomeVideoPosterUrl?: string | null;
+  welcomeVideoDescription?: string | null;
   badge?: string | null;
   regularPrice: number;
   salePrice?: number | null;

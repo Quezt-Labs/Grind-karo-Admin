@@ -38,6 +38,9 @@ const planSchema = z.object({
   description: z.string().optional(),
   promoVideoUrl: z.string().nullable().optional(),
   promoVideoPosterUrl: z.string().nullable().optional(),
+  welcomeVideoUrl: z.string().nullable().optional(),
+  welcomeVideoPosterUrl: z.string().nullable().optional(),
+  welcomeVideoDescription: z.string().optional(),
   price: z.coerce.number().min(1, "Min ₹1"),
   validityMonths: z.coerce.number().min(1, "Min 1 block (4 weeks)"),
   includedFeatures: z.array(z.object({ value: z.string() })),
@@ -91,6 +94,9 @@ export function PlanFormModal({
           description: plan.description || "",
           promoVideoUrl: plan.promoVideoUrl ?? null,
           promoVideoPosterUrl: plan.promoVideoPosterUrl ?? null,
+          welcomeVideoUrl: plan.welcomeVideoUrl ?? null,
+          welcomeVideoPosterUrl: plan.welcomeVideoPosterUrl ?? null,
+          welcomeVideoDescription: plan.welcomeVideoDescription ?? "",
           price: plan.price,
           validityMonths: plan.validityMonths,
           includedFeatures: plan.includedFeatures.length
@@ -113,6 +119,9 @@ export function PlanFormModal({
           description: "",
           promoVideoUrl: null,
           promoVideoPosterUrl: null,
+          welcomeVideoUrl: null,
+          welcomeVideoPosterUrl: null,
+          welcomeVideoDescription: "",
           price: 4999,
           validityMonths: 3,
           includedFeatures: [{ value: "" }],
@@ -133,6 +142,11 @@ export function PlanFormModal({
   const promoVideoPosterUrl = useWatch({
     control,
     name: "promoVideoPosterUrl",
+  });
+  const welcomeVideoUrl = useWatch({ control, name: "welcomeVideoUrl" });
+  const welcomeVideoPosterUrl = useWatch({
+    control,
+    name: "welcomeVideoPosterUrl",
   });
   const [slugTouched, setSlugTouched] = useState(isEdit);
 
@@ -168,6 +182,9 @@ export function PlanFormModal({
       description: data.description || null,
       promoVideoUrl: data.promoVideoUrl || null,
       promoVideoPosterUrl: data.promoVideoPosterUrl || null,
+      welcomeVideoUrl: data.welcomeVideoUrl || null,
+      welcomeVideoPosterUrl: data.welcomeVideoPosterUrl || null,
+      welcomeVideoDescription: data.welcomeVideoDescription?.trim() || null,
       price: data.price,
       validityMonths: data.validityMonths,
       includedFeatures: data.includedFeatures
@@ -245,7 +262,7 @@ export function PlanFormModal({
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Promo video (plan page)
+              Promo video (website — before purchase)
             </label>
             <VideoUploadField
               videoUrl={promoVideoUrl ?? null}
@@ -261,6 +278,37 @@ export function PlanFormModal({
               imageUrl={promoVideoPosterUrl ?? null}
               onImageChange={(url) => setValue("promoVideoPosterUrl", url)}
             />
+          </div>
+
+          <div className="rounded-lg border border-dashed border-gray-300 p-4 dark:border-gray-600">
+            <p className="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200">
+              Welcome video (mobile app — after purchase)
+            </p>
+            <div className="space-y-4">
+              <VideoUploadField
+                videoUrl={welcomeVideoUrl ?? null}
+                onVideoChange={(url) => setValue("welcomeVideoUrl", url)}
+              />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Welcome video poster (optional)
+                </label>
+                <ImageUploadField
+                  imageUrl={welcomeVideoPosterUrl ?? null}
+                  onImageChange={(url) =>
+                    setValue("welcomeVideoPosterUrl", url)
+                  }
+                />
+              </div>
+              <Textarea
+                id="plan-welcome-desc"
+                label="Welcome message (shown in app under video)"
+                rows={2}
+                placeholder="Onboarding for new coaching clients…"
+                error={errors.welcomeVideoDescription?.message}
+                {...register("welcomeVideoDescription")}
+              />
+            </div>
           </div>
 
           <Controller

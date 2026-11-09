@@ -46,6 +46,9 @@ const programSchema = z.object({
   coverImageUrl: z.string().nullable().optional(),
   promoVideoUrl: z.string().nullable().optional(),
   promoVideoPosterUrl: z.string().nullable().optional(),
+  welcomeVideoUrl: z.string().nullable().optional(),
+  welcomeVideoPosterUrl: z.string().nullable().optional(),
+  welcomeVideoDescription: z.string().optional(),
   pdfUrl: z.union([z.string().url(), z.literal("")]).optional(),
   badge: z.string().optional(),
   regularPrice: z.coerce.number().min(0, "Min ₹0"),
@@ -132,6 +135,9 @@ export function ProgramFormModal({
           coverImageUrl: program.coverImageUrl,
           promoVideoUrl: program.promoVideoUrl ?? null,
           promoVideoPosterUrl: program.promoVideoPosterUrl ?? null,
+          welcomeVideoUrl: program.welcomeVideoUrl ?? null,
+          welcomeVideoPosterUrl: program.welcomeVideoPosterUrl ?? null,
+          welcomeVideoDescription: program.welcomeVideoDescription ?? "",
           pdfUrl: existingPdfResource?.pdfUrl ?? "",
           badge: program.badge || "",
           regularPrice: program.regularPrice,
@@ -157,6 +163,9 @@ export function ProgramFormModal({
           coverImageUrl: null,
           promoVideoUrl: null,
           promoVideoPosterUrl: null,
+          welcomeVideoUrl: null,
+          welcomeVideoPosterUrl: null,
+          welcomeVideoDescription: "",
           pdfUrl: "",
           badge: "",
           regularPrice: 0,
@@ -179,6 +188,11 @@ export function ProgramFormModal({
   const promoVideoPosterUrl = useWatch({
     control,
     name: "promoVideoPosterUrl",
+  });
+  const welcomeVideoUrl = useWatch({ control, name: "welcomeVideoUrl" });
+  const welcomeVideoPosterUrl = useWatch({
+    control,
+    name: "welcomeVideoPosterUrl",
   });
   const pdfUrl = useWatch({ control, name: "pdfUrl" });
   const watchedName = useWatch({ control, name: "name" });
@@ -240,6 +254,9 @@ export function ProgramFormModal({
         coverImageUrl: data.coverImageUrl || null,
         promoVideoUrl: data.promoVideoUrl || null,
         promoVideoPosterUrl: data.promoVideoPosterUrl || null,
+        welcomeVideoUrl: data.welcomeVideoUrl || null,
+        welcomeVideoPosterUrl: data.welcomeVideoPosterUrl || null,
+        welcomeVideoDescription: data.welcomeVideoDescription?.trim() || null,
         badge: data.badge || null,
         regularPrice: data.regularPrice,
         salePrice: data.salePrice || null,
@@ -273,6 +290,9 @@ export function ProgramFormModal({
         coverImageUrl: data.coverImageUrl || null,
         promoVideoUrl: data.promoVideoUrl || null,
         promoVideoPosterUrl: data.promoVideoPosterUrl || null,
+        welcomeVideoUrl: data.welcomeVideoUrl || null,
+        welcomeVideoPosterUrl: data.welcomeVideoPosterUrl || null,
+        welcomeVideoDescription: data.welcomeVideoDescription?.trim() || null,
         badge: data.badge || null,
         regularPrice: data.regularPrice,
         salePrice: data.salePrice || null,
@@ -374,7 +394,7 @@ export function ProgramFormModal({
 
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Promo video (product page)
+            Promo video (website — before purchase)
           </label>
           <VideoUploadField
             videoUrl={promoVideoUrl ?? null}
@@ -390,6 +410,34 @@ export function ProgramFormModal({
             imageUrl={promoVideoPosterUrl ?? null}
             onImageChange={(url) => setValue("promoVideoPosterUrl", url)}
           />
+        </div>
+
+        <div className="rounded-lg border border-dashed border-gray-300 p-4 dark:border-gray-600">
+          <p className="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200">
+            Welcome video (mobile app — after purchase)
+          </p>
+          <div className="space-y-4">
+            <VideoUploadField
+              videoUrl={welcomeVideoUrl ?? null}
+              onVideoChange={(url) => setValue("welcomeVideoUrl", url)}
+            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Welcome video poster (optional)
+              </label>
+              <ImageUploadField
+                imageUrl={welcomeVideoPosterUrl ?? null}
+                onImageChange={(url) => setValue("welcomeVideoPosterUrl", url)}
+              />
+            </div>
+            <Textarea
+              id="prog-welcome-desc"
+              label="Welcome message (shown in app under video)"
+              rows={2}
+              placeholder="What to watch first, how to use the program in the app…"
+              {...register("welcomeVideoDescription")}
+            />
+          </div>
         </div>
 
         <PdfUploadField
