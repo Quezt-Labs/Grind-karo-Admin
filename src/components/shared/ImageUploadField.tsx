@@ -3,6 +3,7 @@ import { Upload, X, ImageIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
 import { uploadService } from "@/services/uploadService";
+import { looksLikeImageUpload } from "@/utils/compressImage";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB — matches backend upload cap
 
@@ -28,7 +29,7 @@ export function ImageUploadField({
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
+    if (!looksLikeImageUpload(file)) {
       toast.error("Please upload an image file");
       return;
     }
@@ -38,8 +39,10 @@ export function ImageUploadField({
       const url = await uploadService.smartUpload(file);
       onImageChange(url);
       toast.success("Image uploaded");
-    } catch {
-      toast.error("Failed to upload image");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to upload image",
+      );
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -79,7 +82,7 @@ export function ImageUploadField({
             {isUploading ? "Uploading..." : "Click to upload image"}
           </span>
           <span className="text-xs text-gray-400 dark:text-gray-500">
-            PNG, JPG, WebP up to 10 MB
+            PNG, JPG, WebP, HEIC up to 10 MB
           </span>
         </button>
       )}

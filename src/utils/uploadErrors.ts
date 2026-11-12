@@ -13,6 +13,13 @@ const VIDEO_EXTENSIONS = new Set([
 const AUDIO_EXTENSIONS = new Set(["mp3", "m4a", "wav", "ogg", "aac", "webm"]);
 
 const MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/jpeg",
+  heic: "image/jpeg",
+  heif: "image/jpeg",
   mp4: "video/mp4",
   webm: "video/webm",
   mov: "video/quicktime",

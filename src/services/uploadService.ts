@@ -1,10 +1,21 @@
 import api from "./api";
 import {
+  compressImageIfNeeded,
+  looksLikeImageUpload,
+} from "@/utils/compressImage";
+import {
   formatUploadError,
   logUploadFailure,
   resolvePresignContentType,
   type UploadLogContext,
 } from "@/utils/uploadErrors";
+
+async function prepareFileForUpload(file: File): Promise<File> {
+  if (looksLikeImageUpload(file)) {
+    return compressImageIfNeeded(file);
+  }
+  return file;
+}
 
 export interface UploadResponse {
   url: string;
@@ -54,16 +65,17 @@ const BUFFERED_UPLOAD_MAX_BYTES = 900 * 1024;
 export const uploadService = {
   /** Small files only (≤ ~900 KB) — server-buffered. Prefer smartUpload. */
   async upload(file: File): Promise<UploadResponse> {
-    const contentType = resolvePresignContentType(file);
+    const prepared = await prepareFileForUpload(file);
+    const contentType = resolvePresignContentType(prepared);
     const logBase: UploadLogContext = {
       step: "buffered",
-      fileName: file.name,
-      fileSize: file.size,
+      fileName: prepared.name,
+      fileSize: prepared.size,
       contentType,
     };
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", prepared);
     try {
       const { data } = await api.post("/upload", formData);
       return data.data ?? data;
@@ -79,11 +91,12 @@ export const uploadService = {
     onProgress?: (percent: number) => void,
     mediaType?: "audio" | "video",
   ): Promise<string> {
-    const contentType = assertPresignContentType(file);
+    const prepared = await prepareFileForUpload(file);
+    const contentType = assertPresignContentType(prepared);
     const logBase: UploadLogContext = {
       step: "presign",
-      fileName: file.name,
-      fileSize: file.size,
+      fileName: prepared.name,
+      fileSize: prepared.size,
       contentType,
       mediaType,
     };
@@ -91,9 +104,9 @@ export const uploadService = {
     let presign: PresignResponse;
     try {
       const { data } = await api.post("/upload/presign", {
-        filename: file.name,
+        filename: prepared.name,
         contentType,
-        sizeBytes: file.size,
+        sizeBytes: prepared.size,
       });
       presign = data.data ?? data;
     } catch (error) {
@@ -103,9 +116,9 @@ export const uploadService = {
 
     const signedType = presign.fields["Content-Type"] ?? contentType;
     const uploadFile =
-      file.type !== signedType
-        ? new File([file], file.name, { type: signedType })
-        : file;
+      prepared.type !== signedType
+        ? new File([prepared], prepared.name, { type: signedType })
+        : prepared;
 
     const form = new FormData();
     for (const [k, v] of Object.entries(presign.fields)) {
@@ -162,18 +175,19 @@ export const uploadService = {
     onProgress?: (percent: number) => void,
     mediaType?: "audio" | "video",
   ): Promise<string> {
-    const contentType = resolvePresignContentType(file);
+    const prepared = await prepareFileForUpload(file);
+    const contentType = resolvePresignContentType(prepared);
     const usePresign =
       contentType.startsWith("video/") ||
       contentType.startsWith("audio/") ||
-      file.size > BUFFERED_UPLOAD_MAX_BYTES;
+      prepared.size > BUFFERED_UPLOAD_MAX_BYTES;
 
     if (usePresign) {
-      return this.presignUpload(file, onProgress, mediaType);
+      return this.presignUpload(prepared, onProgress, mediaType);
     }
 
     try {
-      const result = await this.upload(file);
+      const result = await this.upload(prepared);
       return result.url;
     } catch (err: unknown) {
       const status =
@@ -182,7 +196,7 @@ export const uploadService = {
         "response" in err &&
         (err as { response?: { status?: number } }).response?.status;
       if (status === 413) {
-        return this.presignUpload(file, onProgress, mediaType);
+        return this.presignUpload(prepared, onProgress, mediaType);
       }
       throw err;
     }

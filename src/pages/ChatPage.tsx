@@ -31,6 +31,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { ChatAudioPlayer } from "@/components/chat/ChatAudioPlayer";
 import { ChatVideoPlayer } from "@/components/chat/ChatVideoPlayer";
 import { LinkifiedText } from "@/components/shared/LinkifiedText";
+import { looksLikeImageUpload } from "@/utils/compressImage";
 import { cn } from "@/utils/cn";
 import { isChatVideoMessage } from "@/utils/mediaUrl";
 import { Spinner } from "@/components/ui/Spinner";
@@ -278,7 +279,7 @@ export function ChatPage() {
   const uploadAndSendFile = useCallback(
     async (file: File) => {
       if (!selectedUserId) return;
-      const isImage = file.type.startsWith("image/");
+      const isImage = looksLikeImageUpload(file);
       const isVideo = file.type.startsWith("video/");
       const isAudio =
         file.type.startsWith("audio/") || /^voice-\d+\./.test(file.name);
@@ -295,8 +296,12 @@ export function ChatPage() {
           mediaUrl,
           ...(activeReply ? { parentMessageId: activeReply.id } : {}),
         });
-      } catch {
-        toast.error("Upload failed. Please try again.");
+      } catch (err) {
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Upload failed. Please try again.",
+        );
       } finally {
         setUploading(false);
       }
